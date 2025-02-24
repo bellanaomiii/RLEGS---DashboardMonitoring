@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+::after,
+::before {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    text-decoration: none;
+}
+
+li {
+    list-style: none;
+}
+
+h1 {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+.wrapper {
+    display: flex;
+}
+
+.main {
+    min-height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    transition: all 0.35;
+    background-color: #ffff;
+    padding: 80px 20px 20px 20px;
+}
+
+.navbar {
+    position: fixed;
+    top: 0;
+    margin-left: 75px; /* Tambahkan jarak dari kiri */
+    right: 280px;
+    width: calc(100% - 75px);
+    height: 60px;
+    background-color: #ffffff;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+}
+
+#sidebar.expand ~ .main .navbar {
+    left: 190px;
+    width: calc(90% - 85px);
+}
+
+#sidebar {
+    width: 70px;
+    min-width: 70px;
+    z-index: 1100;
+    transition: all .25s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    background-color: #0e223e;
+}
+
+.sidebar-link {
+    text-decoration: none; 
+}
+
+#sidebar.expand {
+    width: 260px;
+    min-width: 260px;
+}
+
+#toggle-btn {
+    background-color: transparent;
+    cursor: pointer;
+    border: 0;
+    padding: 1rem 1.5rem;
+}
+
+#toggle-btn i {
+    font-size: 1.5rem;
+    color: #ffff;
+}
+
+.sidebar-logo {
+    margin: auto 0;
+}
+
+.sidebar-logo a {
+    color: #ffff;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+#sidebar:not(expand) .sidebar-logo,
+#sidebar:not(expand) a.sidebar-link span {
+    display: none;
+}
+
+#sidebar:not(.expand) .sidebar-logo a {
+    display: none;
+}
+
+#sidebar.expand .sidebar-logo a {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible;
+    color: #ffffff; 
+    font-size: 1.15rem;
+    font-weight: 600;
+    transition: opacity 0.3s ease-in-out;
+    text-decoration: none;
+}
+
+#sidebar.expand .sidebar-logo {
+    display: block;
+    text-align: left; 
+    padding-left: 15px;
+}
+
+#sidebar.expand a.sidebar-link span {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible; 
+}
+
+
+.sidebar-nav {
+    padding: 2rem 0;
+    flex: 1 1 auto;
+}
+
+.sidebar-link {
+    position: relative;
+    display: flex;
+    align-items: center; 
+    justify-content: space-between; 
+    width: 100%; 
+    padding-right: 2rem; 
+}
+
+.sidebar-dropdown {
+    display: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+}
+
+a.sidebar-link {
+    padding: .625rem 1.625rem;
+    color: #ffff;
+    display: block;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-link i {
+    font-size: 1.1rem;
+    margin-right: .75rem;
+}
+
+a.sidebar-link:hover {
+    background-color: rgba(57, 75, 108, 0.75);
+    border-left: 3px solid #3b7ddd;
+}
+
+.sidebar-item {
+    position: relative;
+}
+
+#sidebar:not(.expand) .sidebar-item .sidebar-dropdown{
+    position: absolute;
+    top: 0;
+    left: 70px;
+    background-color: #0e2238;
+    padding: 0;
+    min-width: 15rem;
+    display: none;
+}
+.sidebar-item .sidebar-link.has-dropdown[aria-expanded="true"] + .sidebar-dropdown {
+    display: block; 
+}
+
+#sidebar:not(expand) .sidebar-item:hover .has-dropdown+.sidebar-dropdown{
+    display: block;
+    max-height: 15em;
+    width: 100%;
+    opacity: 1;
+}
+
+#sidebar.expand .sidebar-item .sidebar-dropdown.show {
+    display: block;
+    max-height: 15em;
+    opacity: 1;
+}
+
+#sidebar:not(.expand) .sidebar-item:hover .sidebar-dropdown .sidebar-link span {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar-link.has-dropdown {
+    pointer-events: auto; 
+}
+
+#sidebar.expand .sidebar-link.has-dropdown::after {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid white; 
+    position: absolute;
+    right: 1.5rem; 
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.2s ease-out;
+    opacity: 1; 
+    visibility: visible;
+}

@@ -9,7 +9,7 @@
 <body>
     <div class="d-flex">
         <!-- Sidebar -->
-        <div class="bg-dark text-white min-vh-100" style="width: 260px;">
+        <div>
             @include('layouts.sidebar')
         </div>
 

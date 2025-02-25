@@ -14,7 +14,7 @@ class DataController extends Controller
     {
         // Validasi file
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls|max:2048', // Batasi jenis file dan ukuran
+            'file' => 'required|mimes:csv,xlsx,xls|max:2048', // Batasi jenis file dan ukuran
         ]);
 
         // Proses upload dan import file Excel

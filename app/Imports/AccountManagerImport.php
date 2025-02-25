@@ -4,184 +4,100 @@ namespace App\Imports;
 
 use App\Models\AccountManager;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Illuminate\Support\Facades\Log;
 
-
-class AccountManagerImport implements ToModel
+class AccountManagerImport implements ToModel, WithHeadingRow
 {
-    /**
-     * @param array $row
-     *
-     * @return \Illuminate\Database\Eloquent\Model|null
-     */
     public function model(array $row)
     {
+        // Log data untuk debugging
+        Log::info('Data yang diproses: ', $row);
+
         return new AccountManager([
-            'nipnas' => $row[0] ?? null,
-            'corporate_customer' => $row[1] ?? null,
-            'segmen' => $row[2] ?? null,
-            'treg_ho' => $row[3] ?? null,
-            'group_konglo' => $row[4] ?? null,
-            'nik_am_jan' => $row[5] ?? null,
-            'nama_am_jan' => $row[6] ?? null,
-            'nik_am_feb' => $row[7] ?? null,
-            'nama_am_feb' => $row[8] ?? null,
-            'nik_am_mar' => $row[9] ?? null,
-            'nama_am_mar' => $row[10] ?? null,
-            'nik_am_apr' => $row[11] ?? null,
-            'nama_am_apr' => $row[12] ?? null,
-            'nik_am_mei' => $row[13] ?? null,
-            'nama_am_mei' => $row[14] ?? null,
-            'nik_am_jun' => $row[15] ?? null,
-            'nama_am_jun' => $row[16] ?? null,
-            'nik_am_jul' => $row[17] ?? null,
-            'nama_am_jul' => $row[18] ?? null,
-            'nik_am_ags' => $row[19] ?? null,
-            'nama_am_ags' => $row[20] ?? null,
-            'nik_am_sep' => $row[21] ?? null,
-            'nama_am_sep' => $row[22] ?? null,
-            'nik_am_okt' => $row[23] ?? null,
-            'nama_am_okt' => $row[24] ?? null,
-            'nik_am_nov' => $row[25] ?? null,
-            'nama_am_nov' => $row[26] ?? null,
-            'nik_am_des' => $row[27] ?? null,
-            'nama_am_des' => $row[28] ?? null,
-            'proporsi' => $row[29] ?? null,
-            'witel_ho' => $row[30] ?? null,
-            'witel_id' => $row[31] ?? null,
-            'divisi' => $row[32] ?? null,
-            'area' => $row[33] ?? null,
-            'nik_mgr_area' => $row[34] ?? null,
-            'mgr_area' => $row[35] ?? null,
-            't_sust_jan' => $row[36] ?? null,
-            't_sust_feb' => $row[37] ?? null,
-            't_sust_mar' => $row[38] ?? null,
-            't_sust_apr' => $row[39] ?? null,
-            't_sust_mei' => $row[40] ?? null,
-            't_sust_jun' => $row[41] ?? null,
-            't_sust_jul' => $row[42] ?? null,
-            't_sust_ags' => $row[43] ?? null,
-            't_sust_sep' => $row[44] ?? null,
-            't_sust_okt' => $row[45] ?? null,
-            't_sust_nov' => $row[46] ?? null,
-            't_sust_des' => $row[47] ?? null,
-            't_total_sustain' => $row[48] ?? null,
-            't_scal_jan' => $row[49] ?? null,
-            't_scal_feb' => $row[50] ?? null,
-            't_scal_mar' => $row[51] ?? null,
-            't_scal_apr' => $row[52] ?? null,
-            't_scal_mei' => $row[53] ?? null,
-            't_scal_jun' => $row[54] ?? null,
-            't_scal_jul' => $row[55] ?? null,
-            't_scal_ags' => $row[56] ?? null,
-            't_scal_sep' => $row[57] ?? null,
-            't_scal_okt' => $row[58] ?? null,
-            't_scal_nov' => $row[59] ?? null,
-            't_scal_des' => $row[60] ?? null,
-            't_total_scaling' => $row[61] ?? null,
-            't_revenue_jan' => $row[62] ?? null,
-            't_revenue_feb' => $row[63] ?? null,
-            't_revenue_mar' => $row[64] ?? null,
-            't_revenue_apr' => $row[65] ?? null,
-            't_revenue_mei' => $row[66] ?? null,
-            't_revenue_jun' => $row[67] ?? null,
-            't_revenue_jul' => $row[68] ?? null,
-            't_revenue_ags' => $row[69] ?? null,
-            't_revenue_sep' => $row[70] ?? null,
-            't_revenue_okt' => $row[71] ?? null,
-            't_revenue_nov' => $row[72] ?? null,
-            't_revenue_des' => $row[73] ?? null,
-            'total_target_revenue' => $row[74] ?? null,
-            't_ngtma_jan' => $row[75] ?? null,
-            't_ngtma_feb' => $row[76] ?? null,
-            't_ngtma_mar' => $row[77] ?? null,
-            't_ngtma_apr' => $row[78] ?? null,
-            't_ngtma_mei' => $row[79] ?? null,
-            't_ngtma_jun' => $row[80] ?? null,
-            't_ngtma_jul' => $row[81] ?? null,
-            't_ngtma_ags' => $row[82] ?? null,
-            't_ngtma_sep' => $row[83] ?? null,
-            't_ngtma_okt' => $row[84] ?? null,
-            't_ngtma_nov' => $row[85] ?? null,
-            't_ngtma_des' => $row[86] ?? null,
-            'total_target_ngtma' => $row[87] ?? null,
-            'est_sust_jan_pots' => $row[88] ?? null,
-            'est_sust_feb_pots' => $row[89] ?? null,
-            'est_sust_mar_pots' => $row[90] ?? null,
-            'est_sust_apr_pots' => $row[91] ?? null,
-            'est_sust_mei_pots' => $row[92] ?? null,
-            'est_sust_jun_pots' => $row[93] ?? null,
-            'est_sust_jul_pots' => $row[94] ?? null,
-            'est_sust_agu_pots' => $row[95] ?? null,
-            'est_sust_sep_pots' => $row[96] ?? null,
-            'est_sust_okt_pots' => $row[97] ?? null,
-            'est_sust_nov_pots' => $row[98] ?? null,
-            'est_sust_des_pots' => $row[99] ?? null,
-            'total_est_sust_pots' => $row[100] ?? null,
-            'est_sust_jan_np' => $row[101] ?? null,
-            'est_sust_feb_np' => $row[102] ?? null,
-            'est_sust_mar_np' => $row[103] ?? null,
-            'est_sust_apr_np' => $row[104] ?? null,
-            'est_sust_mei_np' => $row[105] ?? null,
-            'est_sust_jun_np' => $row[106] ?? null,
-            'est_sust_jul_np' => $row[107] ?? null,
-            'est_sust_agu_np' => $row[108] ?? null,
-            'est_sust_sep_np' => $row[109] ?? null,
-            'est_sust_okt_np' => $row[110] ?? null,
-            'est_sust_nov_np' => $row[111] ?? null,
-            'est_sust_des_np' => $row[112] ?? null,
-            'total_est_sust_np' => $row[113] ?? null,
-            'real_jan' => $row[114] ?? null,
-            'real_feb' => $row[115] ?? null,
-            'real_mar' => $row[116] ?? null,
-            'real_apr' => $row[117] ?? null,
-            'real_mei' => $row[118] ?? null,
-            'real_jun' => $row[119] ?? null,
-            'real_jul' => $row[120] ?? null,
-            'real_ags' => $row[121] ?? null,
-            'real_sep' => $row[122] ?? null,
-            'real_okt' => $row[123] ?? null,
-            'real_nov' => $row[124] ?? null,
-            'real_des' => $row[125] ?? null,
-            'real_total' => $row[126] ?? null,
-            'real_ngtma_jan' => $row[127] ?? null,
-            'real_ngtma_feb' => $row[128] ?? null,
-            'real_ngtma_mar' => $row[129] ?? null,
-            'real_ngtma_apr' => $row[130] ?? null,
-            'real_ngtma_mei' => $row[131] ?? null,
-            'real_ngtma_jun' => $row[132] ?? null,
-            'real_ngtma_jul' => $row[133] ?? null,
-            'real_ngtma_ags' => $row[134] ?? null,
-            'real_ngtma_sept' => $row[135] ?? null,
-            'real_ngtma_okt' => $row[136] ?? null,
-            'real_ngtma_nov' => $row[137] ?? null,
-            'real_ngtma_des' => $row[138] ?? null,
-            'real_ngtma' => $row[139] ?? null,
-            'r_jan_2023' => $row[140] ?? null,
-            'r_feb_2023' => $row[141] ?? null,
-            'r_mar_2023' => $row[142] ?? null,
-            'r_apr_2023' => $row[143] ?? null,
-            'r_mei_2023' => $row[144] ?? null,
-            'r_jun_2023' => $row[145] ?? null,
-            'r_jul_2023' => $row[146] ?? null,
-            'r_agu_2023' => $row[147] ?? null,
-            'r_sep_2023' => $row[148] ?? null,
-            'r_okt_2023' => $row[149] ?? null,
-            'r_nov_2023' => $row[150] ?? null,
-            'r_des_2023' => $row[151] ?? null,
-            'real_total_2023' => $row[152] ?? null,
-            'bc_jan' => $row[153] ?? null,
-            'bc_feb' => $row[154] ?? null,
-            'bc_mar' => $row[155] ?? null,
-            'bc_apr' => $row[156] ?? null,
-            'bc_mei' => $row[157] ?? null,
-            'bc_jun' => $row[158] ?? null,
-            'bc_jul' => $row[159] ?? null,
-            'bc_agu' => $row[160] ?? null,
-            'bc_sep' => $row[161] ?? null,
-            'bc_okt' => $row[162] ?? null,
-            'bc_nov' => $row[163] ?? null,
-            'bc_des' => $row[164] ?? null,
-            'total_bc' => $row[165] ?? null,
+            'nipnas'                => $row['nipnas'] ?? null,
+            'corporate_customer'    => $row['corporate_customer'] ?? null,
+            'segmen'                => $row['segmen'] ?? null,
+            'treg_ho'               => $row['treg_ho'] ?? null,
+            'group_konglo'          => $row['group_konglo'] ?? null,
+
+            // Account Manager per bulan
+            ...$this->getMonthlyData($row, 'nik_am_'),
+            ...$this->getMonthlyData($row, 'nama_am_'),
+
+            // Kolom lain
+            'proporsi'              => $this->cleanNumber($row['proporsi'] ?? null),
+            'witel_ho'              => $row['witel_ho'] ?? null,
+            'witel_id'              => $row['witel_id'] ?? null,
+            'divisi'                => $row['divisi'] ?? null,
+            'area'                  => $row['area'] ?? null,
+            'nik_mgr_area'          => $row['nik_mgr_area'] ?? null,
+            'mgr_area'              => $row['mgr_area'] ?? null,
+
+            // Performa Sustain, Scaling, Revenue, NGTMA, dan BC
+            ...$this->getMonthlyNumbers($row, 't_sust_'),
+            't_total_sustain'       => $this->cleanNumber($row['t_total_sustain'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 't_scal_'),
+            't_total_scaling'       => $this->cleanNumber($row['t_total_scaling'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 't_revenue_'),
+            'total_target_revenue'  => $this->cleanNumber($row['total_target_revenue'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 't_ngtma_'),
+            'total_target_ngtma'    => $this->cleanNumber($row['total_target_ngtma'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 'est_sust_', '_pots'),
+            'total_est_sust_pots'   => $this->cleanNumber($row['total_est_sust_pots'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 'est_sust_', '_np'),
+            'total_est_sust_np'     => $this->cleanNumber($row['total_est_sust_np'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 'real_'),
+            'real_total'            => $this->cleanNumber($row['real_total'] ?? null),
+
+            ...$this->getMonthlyNumbers($row, 'bc_'),
+            'total_bc'              => $this->cleanNumber($row['total_bc'] ?? null),
         ]);
+    }
+
+    /**
+     * Membersihkan angka dari format tidak valid
+     */
+    private function cleanNumber($value)
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $value = str_replace([',', ' '], '', $value);
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    /**
+     * Mengambil data angka per bulan untuk kelompok kolom tertentu
+     */
+    private function getMonthlyNumbers(array $row, string $prefix, string $suffix = '')
+    {
+        $months = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'ags', 'sep', 'okt', 'nov', 'des'];
+        $data = [];
+        foreach ($months as $month) {
+            $key = "{$prefix}{$month}{$suffix}";
+            $data[$key] = isset($row[$key]) ? $this->cleanNumber($row[$key]) : null;
+        }
+        return $data;
+    }
+
+    /**
+     * Mengambil data string per bulan untuk kelompok kolom tertentu
+     */
+    private function getMonthlyData(array $row, string $prefix)
+    {
+        $months = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'ags', 'sep', 'okt', 'nov', 'des'];
+        $data = [];
+        foreach ($months as $month) {
+            $key = "{$prefix}{$month}";
+            $data[$key] = $row[$key] ?? null;
+        }
+        return $data;
     }
 }

@@ -19,6 +19,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/dashboard', [DataController::class, 'viewUploadedData'])->name('dashboard');
     Route::post('/upload-data', [DataController::class, 'uploadData'])->name('upload.data');
+    Route::get('/sidebarpage', function () {
+        return view('layouts.sidebar');
+    });
+
+    Route::get('/leaderboardAM', function () {
+        return view('leaderboardAM');
+    });
 
 });
 

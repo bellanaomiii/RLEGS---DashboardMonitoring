@@ -34,13 +34,13 @@ body {
     overflow: hidden;
     transition: all 0.35;
     background-color: #ffff;
-    padding: 80px 20px 20px 20px;
+    padding-left: 70px;
 }
 
 .navbar {
     position: fixed;
     top: 0;
-    margin-left: 75px; /* Tambahkan jarak dari kiri */
+    margin-left: 75px;
     right: 280px;
     width: calc(100% - 75px);
     height: 60px;
@@ -69,7 +69,7 @@ body {
 }
 
 .sidebar-link {
-    text-decoration: none; 
+    text-decoration: none;
 }
 
 #sidebar.expand {
@@ -112,7 +112,7 @@ body {
     display: inline-block;
     opacity: 1;
     visibility: visible;
-    color: #ffffff; 
+    color: #ffffff;
     font-size: 1.15rem;
     font-weight: 600;
     transition: opacity 0.3s ease-in-out;
@@ -121,14 +121,14 @@ body {
 
 #sidebar.expand .sidebar-logo {
     display: block;
-    text-align: left; 
+    text-align: left;
     padding-left: 15px;
 }
 
 #sidebar.expand a.sidebar-link span {
     display: inline-block;
     opacity: 1;
-    visibility: visible; 
+    visibility: visible;
 }
 
 
@@ -140,10 +140,10 @@ body {
 .sidebar-link {
     position: relative;
     display: flex;
-    align-items: center; 
-    justify-content: space-between; 
-    width: 100%; 
-    padding-right: 2rem; 
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-right: 2rem;
 }
 
 .sidebar-dropdown {
@@ -187,7 +187,7 @@ a.sidebar-link:hover {
     display: none;
 }
 .sidebar-item .sidebar-link.has-dropdown[aria-expanded="true"] + .sidebar-dropdown {
-    display: block; 
+    display: block;
 }
 
 #sidebar:not(expand) .sidebar-item:hover .has-dropdown+.sidebar-dropdown{
@@ -210,7 +210,7 @@ a.sidebar-link:hover {
 }
 
 .sidebar-link.has-dropdown {
-    pointer-events: auto; 
+    pointer-events: auto;
 }
 
 #sidebar.expand .sidebar-link.has-dropdown::after {
@@ -220,12 +220,12 @@ a.sidebar-link:hover {
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 6px solid white; 
+    border-top: 6px solid white;
     position: absolute;
-    right: 1.5rem; 
+    right: 1.5rem;
     top: 50%;
     transform: translateY(-50%);
     transition: all 0.2s ease-out;
-    opacity: 1; 
+    opacity: 1;
     visibility: visible;
 }

@@ -51,7 +51,7 @@ body{
     flex-direction: column;
     flex-grow: 1; /* Agar otomatis menyesuaikan */
     min-height: 100vh;
-    width: calc(100% - 2px); 
+    width: calc(100% - 2px);
     margin-left: 10px !important; 
     overflow-x: hidden;    
     transition: all 0.3s ease-in-out;

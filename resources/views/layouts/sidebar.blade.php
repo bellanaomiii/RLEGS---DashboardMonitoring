@@ -31,7 +31,7 @@
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link has-dropdown collapsed" data-bs-toggle="collapse" data-bs-target="#performance" aria-expanded="false" aria-controls="performance">
                             <i class="lni lni-bar-chart-dollar"></i>
-                            <span>Performansi</span> 
+                            <span>Performansi</span>
                         </a>
                         <ul id="performance" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
                             <li class="sidebar-item">
@@ -48,7 +48,7 @@
                             </li>
                         </ul>
                     </li>
-                    
+
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link">
                             <i class="lni lni-user-multiple-4"></i>
@@ -82,7 +82,7 @@
                 </div>
             </aside>
 
-            <div class="main p-3">
+            <div class="main p-0">
                 <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
                     <div class="container-fluid">
                         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">

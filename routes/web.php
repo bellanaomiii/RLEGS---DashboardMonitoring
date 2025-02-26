@@ -23,8 +23,7 @@ Route::middleware('auth')->group(function () {
         return view('layouts.sidebar');
     });
 
-    Route::get('/leaderboardAM', function () {
-        return view('leaderboardAM');
+    Route::get('/leaderboardAM', function () { return view('leaderboardAM');
     });
 
 });

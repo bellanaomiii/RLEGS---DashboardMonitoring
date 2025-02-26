@@ -14,7 +14,7 @@ class DataController extends Controller
     {
         // Validasi file
         $request->validate([
-            'file' => 'required|mimes:csv,xlsx,xls|max:2048', // Batasi jenis file dan ukuran
+            'file' => 'required|mimes:csv,xlsx,xls|max:2048',
         ]);
 
         // Proses upload dan import file Excel
@@ -32,13 +32,15 @@ class DataController extends Controller
     // Menampilkan data yang telah diupload
     public function viewUploadedData()
     {
-        // Ambil data dari model AccountManager
-        $data = AccountManager::all();  // Jika data kosong, ini akan mengirimkan koleksi kosong
+
+        $data = AccountManager::all();
 
         // Kirim data ke view
-        return view('dashboard', compact('data'));  // Pastikan 'data' dikirim dengan benar
+        return view('dashboard', compact('data'));  
     }
 
-
+    // tinggal bikin query untuk leaderboard
+    // detailpage untuk performa AM
+    // hapus, edit, search tabel performa AM
 
 }

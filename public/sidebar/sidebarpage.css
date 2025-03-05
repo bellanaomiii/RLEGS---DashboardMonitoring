@@ -42,7 +42,6 @@ body{
     overflow-x: hidden;    
     transition: all 0.35;
     background-color: #ffff;
-<<<<<<< HEAD
     padding: 50px 10px 10px 10px;
 } */
 
@@ -51,7 +50,7 @@ body{
     flex-direction: column;
     flex-grow: 1; /* Agar otomatis menyesuaikan */
     min-height: 100vh;
-    width: calc(100% - 2px);
+    width: calc(100% - 2px); 
     margin-left: 10px !important; 
     overflow-x: hidden;    
     transition: all 0.3s ease-in-out;
@@ -66,20 +65,24 @@ body{
     align-items: center;
 }
 
+.card-body.align-items-center.gap-3:hover {
+    background-color: #9fadc1; /* Ubah warna menjadi merah saat hover */
+    cursor: pointer;
+    font-weight: lighter;
+}
+
+
 #sidebar.expand + .main {
     margin-left: 260px !important;
     width: calc(100% - 260px) !important;
-=======
-    padding-left: 70px;
->>>>>>> 504144a5c31d15f298b63a01234e496319d49875
 }
 
 .navbar {
     position: fixed;
     top: 0;
-    margin-left: 75px;
-    right: 280px;
-    width: calc(100% - 75px);
+    margin-left: 60px; /* Tambahkan jarak dari kiri */
+    right: 250px;
+    width: calc(100% - 60px);
     height: 60px;
     background-color: #ffffff;
     z-index: 1050;
@@ -113,7 +116,7 @@ body{
 }
 
 .sidebar-link {
-    text-decoration: none;
+    text-decoration: none; 
 }
 
 #sidebar.expand {
@@ -156,7 +159,7 @@ body{
     display: inline-block;
     opacity: 1;
     visibility: visible;
-    color: #ffffff;
+    color: #ffffff; 
     font-size: 1.15rem;
     font-weight: 600;
     transition: opacity 0.3s ease-in-out;
@@ -165,14 +168,14 @@ body{
 
 #sidebar.expand .sidebar-logo {
     display: block;
-    text-align: left;
+    text-align: left; 
     padding-left: 15px;
 }
 
 #sidebar.expand a.sidebar-link span {
     display: inline-block;
     opacity: 1;
-    visibility: visible;
+    visibility: visible; 
 }
 
 
@@ -184,10 +187,10 @@ body{
 .sidebar-link {
     position: relative;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-right: 2rem;
+    align-items: center; 
+    justify-content: space-between; 
+    width: 100%; 
+    padding-right: 2rem; 
 }
 
 .sidebar-dropdown {
@@ -231,7 +234,7 @@ a.sidebar-link:hover {
     display: none;
 }
 .sidebar-item .sidebar-link.has-dropdown[aria-expanded="true"] + .sidebar-dropdown {
-    display: block;
+    display: block; 
 }
 
 #sidebar:not(expand) .sidebar-item:hover .has-dropdown+.sidebar-dropdown{
@@ -254,7 +257,7 @@ a.sidebar-link:hover {
 }
 
 .sidebar-link.has-dropdown {
-    pointer-events: auto;
+    pointer-events: auto; 
 }
 
 #sidebar.expand .sidebar-link.has-dropdown::after {
@@ -264,12 +267,94 @@ a.sidebar-link:hover {
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 6px solid white;
+    border-top: 6px solid white; 
     position: absolute;
-    right: 1.5rem;
+    right: 1.5rem; 
     top: 50%;
     transform: translateY(-50%);
     transition: all 0.2s ease-out;
-    opacity: 1;
+    opacity: 1; 
     visibility: visible;
+}
+
+.main-container{
+    position: relative;
+    margin-top: 80px;
+    margin-left: 50px;
+}
+
+.tab-nav-bar{
+    position: relative;
+    margin: 65px 10px 40px 10px;
+}
+
+.tab-navigation{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: fit-content;
+    margin: 0 auto;
+}
+
+.tab-menu{
+    color: #fdfdfd;
+    list-style: none;
+    background: #0e223e;
+    max-width: 800px;
+    padding: 10px;
+    white-space: nowrap;
+    border-bottom: 1px solid (var(#0e223e));
+    border-radius: 50px;
+    box-shadow: #0e223e;
+    overflow-x: auto;
+    user-select: none;
+    scroll-behavior: unset;
+}
+
+.tab-menu::-webkit-scrollbar{
+    display: none;
+}
+
+.tab-btn{
+    display: inline-block;
+    font-size: 1em;
+    font-weight: 400;
+    margin: 0 2px;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    user-select: none;
+    transition: 0.3s ease;
+}
+
+.tab-btn:hover{
+    background-color: #1a3a66;
+}
+
+.tab-btn.active{
+    background: #3b7ddd;
+}
+
+.left-btn, .right-btn{
+    position: absolute;
+    font-size: 1.2em;
+    padding: 10px;
+    cursor: pointer;
+    color: #ffff;
+}
+
+.left-btn{
+    left: 0;
+    background: linear-gradient(to left, transparent, 50%);
+    border-top-left-radius: 30px;
+    border-bottom-left-radius: 30px;
+    display: none;
+}
+
+.right-btn{
+    right: 0;
+    background: linear-gradient(to right, transparent, 50%);
+    border-top-right-radius: 30px;
+    border-bottom-right-radius: 30px;
 }

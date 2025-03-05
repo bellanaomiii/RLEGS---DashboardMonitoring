@@ -6,7 +6,7 @@ use App\Http\Controllers\DataController;
 
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('auth.login');
 });
 
 Route::get('/dashboard', function () {
@@ -24,6 +24,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::get('/leaderboardAM', function () { return view('leaderboardAM');
+    });
+
+    Route::get('/PerformansiWitel', function () { return view('witel');
     });
 
 });

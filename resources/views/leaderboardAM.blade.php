@@ -16,12 +16,12 @@
             </div>
         </div>
     </section> --}}
-    <section class="p-2 container-leaderboard">
-        <div class="container-fluid rounded-4 ms-0">
+    <section class="container-leaderboard p-2">
+        <div class="container-fluid rounded-4 mt-2">
             <div class="row g-4 flex-column">
                 <div class="col-12">
                     <div class="bg-custom card text-white">
-                        <div class="card-body align-items-center gap-3">
+                        <div class="card-body align-items-center gap-2">
                             <h1>Leaderboard Performa <br> Account Manager</h1>
                             <p class="lead my-1">
                             Lorem ipsum dolor sit amet consectetur adipisicing elit. Pariatur, voluptas rem? Amet dignissimos, commodi officiis itaque nulla molestias accusantium maiores hic libero at illo odit sed suscipit dolor, aspernatur rerum?
@@ -32,9 +32,30 @@
             </div>
         </div>        
     </section>
+    
+    <section class="d-flex justify-content-between align-items-center">
+        <div class="container d-flex justify-content-start float-start">
+            <form class="col-md-7 col-lg-5 d-flex p-2 float-start">
+                <input class="form-control me-2" type="search" placeholder="Search Name">
+                <button class="btn btn-outline-info" type="submit">Go</button>
+            </form>
+        </div>
+    
+        <div class="container d-flex justify-content-end float-end">
+            <form class="col-md-9 col-lg-5 ms-auto float-end">
+                <label>Filter by</label>
+                <select class="form-control selectpicker" multiple>
+                    <option select disabled>Select One or More</option>
+                    <option>Revenue Realisasi Tertinggi</option>
+                    <option>Achievement Tertinggi</option>
+                </select>
+            </form>
+        </div>
+    </section>
+    
 
     {{-- Leadearboard AM --}}
-    <section class="p-2 container-leaderboard">
+    <section class="container-leaderboard p-2">
         <div class="container-fluid rounded-4 ms-0">
             <div class="row g-4 flex-column">
                 <div class="col-12">
@@ -65,7 +86,7 @@
         </div>        
     </section>
 
-    <section class="p-2 container-leaderboard">
+    <section class="container-leaderboard p-2">
         <div class="container-fluid rounded-4 ms-0">
             <div class="row g-4 flex-column">
                 <div class="col-12">
@@ -96,7 +117,7 @@
         </div>        
     </section>
 
-    <section class="p-2 container-leaderboard">
+    <section class="container-leaderboard p-2">
         <div class="container-fluid rounded-4 ms-0">
             <div class="row g-4 flex-column">
                 <div class="col-12">
@@ -127,7 +148,7 @@
         </div>        
     </section>
 
-    <section class="p-2 container-leaderboard">
+    <section class="container-leaderboard p-2">
         <div class="container-fluid rounded-4 ms-0">
             <div class="row g-4 flex-column">
                 <div class="col-12">
@@ -158,7 +179,7 @@
         </div>        
     </section>
 
-    <section class="p-2 container-leaderboard">
+    <section class="container-leaderboard p-2">
         <div class="container-fluid rounded-4 ms-0">
             <div class="row g-4 flex-column">
                 <div class="col-12">

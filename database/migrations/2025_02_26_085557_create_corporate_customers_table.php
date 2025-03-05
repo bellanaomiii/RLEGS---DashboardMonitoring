@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('corporate_customers', function (Blueprint $table) {
             $table->id(); // Primary Key
             $table->string('nama'); // Nama Corporate Customer
+            $table->integer('nipnas');
             $table->timestamps();
         });
     }

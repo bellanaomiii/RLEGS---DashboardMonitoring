@@ -10,7 +10,7 @@ class CorporateCustomer extends Model
     use HasFactory;
 
     protected $table = 'corporate_customers';
-    protected $fillable = ['nama'];
+    protected $fillable = ['nama','nipnas'];
 
     public function accountManagers()
     {

@@ -39,7 +39,7 @@ body{
 /* .main {
     min-height: 100vh;
     width: 100%;
-    overflow-x: hidden;    
+    overflow-x: hidden;
     transition: all 0.35;
     background-color: #ffff;
     padding: 50px 10px 10px 10px;
@@ -50,9 +50,9 @@ body{
     flex-direction: column;
     flex-grow: 1; /* Agar otomatis menyesuaikan */
     min-height: 100vh;
-    width: calc(100% - 2px); 
-    margin-left: 10px !important; 
-    overflow-x: hidden;    
+    width: calc(100% - 2px);
+    margin-left: 10px !important;
+    overflow-x: hidden;
     transition: all 0.3s ease-in-out;
     background-color: #ffff;
     padding: 50px 10px 10px 10px;
@@ -112,11 +112,11 @@ body{
     flex-direction: column;
     background-color: #0e223e;
     position: fixed;
-    height: 100vh; 
+    height: 100vh;
 }
 
 .sidebar-link {
-    text-decoration: none; 
+    text-decoration: none;
 }
 
 #sidebar.expand {
@@ -159,7 +159,7 @@ body{
     display: inline-block;
     opacity: 1;
     visibility: visible;
-    color: #ffffff; 
+    color: #ffffff;
     font-size: 1.15rem;
     font-weight: 600;
     transition: opacity 0.3s ease-in-out;
@@ -168,14 +168,14 @@ body{
 
 #sidebar.expand .sidebar-logo {
     display: block;
-    text-align: left; 
+    text-align: left;
     padding-left: 15px;
 }
 
 #sidebar.expand a.sidebar-link span {
     display: inline-block;
     opacity: 1;
-    visibility: visible; 
+    visibility: visible;
 }
 
 
@@ -187,10 +187,10 @@ body{
 .sidebar-link {
     position: relative;
     display: flex;
-    align-items: center; 
-    justify-content: space-between; 
-    width: 100%; 
-    padding-right: 2rem; 
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-right: 2rem;
 }
 
 .sidebar-dropdown {
@@ -234,7 +234,7 @@ a.sidebar-link:hover {
     display: none;
 }
 .sidebar-item .sidebar-link.has-dropdown[aria-expanded="true"] + .sidebar-dropdown {
-    display: block; 
+    display: block;
 }
 
 #sidebar:not(expand) .sidebar-item:hover .has-dropdown+.sidebar-dropdown{
@@ -257,7 +257,7 @@ a.sidebar-link:hover {
 }
 
 .sidebar-link.has-dropdown {
-    pointer-events: auto; 
+    pointer-events: auto;
 }
 
 #sidebar.expand .sidebar-link.has-dropdown::after {
@@ -267,13 +267,13 @@ a.sidebar-link:hover {
     height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 6px solid white; 
+    border-top: 6px solid white;
     position: absolute;
-    right: 1.5rem; 
+    right: 1.5rem;
     top: 50%;
     transform: translateY(-50%);
     transition: all 0.2s ease-out;
-    opacity: 1; 
+    opacity: 1;
     visibility: visible;
 }
 
@@ -362,4 +362,42 @@ a.sidebar-link:hover {
 .form-check-input {
     display: block !important;
     visibility: visible !important;
+}
+
+
+/* Additional CSS to ensure filter dropdown displays correctly */
+.dropdown-menu.show {
+    display: block !important;
+}
+
+.tab-pane.fade.show.active {
+    display: block !important;
+}
+
+.nav-pills .nav-link {
+    cursor: pointer;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #3b7ddd;
+    color: white;
+}
+
+.form-check {
+    margin-bottom: 8px;
+}
+
+.form-check-input {
+    margin-right: 8px;
+    opacity: 1 !important;
+    position: relative !important;
+}
+
+.form-check-label {
+    font-size: 14px;
+}
+
+/* Make sure dropdowns stay in front of other elements */
+.dropdown-menu {
+    z-index: 1060;
 }

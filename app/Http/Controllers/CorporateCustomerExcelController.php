@@ -1,30 +1,24 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\CorporateCustomer;
+use App\Imports\CorporateCustomerImport;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\AccountManagerImport;
-use Illuminate\Support\Facades\Log;
 
-class AccountManagerExcelController extends Controller
+class CorporateCustomerExcelController extends Controller
 {
     /**
-     * Menangani proses impor data Account Manager dari Excel
+     * Import data dari file Excel
      */
     public function import(Request $request)
     {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
         try {
-            // Validasi file Excel yang diupload
-            $request->validate([
-                'file' => 'required|mimes:xlsx,xls,csv',
-            ]);
-
-            // Debug log untuk tracking
-            Log::info('Mulai proses import Excel');
-
-            // Impor data dari file Excel menggunakan Maatwebsite Excel
-            $import = new AccountManagerImport;
+            $import = new CorporateCustomerImport;
             Excel::import($import, $request->file('file'));
 
             // Dapatkan informasi hasil import
@@ -32,7 +26,7 @@ class AccountManagerExcelController extends Controller
             $importedCount = $results['imported'];
             $duplicateCount = $results['duplicates'];
 
-            $message = "$importedCount data Account Manager berhasil diimpor.";
+            $message = "$importedCount data Corporate Customer berhasil diimpor.";
             if ($duplicateCount > 0) {
                 $message .= " $duplicateCount data duplikat dilewati.";
             }
@@ -46,12 +40,8 @@ class AccountManagerExcelController extends Controller
                 ]);
             }
 
-            // Mengembalikan response setelah impor selesai
-            Log::info('Import Excel berhasil');
             return redirect()->route('dashboard')->with('success', $message);
-
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            // Khusus untuk error validasi Excel
             $failures = $e->failures();
 
             $errorMessages = [];
@@ -63,7 +53,6 @@ class AccountManagerExcelController extends Controller
             }
 
             $errorMessage = implode("<br>", $errorMessages);
-            Log::error('Excel validation error: ' . $errorMessage);
 
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
@@ -74,21 +63,18 @@ class AccountManagerExcelController extends Controller
                 ], 422);
             }
 
-            return redirect()->route('dashboard')->with('error', 'Error validasi Excel: ' . $errorMessage);
-
+            return redirect()->route('dashboard')
+                ->with('error', 'Validasi gagal:<br>' . $errorMessage);
         } catch (\Exception $e) {
-            // Untuk error umum lainnya
-            Log::error('Import error: ' . $e->getMessage());
-
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal mengimpor data: ' . $e->getMessage()
+                    'message' => 'Error: ' . $e->getMessage()
                 ], 500);
             }
 
-            return redirect()->route('dashboard')->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
@@ -97,7 +83,7 @@ class AccountManagerExcelController extends Controller
      */
     public function downloadTemplate()
     {
-        $filePath = public_path('templates/Template_Account_Manager.xlsx');
+        $filePath = public_path('templates/Template_Corporate_Customer.xlsx');
 
         if (file_exists($filePath)) {
             return response()->download($filePath);

@@ -64,12 +64,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/leaderboardAM', function () { return view('leaderboardAM');
     });
 
-<<<<<<< HEAD
-    Route::get('/PerformansiWitel', function () { return view('witel');
+    Route::get('/PerformansiWitel', function () { return view('witelPerform');
     });
-=======
-
->>>>>>> 40146b75b30fe32725a85b76988cbc4e90757a1b
 
 });
 

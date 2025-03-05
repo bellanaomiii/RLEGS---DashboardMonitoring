@@ -358,3 +358,8 @@ a.sidebar-link:hover {
     border-top-right-radius: 30px;
     border-bottom-right-radius: 30px;
 }
+
+.form-check-input {
+    display: block !important;
+    visibility: visible !important;
+}

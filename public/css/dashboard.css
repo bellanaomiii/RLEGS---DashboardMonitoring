@@ -1,0 +1,86 @@
+/* Tab Menu Styles */
+.tab-menu-container {
+    margin-bottom: 16px;
+}
+
+.tabs {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab-item {
+    padding: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+}
+
+.tab-item:hover {
+    background-color: #f1f1f1;
+}
+
+.tab-item.active {
+    border-bottom: 2px solid #1C2955;
+    color: #1C2955;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+button.btn {
+    background-color: #1C2955;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button.btn:hover {
+    background-color: #355d8a;
+}
+
+
+/* CSS untuk Tab Menu */
+.tabs {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab-item {
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    margin-right: 10px;
+    border-radius: 5px 5px 0 0;
+}
+
+.tab-item.active {
+    background-color: #1C2955;
+    color: white;
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+
+input[type="date"] {
+    background-color: white;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    font-size: 16px;
+    width: 100%;
+}

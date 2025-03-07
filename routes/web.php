@@ -2,16 +2,26 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\RevenueController;
 use App\Http\Controllers\AccountManagerController;
 use App\Http\Controllers\CorporateCustomerController;
 use App\Http\Controllers\AccountManagerExcelController;
 use App\Http\Controllers\CorporateCustomerExcelController;
 use App\Http\Controllers\RevenueExcelController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return view('auth.login');
 });
+
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');
+
+Route::get('/index', [UserController::class, 'index'])->name('index');
+
 
 // Menghapus route dashboard yang duplikat
 Route::middleware(['auth', 'verified'])->group(function () {

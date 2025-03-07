@@ -16,7 +16,7 @@
     </head>
     <body class="font-sans antialiased">
         <div>
-            @include('layouts.navigation')
+            @include('layouts.profileupdate')
 
             {{-- <!-- Page Heading -->
             @isset($header)

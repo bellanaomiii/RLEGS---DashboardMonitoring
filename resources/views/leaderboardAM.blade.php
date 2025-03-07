@@ -24,7 +24,8 @@
                         <div class="card-body align-items-center gap-2">
                             <h1>Leaderboard Performa <br> Account Manager</h1>
                             <p class="lead my-1">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Pariatur, voluptas rem? Amet dignissimos, commodi officiis itaque nulla molestias accusantium maiores hic libero at illo odit sed suscipit dolor, aspernatur rerum?
+                                Pantau kinerja Account Manager terbaik dengan data terbaru! 
+                                Lihat peringkat mereka berdasarkan pencapaian dan performa terkini.
                             </p>       
                         </div>
                     </div>

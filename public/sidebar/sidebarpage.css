@@ -216,7 +216,8 @@ a.sidebar-link {
 }
 
 a.sidebar-link:hover {
-    background-color: rgba(57, 75, 108, 0.75);
+    background-color: rgba(47, 68, 105, 0.75);
+    color: #ffff;
     border-left: 3px solid #3b7ddd;
 }
 
@@ -275,6 +276,24 @@ a.sidebar-link:hover {
     transition: all 0.2s ease-out;
     opacity: 1;
     visibility: visible;
+}
+
+.left-btn, .right-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #153456; 
+    padding: 10px;
+    border-radius: 50%;
+    z-index: 10; 
+}
+
+.left-btn {
+    left: 0;
+}
+
+.right-btn {
+    right: 0;
 }
 
 .main-container{
@@ -401,3 +420,5 @@ a.sidebar-link:hover {
 .dropdown-menu {
     z-index: 1060;
 }
+
+

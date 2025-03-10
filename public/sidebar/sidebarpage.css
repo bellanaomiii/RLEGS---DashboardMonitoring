@@ -428,8 +428,117 @@ a.sidebar-link:hover {
     width: calc(100% - 70px);
 }
 
-
 #sidebar.expand + #main-content {
     margin-left: 30px; 
     width: calc(100% - 90px);
 }
+
+
+/* Pastikan container relatif terhadap dropdown */
+.month-picker-container {
+    position: relative !important;
+    height: 280px;
+}
+
+/* Dropdown bulan-tahun */
+.month-picker {
+    display: none;
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    width: 100%; /* Sesuai dengan input box */
+    max-width: 300px; /* Batasan agar tidak terlalu besar */
+    z-index: 9999; /* Pastikan muncul di atas elemen lain */
+    top: 50px; /* Agar muncul tepat di bawah input */
+    left: 0;
+    overflow: visible; /* Hindari pemotongan elemen */
+}
+
+.filter-content {
+    overflow: visible !important; 
+    position: relative; 
+    z-index: 10;
+}
+
+/* Header dropdown */
+.month-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    padding: 8px 10px;
+    background: #1d3557;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Navigasi tahun */
+.year-selector button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: white;
+}
+
+/* Grid bulan */
+.month-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    padding: 10px;
+}
+
+/* Item bulan */
+.month-item {
+    background: #f0f0f0;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: center;
+    transition: background 0.2s ease-in-out;
+}
+
+.month-item:hover {
+    background: #3b7ddd;
+    color: white;
+}
+
+/* Bulan yang dipilih */
+.month-item.selected {
+    background: #3b7ddd;
+    color: white;
+}
+
+/* Footer dropdown */
+.month-picker-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Tombol footer */
+.month-picker-footer button {
+    background: #3b7ddd;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.month-picker-footer .cancel {
+    background: #ccc;
+    color: black;
+}
+
+/* Tambahkan efek hover */
+.month-picker-footer button:hover {
+    opacity: 0.8;
+}
+

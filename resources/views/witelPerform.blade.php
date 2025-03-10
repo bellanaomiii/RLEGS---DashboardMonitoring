@@ -75,19 +75,32 @@
                         </div>
                     </div>
 
-                    <!-- Periode Content (initially hidden) -->
+                    <!-- Periode Content -->
                     <div class="filter-content" id="periodeContent" style="display: none;">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="periode1" value="2023">
-                            <label class="form-check-label" for="periode1">2023</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="periode2" value="2024">
-                            <label class="form-check-label" for="periode2">2024</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="periode3" value="2025">
-                            <label class="form-check-label" for="periode3">2025</label>
+                        <div class="mb-5 mt-2">
+                            <label for="month_year_picker" class="block text-sm font-medium mb-1"></label>
+                            <div class="month-picker-container relative">
+                                <input type="text" id="month_year_picker" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Pilih Bulan dan Tahun" readonly>
+                                <input type="hidden" name="bulan_month" id="bulan_month" value="{{ date('m') }}">
+                                <input type="hidden" name="bulan_year" id="bulan_year" value="{{ date('Y') }}">
+                                <input type="hidden" name="bulan" id="bulan" value="{{ date('Y-m') }}">
+                                <div id="month_picker" class="month-picker">
+                                    <div class="month-picker-header">
+                                        <div class="year-selector">
+                                            <button type="button" id="prev_year"><i class="fas fa-chevron-left"></i></button>
+                                            <span id="current_year">{{ date('Y') }}</span>
+                                            <button type="button" id="next_year"><i class="fas fa-chevron-right"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="month-grid" id="month_grid">
+                                        <!-- Month items will be populated by JS -->
+                                    </div>
+                                    <div class="month-picker-footer">
+                                        <button type="button" class="cancel" id="cancel_month">BATAL</button>
+                                        <button type="button" class="apply" id="apply_month">OK</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,6 +182,85 @@
 }
 </style>
 
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const monthYearPicker = document.getElementById("month_year_picker");
+    const bulanMonth = document.getElementById("bulan_month");
+    const bulanYear = document.getElementById("bulan_year");
+    const bulan = document.getElementById("bulan");
+    const monthPicker = document.getElementById("month_picker");
+    const monthGrid = document.getElementById("month_grid");
+    const currentYear = document.getElementById("current_year");
+    const prevYear = document.getElementById("prev_year");
+    const nextYear = document.getElementById("next_year");
+    const applyMonth = document.getElementById("apply_month");
+    const cancelMonth = document.getElementById("cancel_month");
+
+    let selectedMonth = new Date().getMonth() + 1;
+    let selectedYear = new Date().getFullYear();
+
+    // Generate month grid
+    function generateMonthGrid() {
+        monthGrid.innerHTML = "";
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+        monthNames.forEach((month, index) => {
+            let monthButton = document.createElement("button");
+            monthButton.classList.add("month-item");
+            monthButton.innerText = month;
+            monthButton.dataset.month = index + 1;
+
+            if (index + 1 === selectedMonth) {
+                monthButton.classList.add("selected");
+            }
+
+            monthButton.addEventListener("click", function () {
+                document.querySelectorAll(".month-item").forEach(btn => btn.classList.remove("selected"));
+                this.classList.add("selected");
+                selectedMonth = parseInt(this.dataset.month);
+            });
+
+            monthGrid.appendChild(monthButton);
+        });
+    }
+
+    // Show month picker
+    monthYearPicker.addEventListener("click", function () {
+        monthPicker.style.display = "block";
+        generateMonthGrid();
+    });
+
+    // Change year
+    prevYear.addEventListener("click", function () {
+        selectedYear--;
+        currentYear.innerText = selectedYear;
+    });
+
+    nextYear.addEventListener("click", function () {
+        selectedYear++;
+        currentYear.innerText = selectedYear;
+    });
+
+    // Apply selected month & year
+    applyMonth.addEventListener("click", function () {
+        const formattedMonth = selectedMonth.toString().padStart(2, "0");
+        const formattedDate = `${formattedMonth}-${selectedYear}`;
+        
+        monthYearPicker.value = formattedDate;
+        bulanMonth.value = formattedMonth;
+        bulanYear.value = selectedYear;
+        bulan.value = `${selectedYear}-${formattedMonth}`;
+
+        monthPicker.style.display = "none";
+    });
+
+    // Cancel picker
+    cancelMonth.addEventListener("click", function () {
+        monthPicker.style.display = "none";
+    });
+});
+
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Filter button toggle

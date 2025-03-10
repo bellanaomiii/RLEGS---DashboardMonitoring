@@ -29,27 +29,23 @@
                 </div>                
                 <ul class="sidebar-nav">
                     <li class="sidebar-item">
-                        <a href="#" class="sidebar-link">
-                            <i class="lni lni-dashboard-square-1"></i>
-                            <span>Overview</span>
+                        <a href="{{ url('dashboard') }}" class="sidebar-link">
+                            <i class="lni lni-dashboard-square-1"></i><span>Data Revenue</span>
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link has-dropdown collapsed" data-bs-toggle="collapse" data-bs-target="#performance" aria-expanded="false" aria-controls="performance">
-                            <i class="lni lni-bar-chart-dollar"></i>
-                            <span>Performansi</span>
+                            <i class="lni lni-bar-chart-dollar"></i><span>Performansi</span>
                         </a>
                         <ul id="performance" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
                             <li class="sidebar-item">
-                                <a href="{{ url('PerformansiWitel') }}" class="sidebar-link">
-                                    <i class="lni lni-react"></i>
-                                    <span>Witel</span>
+                                <a href="{{ url('witel-perform') }}" class="sidebar-link">
+                                    <i class="lni lni-react"></i><span>Witel</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a href="{{ url('leaderboardAM') }}" class="sidebar-link">
-                                    <i class="lni lni-hierarchy-1"></i>
-                                    <span>Leaderboard AM</span>
+                                    <i class="lni lni-hierarchy-1"></i><span>Leaderboard AM</span>
                                 </a>
                             </li>
                         </ul>
@@ -57,33 +53,28 @@
 
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link">
-                            <i class="lni lni-user-multiple-4"></i>
-                            <span>Top LOP</span>
+                            <i class="lni lni-user-multiple-4"></i><span>Top LOP</span>
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link">
-                            <i class="lni lni-chromecast"></i>
-                            <span>Aosodomoro</span>
+                            <i class="lni lni-chromecast"></i><span>Aosodomoro</span>
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link">
-                            <i class="lni lni-target-user"></i>
-                            <span>EDK</span>
+                            <i class="lni lni-target-user"></i><span>EDK</span>
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="#" class="sidebar-link">
-                            <i class="lni lni-gear-1"></i>
-                            <span>Settings</span>
+                            <i class="lni lni-gear-1"></i><span>Settings</span>
                         </a>
                     </li>
                 </ul>
                 <div class="sidebar-footer">
-                    <a href="#" class="sidebar-link">
-                        <i class="lni lni-exit"></i>
-                        <span>Logout</span>
+                    <a href="{{ route('logout') }}" class="sidebar-link">
+                        <i class="lni lni-exit"></i><span>Logout</span>
                     </a>
                 </div>
             </aside>
@@ -137,7 +128,6 @@
         </div>
         <script src="sidebar/script.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
     </body>
 </html>

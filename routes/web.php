@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\RevenueController;
 use App\Http\Controllers\AccountManagerController;
 use App\Http\Controllers\CorporateCustomerController;
@@ -9,14 +10,19 @@ use App\Http\Controllers\AccountManagerExcelController;
 use App\Http\Controllers\CorporateCustomerExcelController;
 use App\Http\Controllers\RevenueExcelController;
 use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return view('auth.login');
 });
 
-// Menghapus route dashboard yang duplikat
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');
+
+// Menampilkan dashboard dengan data Witel dan Divisi
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Menampilkan dashboard dengan data Witel dan Divisi
     Route::get('/dashboard', [RevenueController::class, 'index'])->name('dashboard');
 });
 
@@ -73,6 +79,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/PerformansiWitel', function () {
         return view('witelPerform');
     });
+
+    Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
 });
 
 require __DIR__.'/auth.php';

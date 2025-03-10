@@ -1,4 +1,7 @@
 <x-guest-layout>
+
+    <h1 class="text-2xl font-bold text-center text-black-800 mb-6">Dashboard Monitoring RLEGS</h1>
+
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 

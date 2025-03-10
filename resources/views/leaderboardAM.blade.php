@@ -14,6 +14,9 @@
                             <p class="lead my-1">
                             Dashboard performa pendapatan Account Manager berdasarkan real revenue dan achievement target
                             </p>
+                                Pantau kinerja Account Manager terbaik dengan data terbaru!
+                                Lihat peringkat mereka berdasarkan pencapaian dan performa terkini.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -98,4 +101,7 @@
         </section>
     @endforelse
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 @endsection

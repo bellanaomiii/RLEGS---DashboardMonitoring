@@ -51,14 +51,15 @@ class RevenueController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Gabungkan bulan dan tahun menjadi format Y-m dengan tambahan tanggal 01
-        $bulan = $request->bulan_year . '-' . $request->bulan_month;
+        // Gabungkan bulan dan tahun menjadi format Y-m-d
+        $bulan = $request->bulan_year . '-' . $request->bulan_month . '-01';
 
         try {
             // Cek apakah data sudah ada
             $existingRevenue = Revenue::where('account_manager_id', $request->account_manager_id)
                 ->where('corporate_customer_id', $request->corporate_customer_id)
-                ->where('bulan', $bulan)
+                ->whereYear('bulan', $request->bulan_year)
+                ->whereMonth('bulan', $request->bulan_month)
                 ->first();
 
             if ($existingRevenue) {
@@ -70,13 +71,13 @@ class RevenueController extends Controller
 
                 $message = 'Data Revenue berhasil diperbarui.';
             } else {
-                // Buat data baru dengan menggunakan DB::raw untuk date format
+                // Buat data baru dengan format bulan yang benar (YYYY-MM-DD)
                 Revenue::create([
                     'account_manager_id' => $request->account_manager_id,
                     'corporate_customer_id' => $request->corporate_customer_id,
                     'target_revenue' => $request->target_revenue,
                     'real_revenue' => $request->real_revenue,
-                    'bulan' => DB::raw("DATE_FORMAT('{$bulan}-01', '%Y-%m')") // Ensure DB treats it as a date format
+                    'bulan' => $bulan
                 ]);
 
                 $message = 'Data Revenue berhasil ditambahkan.';
@@ -152,19 +153,19 @@ class RevenueController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Gabungkan bulan dan tahun menjadi format Y-m
-        $bulan = $request->bulan_year . '-' . $request->bulan_month;
+        // Gabungkan bulan dan tahun menjadi format Y-m-d
+        $bulan = $request->bulan_year . '-' . $request->bulan_month . '-01';
 
         try {
             $revenue = Revenue::findOrFail($id);
 
-            // Update data revenue dengan DB::raw untuk memastikan format tanggal
+            // Update data revenue dengan format tanggal yang benar
             $revenue->update([
                 'account_manager_id' => $request->account_manager_id,
                 'corporate_customer_id' => $request->corporate_customer_id,
                 'target_revenue' => $request->target_revenue,
                 'real_revenue' => $request->real_revenue,
-                'bulan' => DB::raw("DATE_FORMAT('{$bulan}-01', '%Y-%m')") // Ensure DB treats it as a date format
+                'bulan' => $bulan
             ]);
 
             if ($request->ajax()) {

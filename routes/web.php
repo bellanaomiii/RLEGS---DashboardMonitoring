@@ -8,6 +8,7 @@ use App\Http\Controllers\CorporateCustomerController;
 use App\Http\Controllers\AccountManagerExcelController;
 use App\Http\Controllers\CorporateCustomerExcelController;
 use App\Http\Controllers\RevenueExcelController;
+use App\Http\Controllers\LeaderboardController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -62,13 +63,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/corporate-customer/import', [CorporateCustomerExcelController::class, 'import'])->name('corporate_customer.import');
     Route::get('/corporate-customer/template', [CorporateCustomerExcelController::class, 'downloadTemplate'])->name('corporate_customer.template');
 
+    Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
+
     // Sidebar dan leaderboard routes
     Route::get('/sidebarpage', function () {
         return view('layouts.sidebar');
-    });
-
-    Route::get('/leaderboardAM', function () {
-        return view('leaderboardAM');
     });
 
     Route::get('/PerformansiWitel', function () {

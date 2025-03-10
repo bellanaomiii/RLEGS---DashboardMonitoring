@@ -124,7 +124,7 @@
                                 <td class="px-4 py-2">{{ $revenue->corporateCustomer->nama }}</td>
                                 <td class="px-4 py-2">{{ number_format($revenue->target_revenue, 0, ',', '.') }}</td>
                                 <td class="px-4 py-2">{{ number_format($revenue->real_revenue, 0, ',', '.') }}</td>
-                                <td class="px-4 py-2">{{ \Carbon\Carbon::parse($revenue->bulan . '-01')->format('F Y') }}</td>
+                                <td class="px-4 py-2">{{ \Carbon\Carbon::parse($revenue->bulan)->format('F Y') }}</td>
                                 <td class="px-4 py-2">
                                     <a href="{{ route('revenue.edit', $revenue->id) }}" class="text-blue-600 hover:underline">Edit</a> |
                                     <form action="{{ route('revenue.destroy', $revenue->id) }}" method="POST" style="display:inline;" class="delete-form">

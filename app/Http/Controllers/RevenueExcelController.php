@@ -7,6 +7,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\RevenueImport;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Models\AccountManager;
+use App\Models\CorporateCustomer;
 
 class RevenueExcelController extends Controller
 {
@@ -33,7 +35,7 @@ class RevenueExcelController extends Controller
             $importedCount = $results['imported'];
             $duplicateCount = $results['duplicates'];
             $errorCount = $results['errors'];
-            $errorDetails = $results['error_details'];
+            $errorDetails = $results['error_details'] ?? [];
 
             $message = "$importedCount data Revenue berhasil diimpor.";
             if ($duplicateCount > 0) {
@@ -105,11 +107,20 @@ class RevenueExcelController extends Controller
      */
     public function downloadTemplate()
     {
-        // Cek apakah file template sudah ada
-        $filePath = public_path('templates/Template_Revenue.xlsx');
+        try {
+            // Cek apakah file template sudah ada
+            $filePath = public_path('templates/Template_Revenue.xlsx');
+            $templateDirectory = public_path('templates');
 
-        // Jika file belum ada, generate template
-        if (!file_exists($filePath)) {
+            // Create the directory if it doesn't exist
+            if (!file_exists($templateDirectory)) {
+                mkdir($templateDirectory, 0755, true);
+            }
+
+            // Dapatkan beberapa contoh Account Manager dan Corporate Customer yang ada di database
+            $accountManagerExample = AccountManager::first() ? AccountManager::first()->nama : 'Nama Account Manager';
+            $corporateCustomerExample = CorporateCustomer::first() ? CorporateCustomer::first()->nama : 'Nama Corporate Customer';
+
             // Create example Excel template
             $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
@@ -122,11 +133,18 @@ class RevenueExcelController extends Controller
             $sheet->setCellValue('E1', 'bulan');
 
             // Add example data
-            $sheet->setCellValue('A2', 'Nama Account Manager');
-            $sheet->setCellValue('B2', 'Nama Corporate Customer');
+            $sheet->setCellValue('A2', $accountManagerExample);
+            $sheet->setCellValue('B2', $corporateCustomerExample);
             $sheet->setCellValue('C2', '100000000');
             $sheet->setCellValue('D2', '95000000');
             $sheet->setCellValue('E2', '01/2023');
+
+            // Add notes
+            $sheet->setCellValue('A4', 'Catatan:');
+            $sheet->setCellValue('A5', '- Kolom account_manager harus sama persis dengan nama Account Manager yang ada di database');
+            $sheet->setCellValue('A6', '- Kolom corporate_customer harus sama persis dengan nama Corporate Customer yang ada di database');
+            $sheet->setCellValue('A7', '- Format bulan adalah MM/YYYY (contoh: 01/2023 untuk Januari 2023)');
+            $sheet->setCellValue('A8', '- Data tidak boleh duplikat (kombinasi account_manager, corporate_customer, dan bulan harus unik)');
 
             // Style the header
             $sheet->getStyle('A1:E1')->getFont()->setBold(true);
@@ -134,25 +152,30 @@ class RevenueExcelController extends Controller
                 ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()->setRGB('DDEBF7');
 
+            // Style the notes
+            $sheet->getStyle('A4')->getFont()->setBold(true);
+            $sheet->mergeCells('A5:E5');
+            $sheet->mergeCells('A6:E6');
+            $sheet->mergeCells('A7:E7');
+            $sheet->mergeCells('A8:E8');
+
             // Auto-size columns
             foreach(range('A','E') as $column) {
                 $sheet->getColumnDimension($column)->setAutoSize(true);
             }
 
-            // Create the directory if it doesn't exist
-            if (!file_exists(public_path('templates'))) {
-                mkdir(public_path('templates'), 0755, true);
-            }
-
             // Save the file
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             $writer->save($filePath);
-        }
 
-        if (file_exists($filePath)) {
-            return response()->download($filePath);
-        } else {
-            return redirect()->route('dashboard')->with('error', 'Template tidak ditemukan.');
+            if (file_exists($filePath)) {
+                return response()->download($filePath);
+            } else {
+                return redirect()->route('dashboard')->with('error', 'Template tidak dapat dibuat.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Error generating template: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Gagal membuat template: ' . $e->getMessage());
         }
     }
 }

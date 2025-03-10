@@ -20,8 +20,6 @@ Route::get('/logout', function () {
     return redirect('/');
 })->name('logout');
 
-Route::get('/index', [UserController::class, 'index'])->name('index');
-
 
 // Menghapus route dashboard yang duplikat
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -81,9 +79,8 @@ Route::middleware('auth')->group(function () {
         return view('leaderboardAM');
     });
 
-    Route::get('/PerformansiWitel', function () {
-        return view('witelPerform');
-    });
+    Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
+
 });
 
 require __DIR__.'/auth.php';

@@ -94,7 +94,30 @@
             </div>
         </div>
     </div>
+
+    <div class="container px-4 mx-auto mt-5">
+        <div class="p-6 bg-white rounded shadow">
+            <h2 class="text-xl font-semibold mb-4">Grafik Performa Witel</h2>
+    
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-50 rounded">
+                    {!! $lineChart->container() !!}
+                </div>
+    
+                <div class="p-4 bg-gray-50 rounded">
+                    {!! $radialChart->container() !!}
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
+
+{{-- Load Chart Scripts --}}
+<script src="{{ $lineChart->cdn() }}"></script>
+<script src="{{ $radialChart->cdn() }}"></script>
+
+{{ $lineChart->script() }}
+{{ $radialChart->script() }}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="sidebar/script.js"></script>

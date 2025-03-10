@@ -421,4 +421,15 @@ a.sidebar-link:hover {
     z-index: 1060;
 }
 
+#main-content {
+    margin-left: 20px; 
+    padding: 45px;
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 70px);
+}
 
+
+#sidebar.expand + #main-content {
+    margin-left: 30px; 
+    width: calc(100% - 90px);
+}

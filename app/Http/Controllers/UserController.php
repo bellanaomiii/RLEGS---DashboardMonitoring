@@ -10,7 +10,7 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(RLEGSChart $chart)
+    public function witelPerform(RLEGSChart $chart)
     {
         return view('witelPerform', [
             'lineChart' => $chart->buildLineChart(),

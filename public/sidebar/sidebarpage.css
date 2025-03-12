@@ -296,86 +296,40 @@ a.sidebar-link:hover {
     right: 0;
 }
 
-.main-container{
+.main-container {
     position: relative;
     margin-top: 80px;
     margin-left: 50px;
+    margin-right: 50px;
 }
 
-.tab-nav-bar{
-    position: relative;
+.regions-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
     margin: 65px 10px 40px 10px;
 }
 
-.tab-navigation{
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    max-width: fit-content;
-    margin: 0 auto;
-}
-
-.tab-menu{
-    color: #fdfdfd;
-    list-style: none;
+.region-box {
     background: #0e223e;
-    max-width: 800px;
-    padding: 10px;
-    white-space: nowrap;
-    border-bottom: 1px solid (var(#0e223e));
-    border-radius: 50px;
-    box-shadow: #0e223e;
-    overflow-x: auto;
-    user-select: none;
-    scroll-behavior: unset;
-}
-
-.tab-menu::-webkit-scrollbar{
-    display: none;
-}
-
-.tab-btn{
-    display: inline-block;
-    font-size: 1em;
-    font-weight: 400;
-    margin: 0 2px;
-    padding: 10px 20px;
-    border-radius: 30px;
+    color: #fdfdfd;
+    padding: 10px 15px;
+    border-radius: 10px;
+    text-align: center;
     cursor: pointer;
-    user-select: none;
     transition: 0.3s ease;
+    width: calc(25% - 70px);
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.tab-btn:hover{
+.region-box:hover {
     background-color: #1a3a66;
 }
 
-.tab-btn.active{
+.region-box.active {
     background: #3b7ddd;
-}
-
-.left-btn, .right-btn{
-    position: absolute;
-    font-size: 1.2em;
-    padding: 10px;
-    cursor: pointer;
-    color: #ffff;
-}
-
-.left-btn{
-    left: 0;
-    background: linear-gradient(to left, transparent, 50%);
-    border-top-left-radius: 30px;
-    border-bottom-left-radius: 30px;
-    display: none;
-}
-
-.right-btn{
-    right: 0;
-    background: linear-gradient(to right, transparent, 50%);
-    border-top-right-radius: 30px;
-    border-bottom-right-radius: 30px;
 }
 
 .form-check-input {
@@ -542,3 +496,47 @@ a.sidebar-link:hover {
     opacity: 0.8;
 }
 
+/* Styling untuk select agar menjadi dropdown */
+#filterSelect2 {
+    /* Pastikan hanya menampilkan satu baris */
+    height: auto;
+    max-height: 38px;
+    overflow: hidden;
+    
+    /* Styling dasar */
+    background-color: #1e2a4a;
+    color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 12px;
+    width: 100%;
+    
+    /* Tambahkan ikon dropdown */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 10px) center;
+    background-size: 12px;
+    
+    /* Behavior pada klik */
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+  
+  /* Styling untuk dropdown ketika dibuka */
+  #filterSelect2:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(30, 42, 74, 0.5);
+  }
+  
+  /* Styling untuk opsi */
+  #filterSelect2 option {
+    padding: 8px 12px;
+  }
+  
+  /* Styling untuk opsi terpilih */
+  #filterSelect2 option:checked,
+  #filterSelect2 option:selected {
+    color: white;
+  }

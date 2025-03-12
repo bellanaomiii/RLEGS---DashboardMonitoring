@@ -5,22 +5,15 @@
 @section('content')
 <section>
     <section class="main-container">
-        <div class="tab-nav-bar">
-            <div class="tab-navigation">
-                <i class="fas fa-angle-left left-btn"></i>
-                <i class="fas fa-angle-right right-btn"></i>
-
-                <div class="tab-menu">
-                    <li class="tab-btn active">Suramadu</li>
-                    <li class="tab-btn">Nusa Tenggara</li>
-                    <li class="tab-btn">Jatim Barat</li>
-                    <li class="tab-btn">Yogya Jateng Selatan</li>
-                    <li class="tab-btn">Bali</li>
-                    <li class="tab-btn">Semarang Jateng Utara</li>
-                    <li class="tab-btn">Solo Jateng Timur</li>
-                    <li class="tab-btn">Jatim Timur</li>
-                </div>
-            </div>
+        <div class="regions-container">
+            <div class="region-box active">Suramadu</div>
+            <div class="region-box">Nusa Tenggara</div>
+            <div class="region-box">Jatim Barat</div>
+            <div class="region-box">Yogya Jateng Selatan</div>
+            <div class="region-box">Bali</div>
+            <div class="region-box">Semarang Jateng Utara</div>
+            <div class="region-box">Solo Jateng Timur</div>
+            <div class="region-box">Jatim Timur</div>
         </div>
     </section>
 

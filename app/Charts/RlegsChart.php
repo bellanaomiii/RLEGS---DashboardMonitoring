@@ -10,19 +10,18 @@ class RLEGSChart
     {
         return (new LarapexChart)
             ->setTitle('Revenue Witel')
-            ->setSubtitle('Total Revenue Witel')
             ->setType('line') 
-            ->setXAxis(['Jan', 'Feb', 'Mar', 'Apr'])
+            ->setXAxis(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Juni', 'Juli','Ags', 'Sept', 'Okt', 'Nov', 'Des'])
             ->setHeight(280)
             ->setDataset([
                 [
-                    'name' => 'Pengguna Baru',
-                    'data' => [5, 15, 10, 20]
+                    'name' => 'Real Revenue',
+                    'data' => [200000000, 400000000, 600000000, 800000000, 1000000000]
                 ],
                 [
-                    'name' => 'Pengguna Lama',
-                    'data' => [10, 30, 17, 15]
-                ]
+                    'name' => 'Target Revenue',
+                    'data' => [300000000, 200000000, 500000000, 900000000, 800000000]
+                ],
             ]);
     }
 

@@ -41,24 +41,48 @@
         </div>
 
         <div class="container d-flex justify-content-end float-end">
-            <form id="filterForm" action="{{ route('leaderboard') }}" method="GET" class="col-md-9 col-lg-5 ms-auto float-end">
-                <label>Filter by</label>
-                <!-- Add data-live-search="true" to enable search box -->
-                <select class="form-control" id="filterSelect" name="filter_by[]" multiple data-live-search="true" onchange="this.form.submit()">
-                    <option disabled>Select One or More</option>
-                    <option value="Revenue Realisasi Tertinggi" {{ in_array('Revenue Realisasi Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
+            <div class="col-md-9 col-lg-5 ms-auto float-end">
+              <label>Filter by</label>
+              <div class="row">
+                <div class="col-6">
+                  <form id="filterForm" action="{{ route('leaderboard') }}" method="GET">
+                    <select class="form-control" id="filterSelect" name="filter_by[]" multiple data-live-search="true" onchange="this.form.submit()">
+                      <option disabled>Select One or More</option>
+                      <option value="Revenue Realisasi Tertinggi" {{ in_array('Revenue Realisasi Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
                         Revenue Realisasi Tertinggi
-                    </option>
-                    <option value="Achievement Tertinggi" {{ in_array('Achievement Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
+                      </option>
+                      <option value="Achievement Tertinggi" {{ in_array('Achievement Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
                         Achievement Tertinggi
-                    </option>
-                </select>
-                
-                @if(!empty(request('search')))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
-                @endif
-            </form>
+                      </option>
+                    </select>
+                    @if(!empty(request('search')))
+                      <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                  </form>
+                </div>
+                <div class="col-6">
+                    <form id="filterForm2" action="{{ route('leaderboard') }}" method="GET">
+                      <select class="form-control" id="filterSelect2" name="region_filter[]" multiple data-live-search="true" onchange="this.form.submit()">
+                        <option disabled>Select One Witel</option>
+                        <option value="Suramadu">Suramadu</option>
+                        <option value="Nusa Tenggara">Nusa Tenggara</option>
+                        <option value="Jatim Barat">Jatim Barat</option>
+                        <option value="Yogya Jateng Selatan">Yogya Jateng Selatan</option>
+                        <option value="Bali">Bali</option>
+                        <option value="Semarang Jateng Utara">Semarang Jateng Utara</option>
+                        <option value="Solo Jateng Timur">Solo Jateng Timur</option>
+                        <option value="Jatim Timur">Jatim Timur</option>
+                      </select>
+                      @if(!empty(request('search')))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                      @endif
+                    </form>
+                  </div>
+              </div>
+            </div>
+          </div>
         </div>
+        
     </section>
 
     {{-- Leaderboard AM --}}
@@ -126,11 +150,13 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/js/bootstrap-select.min.js"></script>
 
+
 <!-- Inisialisasi Bootstrap Select dengan fix untuk duplikasi dan searchbox -->
 <script>
-    $(document).ready(function() {
-        // Remove any duplicate options before initializing
-        const select = document.getElementById('filterSelect');
+$(document).ready(function() {
+    // Function to remove duplicate options
+    function removeDuplicates(elementId) {
+        const select = document.getElementById(elementId);
         const optionsSet = new Set();
         
         Array.from(select.options).forEach(option => {
@@ -143,15 +169,22 @@
                 optionsSet.add(value);
             }
         });
-        
-        // Initialize Bootstrap Select after cleaning duplicates
-        $('#filterSelect').selectpicker({
-            liveSearch: true,           // Enable search box
-            actionsBox: false,          // Disable actions box (Pilih Semua/Hapus Semua)
-            liveSearchPlaceholder: 'Search filter options...',
-            size: 5                     // Show 5 items in dropdown
-        });
+    }
+    
+    // Remove duplicates for both selects
+    removeDuplicates('filterSelect');
+    removeDuplicates('filterSelect2');
+    
+    // Initialize Bootstrap Select for both selects with the same configuration
+    $('#filterSelect, #filterSelect2').selectpicker({
+        liveSearch: true,           // Enable search box
+        actionsBox: false,          // Disable actions box (Pilih Semua/Hapus Semua)
+        liveSearchPlaceholder: 'Search filter options...',
+        size: 5                     // Show 5 items in dropdown
     });
+    
+    // Add console log to debug
+    console.log('Bootstrap-select initialization complete for both selects');
+});
 </script>
-
 @endsection

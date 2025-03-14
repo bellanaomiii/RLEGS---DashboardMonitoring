@@ -4,15 +4,18 @@
 
 @section('content')
 <div class="main">
-    <section class="container-leaderboard p-2">
-        <div class="container-fluid rounded-4 mt-2">
+    <section class="container-leaderboard p-4">
+        <div class="container-fluid rounded-4 mt-4">
             <div class="row g-4 flex-column">
                 <div class="col-12">
-                    <div class="bg-custom card text-white">
-                        <div class="card-body align-items-center gap-2">
-                            <h1>Leaderboard Performa <br> Account Manager</h1>
-                            <p class="lead my-1">
-                            Dashboard performa pendapatan Account Manager berdasarkan real revenue dan achievement target
+                    <div class="card bg-custom text-white shadow-lg">
+                        <div class="card-body text-center">
+                            <h1 class="fw-bold text-uppercase">Leaderboard Performa</h1>
+                            <h2 class="fw-semibold">Account Manager</h2>
+                            <p class="lead mt-3">
+                                Dashboard performa pendapatan Account Manager berdasarkan 
+                                <span class="fw-bold text-warning">real revenue</span> 
+                                dan <span class="fw-bold text-success">achievement target</span>
                             </p>
                         </div>
                     </div>
@@ -20,6 +23,7 @@
             </div>
         </div>
     </section>
+    
 
     <section class="d-flex justify-content-between align-items-center">
         <div class="container d-flex justify-content-start float-start">
@@ -44,7 +48,7 @@
     {{-- Leaderboard AM --}}
     @forelse($accountManagers as $index => $am)
         <section class="container-leaderboard p-2">
-            <div class="container-fluid rounded-4 ms-0">
+            <div class="container-fluid rounded-4">
                 <div class="row g-4 flex-column">
                     <div class="col-12">
                         <div class="card bg-white text-black">

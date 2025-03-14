@@ -21,9 +21,9 @@
             <aside id="sidebar">
                 <div class="d-flex">
                     <button id="toggle-btn" type="button">
-                        <img src="{{ asset('img/LogoTelkom.png') }}" class="avatar rounded-circle" alt="Logo" width="45" height="45" style="margin-left: -10px">
+                        <img src="{{ asset('img/logo-outline.png') }}" class="avatar rounded-circle" alt="Logo" width="35" height="35" style="margin-left: 1px">
                     </button>
-                    <div class="sidebar-logo">
+                    <div class="sidebar-logo mt-4" style="margin-left: -18px;">
                         <a href="#">RLEGS</a>
                     </div>
                 </div>                

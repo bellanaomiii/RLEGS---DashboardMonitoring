@@ -36,7 +36,7 @@
         <div class="container d-flex justify-content-start float-start">
             <form action="{{ route('leaderboard') }}" method="GET" class="col-md-7 col-lg-5 d-flex p-2 float-start">
                 <input class="form-control me-2" type="search" name="search" placeholder="Search Name" value="{{ request('search') }}">
-                <button class="btn btn-outline-info" type="submit">Go</button>
+                <button class="btn gradient-btn" type="submit">Go</button>
             </form>
         </div>
 
@@ -94,14 +94,15 @@
                         <div class="card bg-white text-black">
                             <div class="card-body d-flex align-items-center gap-3">
                                 @if($index == 0)
-                                    <img src="{{ asset('img/rank1.png') }}" width="35">
+                                <p class="ms-4 fs-6 fw-bold text-gold">1</p>
                                 @elseif($index == 1)
-                                    <img src="{{ asset('img/rank2.png') }}" width="35">
+                                <p class="ms-4 fs-6 fw-bold text-silver">2</p>
                                 @elseif($index == 2)
-                                    <img src="{{ asset('img/rank3.png') }}" width="35">
+                                <p class="ms-4 fs-6 fw-bold text-bronze">3</p>
                                 @else
-                                    <p class="ms-4 fs-6">{{ $index + 1 }}</p>
+                                <p class="ms-4 fs-6">{{ $index + 1 }}</p>
                                 @endif
+                                
 
                                 <img src="{{ asset('img/profile.png') }}" width="55">
                                 <div>

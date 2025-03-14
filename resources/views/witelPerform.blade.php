@@ -17,6 +17,54 @@
         </div>
     </section>
 
+    {{-- <div class="row">
+        <div class="col-sm-6 mb-3 mb-sm-0">
+            <input type="text" class="form-control date-range-picker" data-coreui-toggle="date-range-picker" data-coreui-start-date="2022/08/03" data-coreui-end-date="2022/08/17" data-coreui-locale="en-US">
+        </div>    
+        <div class="col-sm-6">
+            <input type="text" class="form-control date-range-picker" data-coreui-start-date="2022/08/03" data-coreui-end-date="2022/08/17" data-coreui-locale="en-US">
+        </div>
+    </div> --}}
+
+    <div class="row">
+        <div class="col-sm-6 mb-3 mb-sm-0">
+            <div
+                data-coreui-start-date="2022/08/03"
+                data-coreui-end-date="2022/08/17"
+                data-coreui-locale="en-US"
+                data-coreui-toggle="date-range-picker">
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div
+                data-coreui-start-date="2022/08/03"
+                data-coreui-end-date="2022/09/17"
+                data-coreui-locale="en-US"
+                data-coreui-toggle="date-range-picker">
+            </div>
+        </div>
+    </div>
+    
+
+    {{--   <div class="row">
+    <div class="col-sm-6 mb-3 mb-sm-0">
+      <div
+        data-coreui-footer="true"
+        data-coreui-locale="en-US"
+        data-coreui-toggle="date-range-picker">
+      </div>
+    </div>
+    <div class="col-sm-6">
+      <div
+        data-coreui-start-date="2022/08/03"
+        data-coreui-end-date="2022/09/17"
+        data-coreui-footer="true"
+        data-coreui-locale="en-US"
+        data-coreui-toggle="date-range-picker">
+      </div>
+    </div>
+  </div> --}}
+    
     <!-- Filter Button and Content -->
     <div class="container d-flex justify-content-end mt-5">
         <div class="filter-container">
@@ -34,7 +82,7 @@
                     <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary active filter-tab-btn" data-target="tregContent">TREG HO</button>
                         <button type="button" class="btn btn-outline-primary filter-tab-btn" data-target="divisiContent">Divisi</button>
-                        <button type="button" class="btn btn-outline-primary filter-tab-btn" data-target="periodeContent">Periode</button>
+                        {{-- <button type="button" class="btn btn-outline-primary filter-tab-btn" data-target="periodeContent">Periode</button> --}}
                     </div>
                 </div>
 
@@ -67,11 +115,11 @@
                             <label class="form-check-label" for="divisi3">DSS</label>
                         </div>
                     </div>
-
-                    <!-- Periode Content -->
+        
+                    {{-- <!-- Periode Content -->
                     <div class="filter-content" id="periodeContent" style="display: none;">
                         <div class="mb-5 mt-2">
-                            <label for="month_year_picker" class="block text-sm font-medium mb-1"></label>
+                            {{-- <label for="month_year_picker" class="block text-sm font-medium mb-1"></label>
                             <div class="month-picker-container relative">
                                 <input type="text" id="month_year_picker" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Pilih Bulan dan Tahun" readonly>
                                 <input type="hidden" name="bulan_month" id="bulan_month" value="{{ date('m') }}">
@@ -93,9 +141,9 @@
                                         <button type="button" class="apply" id="apply_month">OK</button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                            </div> --}}
+                        {{-- </div>
+                    </div> --}} 
                 </div>
             </div>
         </div>
@@ -126,6 +174,9 @@
 {{ $radialChart->script() }}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@4.2.0/dist/js/coreui.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@coreui/coreui-datepicker@1.0.0/dist/js/coreui-datepicker.min.js"></script>
+
 <script src="sidebar/script.js"></script>
 
 <style>
@@ -175,85 +226,7 @@
 }
 </style>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-    const monthYearPicker = document.getElementById("month_year_picker");
-    const bulanMonth = document.getElementById("bulan_month");
-    const bulanYear = document.getElementById("bulan_year");
-    const bulan = document.getElementById("bulan");
-    const monthPicker = document.getElementById("month_picker");
-    const monthGrid = document.getElementById("month_grid");
-    const currentYear = document.getElementById("current_year");
-    const prevYear = document.getElementById("prev_year");
-    const nextYear = document.getElementById("next_year");
-    const applyMonth = document.getElementById("apply_month");
-    const cancelMonth = document.getElementById("cancel_month");
 
-    let selectedMonth = new Date().getMonth() + 1;
-    let selectedYear = new Date().getFullYear();
-
-    // Generate month grid
-    function generateMonthGrid() {
-        monthGrid.innerHTML = "";
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-
-        monthNames.forEach((month, index) => {
-            let monthButton = document.createElement("button");
-            monthButton.classList.add("month-item");
-            monthButton.innerText = month;
-            monthButton.dataset.month = index + 1;
-
-            if (index + 1 === selectedMonth) {
-                monthButton.classList.add("selected");
-            }
-
-            monthButton.addEventListener("click", function () {
-                document.querySelectorAll(".month-item").forEach(btn => btn.classList.remove("selected"));
-                this.classList.add("selected");
-                selectedMonth = parseInt(this.dataset.month);
-            });
-
-            monthGrid.appendChild(monthButton);
-        });
-    }
-
-    // Show month picker
-    monthYearPicker.addEventListener("click", function () {
-        monthPicker.style.display = "block";
-        generateMonthGrid();
-    });
-
-    // Change year
-    prevYear.addEventListener("click", function () {
-        selectedYear--;
-        currentYear.innerText = selectedYear;
-    });
-
-    nextYear.addEventListener("click", function () {
-        selectedYear++;
-        currentYear.innerText = selectedYear;
-    });
-
-    // Apply selected month & year
-    applyMonth.addEventListener("click", function () {
-        const formattedMonth = selectedMonth.toString().padStart(2, "0");
-        const formattedDate = `${formattedMonth}-${selectedYear}`;
-        
-        monthYearPicker.value = formattedDate;
-        bulanMonth.value = formattedMonth;
-        bulanYear.value = selectedYear;
-        bulan.value = `${selectedYear}-${formattedMonth}`;
-
-        monthPicker.style.display = "none";
-    });
-
-    // Cancel picker
-    cancelMonth.addEventListener("click", function () {
-        monthPicker.style.display = "none";
-    });
-});
-
-</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Filter button toggle
@@ -294,6 +267,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!filterPanel.contains(event.target) && event.target !== filterButton) {
             filterPanel.style.display = 'none';
         }
+    });
+});
+</script>
+
+<script>
+const dateRangePickerElementList = Array.prototype.slice.call(document.querySelectorAll('.date-range-picker'));
+const dateRangePickerList = dateRangePickerElementList.map(dateRangePickerEl => {
+    return new coreui.DateRangePicker(dateRangePickerEl);
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateRangePickerElementList = Array.prototype.slice.call(document.querySelectorAll('[data-coreui-toggle="date-range-picker"]'));
+    const dateRangePickerList = dateRangePickerElementList.map(dateRangePickerEl => {
+        return new coreui.DateRangePicker(dateRangePickerEl);
     });
 });
 </script>

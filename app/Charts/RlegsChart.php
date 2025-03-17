@@ -25,15 +25,35 @@ class RLEGSChart
             ]);
     }
 
-    public function buildRadialChart(): LarapexChart
+    public function buildComparisonBarChart(): LarapexChart
     {
         return (new LarapexChart)
-            ->setTitle('Passing effectiveness')
-            ->setSubtitle('Barcelona city vs Madrid sports')
-            ->setType('radialBar')
+            ->setTitle('San Francisco vs Boston')
+            ->setSubtitle('Wins during season 2021')
+            ->setType('bar')
             ->setHeight(280)
-            ->setDataset([75, 60])
-            ->setLabels(['Barcelona city', 'Madrid sports'])
-            ->setColors(['#D32F2F', '#03A9F4']);
+            ->setDataset([
+                [
+                    'name' => 'San Francisco',
+                    'data' => [6, 9, 3, 4, 10, 8]
+                ],
+                [
+                    'name' => 'Boston',
+                    'data' => [7, 3, 8, 2, 6, 4]
+                ]
+            ])
+            ->setXAxis(['January', 'February', 'March', 'April', 'May', 'June'])
+            ->setGrid(false);
     }
+
+    public function buildDonutChart(): LarapexChart
+    {
+        return (new LarapexChart)
+            ->setTitle('Top 3 Scorers of the Team')
+            ->setSubtitle('Season 2021')
+            ->setType('donut') // Menentukan tipe chart
+            ->setDataset([20, 24, 30]) // Menggunakan setDataset() yang benar
+            ->setLabels(['Player 7', 'Player 10', 'Player 9']);
+    }
+    
 }

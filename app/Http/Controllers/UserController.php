@@ -14,7 +14,8 @@ class UserController extends Controller
     {
         return view('witelPerform', [
             'lineChart' => $chart->buildLineChart(),
-            'radialChart' => $chart->buildRadialChart()
+            'barChart' => $chart->buildComparisonBarChart(),
+            'donutChart' => $chart -> buildDonutChart()
         ]);
     }
 

@@ -149,29 +149,56 @@
         </div>
     </div>
 
-    <div class="container px-4 mx-auto mt-5">
-        <div class="p-6 bg-white rounded shadow">
-            <h2 class="text-xl font-semibold mb-4">Grafik Performa Witel</h2>
-    
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-4 bg-gray-50 rounded">
-                    {!! $lineChart->container() !!}
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="overview-container">
+                    <div class="overview-box active">Overview RLEGS</div>
+                    <div class="overview-box">Overview DPS</div>
+                    <div class="overview-box">Overview DGS</div>
+                    <div class="overview-box">Overview DSS</div>
                 </div>
-    
-                <div class="p-4 bg-gray-50 rounded">
-                    {!! $radialChart->container() !!}
+            </div>
+            
+            <div class="col-md-8">
+                <div class="p-6 bg-white rounded shadow">
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-4">
+                            <div class="p-4 bg-gray-50 rounded">
+                                {!! $lineChart->container() !!}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="p-4 bg-gray-50 rounded">
+                                {!! $donutChart->container() !!}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-4 mb-4">
+                        <div class="col-12">
+                            <div class="p-4 bg-gray-50 rounded">
+                                {!! $barChart->container() !!}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    
 </section>
 
-{{-- Load Chart Scripts --}}
 <script src="{{ $lineChart->cdn() }}"></script>
-<script src="{{ $radialChart->cdn() }}"></script>
+<script src="{{ $barChart->cdn() }}"></script>
+<script src="{{ $donutChart->cdn() }}"></script>
+
 
 {{ $lineChart->script() }}
-{{ $radialChart->script() }}
+{{ $barChart->script() }} 
+{{ $donutChart->script() }}
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@4.2.0/dist/js/coreui.bundle.min.js"></script>

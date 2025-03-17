@@ -384,6 +384,26 @@ a.sidebar-link:hover {
     background: #3b7ddd;
 }
 
+.overview-box {
+    margin-top: 10px;
+    margin-left: 45px;
+    background: #0e223e;
+    color: #fdfdfd;
+    padding: 75px 85px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    width: calc(25% - 30px);
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    height: 200px; 
+}
+
+
 .form-check-input {
     display: block !important;
     visibility: visible !important;

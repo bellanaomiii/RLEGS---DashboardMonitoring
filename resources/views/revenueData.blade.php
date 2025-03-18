@@ -6,6 +6,8 @@
     <!-- Menyertakan dashboard.css langsung di sini -->
     <link href="{{ asset('css/dashboard.css') }}" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 @endsection
 
 @section('content')
@@ -14,6 +16,13 @@
 
     <!-- Snackbar untuk notifikasi -->
     <div id="snackbar" class="hidden"></div>
+
+    <!-- Error Message Display -->
+    @if(session('error'))
+    <div class="error-alert">
+        <i class="fas fa-exclamation-circle mr-2"></i> {{ session('error') }}
+    </div>
+    @endif
 
     <!-- Form Tambah Data Revenue -->
     <div class="card p-4 mb-4 border rounded-lg shadow-md">
@@ -27,7 +36,7 @@
                 <input type="text" id="account_manager" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Cari Account Manager..." required>
                 <input type="hidden" name="account_manager_id" id="account_manager_id">
                 <div id="account_manager_suggestions" class="suggestions-container"></div>
-                <p><a href="#" data-bs-toggle="modal" data-bs-target="#addAccountManagerModal" class="text-blue-600 hover:underline text-sm">Tambah Account Manager Baru</a></p>
+                <p><a href="#" data-bs-toggle="modal" data-bs-target="#addAccountManagerModal" class="text-blue-600 hover:underline text-sm"><i class="fas fa-plus-circle"></i> Tambah Account Manager Baru</a></p>
             </div>
 
             <!-- Nama Corporate Customer -->
@@ -36,7 +45,7 @@
                 <input type="text" id="corporate_customer" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Cari Corporate Customer..." required>
                 <input type="hidden" name="corporate_customer_id" id="corporate_customer_id">
                 <div id="corporate_customer_suggestions" class="suggestions-container"></div>
-                <p><a href="#" data-bs-toggle="modal" data-bs-target="#addCorporateCustomerModal" class="text-blue-600 hover:underline text-sm">Tambah Corporate Customer Baru</a></p>
+                <p><a href="#" data-bs-toggle="modal" data-bs-target="#addCorporateCustomerModal" class="text-blue-600 hover:underline text-sm"><i class="fas fa-plus-circle"></i> Tambah Corporate Customer Baru</a></p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -51,22 +60,23 @@
                     <label for="real_revenue" class="block text-sm font-medium mb-1">Real Revenue</label>
                     <input type="number" class="form-control w-full px-4 py-2 border rounded-lg" name="real_revenue" id="real_revenue" placeholder="Masukkan real revenue" required>
                 </div>
+                
             </div>
 
             <!-- Bulan Capaian -->
             <div class="mb-4">
                 <label for="month_year_picker" class="block text-sm font-medium mb-1">Bulan Capaian</label>
-                <div class="relative">
+                <div class="month-picker-container relative">
                     <input type="text" id="month_year_picker" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Pilih Bulan dan Tahun" readonly>
-                    <input type="hidden" name="bulan_month" id="bulan_month">
-                    <input type="hidden" name="bulan_year" id="bulan_year">
-                    <input type="hidden" name="bulan" id="bulan">
+                    <input type="hidden" name="bulan_month" id="bulan_month" value="{{ date('m') }}">
+                    <input type="hidden" name="bulan_year" id="bulan_year" value="{{ date('Y') }}">
+                    <input type="hidden" name="bulan" id="bulan" value="{{ date('Y-m') }}">
                     <div id="month_picker" class="month-picker">
                         <div class="month-picker-header">
                             <div class="year-selector">
-                                <button type="button" id="prev_year">&lt;</button>
-                                <span id="current_year">2023</span>
-                                <button type="button" id="next_year">&gt;</button>
+                                <button type="button" id="prev_year"><i class="fas fa-chevron-left"></i></button>
+                                <span id="current_year">{{ date('Y') }}</span>
+                                <button type="button" id="next_year"><i class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
                         <div class="month-grid" id="month_grid">
@@ -81,8 +91,12 @@
             </div>
 
             <div class="flex space-x-2">
-                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">Simpan</button>
-                <button type="button" class="btn bg-green-600 text-white hover:bg-green-700 py-2 px-6 rounded-lg" data-bs-toggle="modal" data-bs-target="#importRevenueModal">Import Excel</button>
+                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">
+                    <i class="fas fa-save mr-2"></i> Simpan
+                </button>
+                <button type="button" class="btn bg-green-600 text-white hover:bg-green-700 py-2 px-6 rounded-lg" data-bs-toggle="modal" data-bs-target="#importRevenueModal">
+                    <i class="fas fa-file-excel mr-2"></i> Import Excel
+                </button>
             </div>
         </form>
     </div>
@@ -94,16 +108,16 @@
         <!-- Tab Menu untuk Tabel Data -->
         <div class="tab-menu-container">
             <ul class="tabs">
-                <li class="tab-item active" data-tab="revenueTab">Revenue Data</li>
-                <li class="tab-item" data-tab="amTab">Account Manager</li>
-                <li class="tab-item" data-tab="ccTab">Corporate Customer</li>
+                <li class="tab-item active" data-tab="revenueTab"><i class="fas fa-chart-line mr-2"></i> Revenue Data</li>
+                <li class="tab-item" data-tab="amTab"><i class="fas fa-user-tie mr-2"></i> Account Manager</li>
+                <li class="tab-item" data-tab="ccTab"><i class="fas fa-building mr-2"></i> Corporate Customer</li>
             </ul>
         </div>
 
         <!-- Tab Content untuk Revenue -->
         <div id="revenueTab" class="tab-content active">
             @if($revenues->isEmpty())
-                <p class="text-center text-gray-500">Tidak ada data revenue tersedia.</p>
+                <p class="text-center text-gray-500 py-4"><i class="fas fa-info-circle mr-2"></i> Tidak ada data revenue tersedia.</p>
             @else
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full border-collapse">
@@ -124,13 +138,17 @@
                                 <td class="px-4 py-2">{{ $revenue->corporateCustomer->nama }}</td>
                                 <td class="px-4 py-2">{{ number_format($revenue->target_revenue, 0, ',', '.') }}</td>
                                 <td class="px-4 py-2">{{ number_format($revenue->real_revenue, 0, ',', '.') }}</td>
-                                <td class="px-4 py-2">{{ \Carbon\Carbon::parse($revenue->bulan)->format('F Y') }}</td>
-                                <td class="px-4 py-2">
-                                    <a href="{{ route('revenue.edit', $revenue->id) }}" class="text-blue-600 hover:underline">Edit</a> |
+                                <td class="px-4 py-2">{{ \Carbon\Carbon::parse($revenue->bulan . '-01')->format('F Y') }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <a href="{{ route('revenue.edit', $revenue->id) }}" class="action-btn edit-btn" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                     <form action="{{ route('revenue.destroy', $revenue->id) }}" method="POST" style="display:inline;" class="delete-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline">Hapus</button>
+                                        <button type="submit" class="action-btn delete-btn" title="Hapus">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
                                     </form>
                                 </td>
                             </tr>
@@ -138,7 +156,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4">
+
                     {{ $revenues->links() }}
                 </div>
             @endif
@@ -147,7 +165,7 @@
         <!-- Tab Content untuk Account Manager -->
         <div id="amTab" class="tab-content">
             @if($accountManagers->isEmpty())
-                <p class="text-center text-gray-500">Tidak ada data Account Manager tersedia.</p>
+                <p class="text-center text-gray-500 py-4"><i class="fas fa-info-circle mr-2"></i> Tidak ada data Account Manager tersedia.</p>
             @else
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full border-collapse">
@@ -167,12 +185,16 @@
                                 <td class="px-4 py-2">{{ $am->nik }}</td>
                                 <td class="px-4 py-2">{{ $am->witel->nama }}</td>
                                 <td class="px-4 py-2">{{ $am->divisi->nama }}</td>
-                                <td class="px-4 py-2">
-                                    <a href="{{ route('account_manager.edit', $am->id) }}" class="text-blue-600 hover:underline">Edit</a> |
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <a href="{{ route('account_manager.edit', $am->id) }}" class="action-btn edit-btn" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                     <form action="{{ route('account_manager.destroy', $am->id) }}" method="POST" style="display:inline;" class="delete-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline">Hapus</button>
+                                        <button type="submit" class="action-btn delete-btn" title="Hapus">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
                                     </form>
                                 </td>
                             </tr>
@@ -180,16 +202,13 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4">
-                    {{ $accountManagers->links() }}
-                </div>
             @endif
         </div>
 
         <!-- Tab Content untuk Corporate Customer -->
         <div id="ccTab" class="tab-content">
             @if($corporateCustomers->isEmpty())
-                <p class="text-center text-gray-500">Tidak ada data Corporate Customer tersedia.</p>
+                <p class="text-center text-gray-500 py-4"><i class="fas fa-info-circle mr-2"></i> Tidak ada data Corporate Customer tersedia.</p>
             @else
                 <div class="overflow-x-auto">
                     <table class="table-auto w-full border-collapse">
@@ -205,12 +224,16 @@
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="px-4 py-2">{{ $cc->nama }}</td>
                                 <td class="px-4 py-2">{{ $cc->nipnas }}</td>
-                                <td class="px-4 py-2">
-                                    <a href="{{ route('corporate_customer.edit', $cc->id) }}" class="text-blue-600 hover:underline">Edit</a> |
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <a href="{{ route('corporate_customer.edit', $cc->id) }}" class="action-btn edit-btn" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                     <form action="{{ route('corporate_customer.destroy', $cc->id) }}" method="POST" style="display:inline;" class="delete-form">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:underline">Hapus</button>
+                                        <button type="submit" class="action-btn delete-btn" title="Hapus">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
                                     </form>
                                 </td>
                             </tr>
@@ -218,9 +241,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4">
-                    {{ $corporateCustomers->links() }}
-                </div>
+
             @endif
         </div>
     </div>
@@ -231,15 +252,15 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="addAccountManagerModalLabel">Tambah Account Manager Baru</h5>
+        <h5 class="modal-title" id="addAccountManagerModalLabel"><i class="fas fa-user-plus mr-2"></i> Tambah Account Manager Baru</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <!-- Tab Menu di Modal -->
         <div class="tab-menu-container">
             <ul class="tabs">
-                <li class="tab-item active" data-tab="formTabAM">Form Manual</li>
-                <li class="tab-item" data-tab="importTabAM">Import Excel</li>
+                <li class="tab-item active" data-tab="formTabAM"><i class="fas fa-edit mr-2"></i> Form Manual</li>
+                <li class="tab-item" data-tab="importTabAM"><i class="fas fa-file-import mr-2"></i> Import Excel</li>
             </ul>
         </div>
 
@@ -273,7 +294,9 @@
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">Simpan</button>
+                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">
+                    <i class="fas fa-save mr-2"></i> Simpan
+                </button>
             </form>
         </div>
 
@@ -282,10 +305,16 @@
             <form id="amImportForm" action="{{ route('account_manager.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <label for="file_upload_am" class="block text-sm font-medium">Unggah File Excel</label>
-                <input type="file" name="file" id="file_upload_am" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
-                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">Unggah Data</button>
+                <div class="mt-2 flex items-center">
+                    <input type="file" name="file" id="file_upload_am" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">
+                    <i class="fas fa-upload mr-2"></i> Unggah Data
+                </button>
             </form>
-            <a href="{{ route('account_manager.template') }}" class="text-blue-500 hover:underline mt-4 block">Unduh Template Excel</a>
+            <a href="{{ route('account_manager.template') }}" class="text-blue-500 hover:underline mt-4 flex items-center">
+                <i class="fas fa-download mr-2"></i> Unduh Template Excel
+            </a>
         </div>
       </div>
     </div>
@@ -297,15 +326,15 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="addCorporateCustomerModalLabel">Tambah Corporate Customer Baru</h5>
+        <h5 class="modal-title" id="addCorporateCustomerModalLabel"><i class="fas fa-building mr-2"></i> Tambah Corporate Customer Baru</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <!-- Tab Menu di Modal -->
         <div class="tab-menu-container">
             <ul class="tabs">
-                <li class="tab-item active" data-tab="formTabCC">Form Manual</li>
-                <li class="tab-item" data-tab="importTabCC">Import Excel</li>
+                <li class="tab-item active" data-tab="formTabCC"><i class="fas fa-edit mr-2"></i> Form Manual</li>
+                <li class="tab-item" data-tab="importTabCC"><i class="fas fa-file-import mr-2"></i> Import Excel</li>
             </ul>
         </div>
 
@@ -321,7 +350,9 @@
                     <label for="nipnas" class="block text-sm font-medium">NIPNAS</label>
                     <input type="number" name="nipnas" id="nipnas" class="form-control w-full px-4 py-2 border rounded-lg" placeholder="Masukkan NIPNAS (maksimal 7 digit)" max="9999999" required>
                 </div>
-                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">Simpan</button>
+                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg">
+                    <i class="fas fa-save mr-2"></i> Simpan
+                </button>
             </form>
         </div>
 
@@ -330,10 +361,16 @@
             <form id="ccImportForm" action="{{ route('corporate_customer.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <label for="file_upload_cc" class="block text-sm font-medium">Unggah File Excel</label>
-                <input type="file" name="file" id="file_upload_cc" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
-                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">Unggah Data</button>
+                <div class="mt-2 flex items-center">
+                    <input type="file" name="file" id="file_upload_cc" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">
+                    <i class="fas fa-upload mr-2"></i> Unggah Data
+                </button>
             </form>
-            <a href="{{ route('corporate_customer.template') }}" class="text-blue-500 hover:underline mt-4 block">Unduh Template Excel</a>
+            <a href="{{ route('corporate_customer.template') }}" class="text-blue-500 hover:underline mt-4 flex items-center">
+                <i class="fas fa-download mr-2"></i> Unduh Template Excel
+            </a>
         </div>
       </div>
     </div>
@@ -345,29 +382,36 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="importRevenueModalLabel">Import Data Revenue</h5>
+        <h5 class="modal-title" id="importRevenueModalLabel"><i class="fas fa-file-import mr-2"></i> Import Data Revenue</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <form id="revenueImportForm" action="{{ route('revenue.import') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <label for="file_upload_revenue" class="block text-sm font-medium">Unggah File Excel</label>
-            <input type="file" name="file" id="file_upload_revenue" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
-            <div class="mt-4">
-                <p class="text-sm text-gray-600 mb-2">Catatan: Format Excel harus sesuai dengan template.</p>
-                <ul class="text-sm text-gray-600 list-disc ml-5">
+            <div class="mt-2 flex items-center">
+                <input type="file" name="file" id="file_upload_revenue" accept=".xlsx, .xls, .csv" required class="w-full px-4 py-2 border rounded-lg">
+            </div>
+            <div class="mt-4 bg-blue-50 p-4 rounded-lg">
+                <p class="text-sm text-gray-600 mb-2"><i class="fas fa-info-circle mr-2"></i> Catatan: Format Excel harus sesuai dengan template.</p>
+                <ul class="text-sm text-gray-600 list-disc ml-8">
                     <li>Kolom: account_manager, corporate_customer, target_revenue, real_revenue, bulan</li>
                     <li>account_manager dan corporate_customer harus ada di database</li>
                     <li>bulan dalam format MM/YYYY (contoh: 01/2025 untuk Januari 2025)</li>
                 </ul>
             </div>
-            <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">Unggah Data</button>
+            <button type="submit" class="btn bg-[#1C2955] text-white hover:bg-blue-700 py-2 px-6 rounded-lg mt-4">
+                <i class="fas fa-upload mr-2"></i> Unggah Data
+            </button>
         </form>
-        <a href="{{ route('revenue.template') }}" class="text-blue-500 hover:underline mt-4 block">Unduh Template Excel</a>
+        <a href="{{ route('revenue.template') }}" class="text-blue-500 hover:underline mt-4 flex items-center">
+            <i class="fas fa-download mr-2"></i> Unduh Template Excel
+        </a>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ asset('js/dashboard.js') }}"></script>
 @endsection

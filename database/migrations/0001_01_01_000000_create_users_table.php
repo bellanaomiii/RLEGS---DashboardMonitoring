@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role')->default('account_manager'); // Default role
+            $table->unsignedBigInteger('account_manager_id')->nullable(); // Harus nullable
+            $table->string('profile_image')->nullable();
+            $table->string('admin_code')->nullable(); // Untuk verifikasi admin
             $table->rememberToken();
             $table->timestamps();
         });
@@ -42,8 +46,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };

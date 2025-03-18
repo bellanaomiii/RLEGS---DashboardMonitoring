@@ -10,17 +10,20 @@ class User extends Authenticatable
 {
     use HasApiTokens, Notifiable;
 
-    // Menambahkan kolom role ke dalam $fillable untuk mass assignment
     protected $fillable = [
-        'name', 'email', 'password', 'role',
+        'name',
+        'email',
+        'password',
+        'role',
+        'account_manager_id',
+        'profile_image',
+        'admin_code'
     ];
 
-    // Untuk menyembunyikan kolom tertentu saat diubah menjadi array atau JSON
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'remember_token', 'admin_code'
     ];
 
-    // Untuk casting beberapa kolom ke tipe data tertentu
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
@@ -31,13 +34,26 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    public function isManager()
-    {
-        return $this->role === 'manager';
-    }
-
     public function isAccountManager()
     {
         return $this->role === 'account_manager';
+    }
+
+    // Relasi dengan model AccountManager (nullable)
+    public function accountManager()
+    {
+        return $this->belongsTo(AccountManager::class);
+    }
+
+    // Mendapatkan nama lengkap dari account manager jika ada
+    public function getAccountManagerName()
+    {
+        return $this->accountManager ? $this->accountManager->nama : $this->name;
+    }
+
+    // Mendapatkan profile image url
+    public function getProfileImageUrl()
+    {
+        return $this->profile_image ? asset('storage/' . $this->profile_image) : asset('images/default-avatar.png');
     }
 }

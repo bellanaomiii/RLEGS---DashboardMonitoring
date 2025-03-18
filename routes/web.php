@@ -11,6 +11,8 @@ use App\Http\Controllers\CorporateCustomerExcelController;
 use App\Http\Controllers\RevenueExcelController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -21,17 +23,28 @@ Route::get('/logout', function () {
     return redirect('/');
 })->name('logout');
 
+// Tambahan route search untuk register
+Route::get('/search-account-managers', [RegisteredUserController::class, 'searchAccountManagers'])
+    ->middleware('guest')
+    ->name('search.account-managers');
+
 // Menampilkan dashboard dengan data Witel dan Divisi
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [RevenueController::class, 'index'])->name('dashboard');
+    // Dashboard - dapat diakses oleh admin dan account manager
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Data Revenue - authorization dilakukan di controller
+    Route::get('/revenue_data', [RevenueController::class, 'index'])
+        ->name('revenue.data');
 });
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/update-image', [ProfileController::class, 'updateImage'])->name('profile.update-image');
 
-    // Revenue routes
+    // Revenue routes - authorization dilakukan di controller
     Route::post('/revenue/store', [RevenueController::class, 'store'])->name('revenue.store');
     Route::get('/revenue/{id}/edit', [RevenueController::class, 'edit'])->name('revenue.edit');
     Route::put('/revenue/{id}', [RevenueController::class, 'update'])->name('revenue.update');
@@ -41,11 +54,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
     Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');
 
-    // Search routes
+    // Search routes - available for all authenticated users
     Route::get('/search-am', [RevenueController::class, 'searchAccountManager'])->name('revenue.searchAccountManager');
     Route::get('/search-customer', [RevenueController::class, 'searchCorporateCustomer'])->name('revenue.searchCorporateCustomer');
 
-    // Account Manager routes
+    // Account Manager routes - authorization dilakukan di controller
     Route::get('/account-manager', [AccountManagerController::class, 'index'])->name('account_manager.index');
     Route::get('/account-manager/create', [AccountManagerController::class, 'create'])->name('account_manager.create');
     Route::post('/account-manager/store', [AccountManagerController::class, 'store'])->name('account_manager.store');
@@ -69,9 +82,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/corporate-customer/import', [CorporateCustomerExcelController::class, 'import'])->name('corporate_customer.import');
     Route::get('/corporate-customer/template', [CorporateCustomerExcelController::class, 'downloadTemplate'])->name('corporate_customer.template');
 
+    // Leaderboard dan Witel Performance - dapat diakses semua user
     Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
+    Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
 
-    // Sidebar dan leaderboard routes
+    // Sidebar route
     Route::get('/sidebarpage', function () {
         return view('layouts.sidebar');
     });
@@ -79,8 +94,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/PerformansiWitel', function () {
         return view('witelPerform');
     });
-
-    Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
 });
 
 require __DIR__.'/auth.php';

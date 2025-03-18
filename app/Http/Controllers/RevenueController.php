@@ -11,24 +11,42 @@ use App\Models\Divisi;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class RevenueController extends Controller
 {
     // Menampilkan halaman dashboard dengan data Revenue, Witel, dan Divisi
     public function index()
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
+        }
+
+        // Kode yang sudah ada
         $revenues = Revenue::with(['accountManager', 'corporateCustomer'])->orderBy('bulan', 'desc')->paginate(10);
         $accountManagers = AccountManager::with(['witel', 'divisi'])->paginate(10);
         $corporateCustomers = CorporateCustomer::paginate(10);
         $witels = Witel::all();
         $divisi = Divisi::all();
 
-        return view('dashboard', compact('revenues', 'accountManagers', 'corporateCustomers', 'witels', 'divisi'));
+        return view('revenueData', compact('revenues', 'accountManagers', 'corporateCustomers', 'witels', 'divisi'));
     }
 
     // Menyimpan data revenue baru
     public function store(Request $request)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan data revenue.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan data revenue.');
+        }
+
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'account_manager_id' => 'required|exists:account_managers,id',
@@ -114,6 +132,11 @@ class RevenueController extends Controller
     // Edit data revenue
     public function edit($id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengedit data revenue.');
+        }
+
         $revenue = Revenue::findOrFail($id);
         $accountManagers = AccountManager::all();
         $corporateCustomers = CorporateCustomer::all();
@@ -131,6 +154,17 @@ class RevenueController extends Controller
     // Update data revenue
     public function update(Request $request, $id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data revenue.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data revenue.');
+        }
+
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'account_manager_id' => 'required|exists:account_managers,id',
@@ -193,6 +227,11 @@ class RevenueController extends Controller
     // Hapus data revenue
     public function destroy($id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menghapus data revenue.');
+        }
+
         try {
             $revenue = Revenue::findOrFail($id);
             $revenue->delete();

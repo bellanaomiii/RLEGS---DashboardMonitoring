@@ -15,21 +15,48 @@
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+        <style>
+            /* Styling untuk gambar avatar agar konsisten ukurannya */
+            .avatar-container {
+                width: 35px;
+                height: 35px;
+                overflow: hidden;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+            }
+
+            .avatar-container img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: center;
+            }
+
+            /* Style untuk logo dan user profile */
+            .logo-avatar {
+                margin-left: 1px;
+            }
+        </style>
     </head>
     <body>
         <div class="wrapper">
             <aside id="sidebar">
                 <div class="d-flex">
                     <button id="toggle-btn" type="button">
-                        <img src="{{ asset('img/logo-outline.png') }}" class="avatar rounded-circle" alt="Logo" width="35" height="35" style="margin-left: 1px">
+                        <div class="avatar-container logo-avatar">
+                            <img src="{{ asset('img/logo-outline.png') }}" alt="Logo">
+                        </div>
                     </button>
                     <div class="sidebar-logo mt-4" style="margin-left: -18px;">
                         <a href="#">RLEGS</a>
                     </div>
-                </div>                
+                </div>
                 <ul class="sidebar-nav">
                     <li class="sidebar-item">
-                        <a href="{{ url('dashboard') }}" class="sidebar-link">
+                        <a href="{{ route('revenue.data') }}" class="sidebar-link">
                             <i class="lni lni-dashboard-square-1"></i><span>Data Revenue</span>
                         </a>
                     </li>
@@ -92,13 +119,19 @@
                                         <i class="lni lni-bell-1 fs-4 mt-2"></i>
                                     </a>
                                 </li>
-            
-                                <!-- Dropdown User -->
+
+                                <!-- Dropdown User dengan avatar yang di-crop dengan benar -->
                                 <li class="nav-item dropdown ms-1">
-                                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button"
                                         data-bs-toggle="dropdown" aria-expanded="false">
-                                        <img src="{{ asset('img/profile.png') }}" class="avatar rounded-circle" width="35">
-                                        <span class="ms-1">{{ Auth::user()->name }}</span>
+                                        <div class="avatar-container">
+                                            @if(Auth::user()->profile_image)
+                                                <img src="{{ asset('storage/' . Auth::user()->profile_image) }}" alt="{{ Auth::user()->name }}">
+                                            @else
+                                                <img src="{{ asset('img/profile.png') }}" alt="Default Profile">
+                                            @endif
+                                        </div>
+                                        <span class="ms-2">{{ Auth::user()->name }}</span>
                                     </a>
                                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                         <li>
@@ -123,11 +156,61 @@
                     </div>
                 </nav>
             </div>
-            
-            
+
+
         </div>
         <script src="sidebar/script.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
+
+        <!-- Tambahan script untuk perbaikan dropdown yang tidak berfungsi -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fix untuk dropdown toggle yang tidak berfungsi di beberapa halaman
+            var dropdownToggle = document.querySelectorAll('.dropdown-toggle');
+
+            // Pastikan dropdown bekerja di semua halaman
+            dropdownToggle.forEach(function(dropdown) {
+                dropdown.addEventListener('click', function(e) {
+                    // Hanya menjalankan manual jika built-in Bootstrap tidak bekerja
+                    if (!this.nextElementSibling.classList.contains('show')) {
+                        var dropdownMenu = this.nextElementSibling;
+
+                        // Coba toggle dengan class manual
+                        setTimeout(function() {
+                            if (!dropdownMenu.classList.contains('show')) {
+                                // Tutup dropdown lain yang mungkin terbuka
+                                document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                                    menu.classList.remove('show');
+                                });
+
+                                // Tampilkan dropdown ini
+                                dropdownMenu.classList.add('show');
+                            }
+                        }, 50);
+                    }
+                });
+            });
+
+            // Tutup dropdown saat klik di luar
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.nav-item.dropdown')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                }
+            });
+
+            // Pastikan sidebar toggle juga berfungsi dengan baik
+            const sidebarToggle = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+        });
+        </script>
     </body>
 </html>

@@ -82,7 +82,7 @@
             </div>
           </div>
         </div>
-        
+
     </section>
 
     {{-- Leaderboard AM --}}
@@ -102,7 +102,7 @@
                                 @else
                                 <p class="ms-4 fs-6">{{ $index + 1 }}</p>
                                 @endif
-                                
+
 
                                 <img src="{{ asset('img/profile.png') }}" width="55">
                                 <div>
@@ -159,10 +159,10 @@ $(document).ready(function() {
     function removeDuplicates(elementId) {
         const select = document.getElementById(elementId);
         const optionsSet = new Set();
-        
+
         Array.from(select.options).forEach(option => {
             if (option.disabled) return; // Skip disabled options
-            
+
             const value = option.value;
             if (optionsSet.has(value)) {
                 option.remove(); // Remove duplicate
@@ -171,11 +171,11 @@ $(document).ready(function() {
             }
         });
     }
-    
+
     // Remove duplicates for both selects
     removeDuplicates('filterSelect');
     removeDuplicates('filterSelect2');
-    
+
     // Initialize Bootstrap Select for both selects with the same configuration
     $('#filterSelect, #filterSelect2').selectpicker({
         liveSearch: true,           // Enable search box
@@ -183,7 +183,7 @@ $(document).ready(function() {
         liveSearchPlaceholder: 'Search filter options...',
         size: 5                     // Show 5 items in dropdown
     });
-    
+
     // Add console log to debug
     console.log('Bootstrap-select initialization complete for both selects');
 });

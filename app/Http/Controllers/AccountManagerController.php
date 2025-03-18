@@ -7,12 +7,18 @@ use App\Models\AccountManager;
 use App\Models\Witel;
 use App\Models\Divisi;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class AccountManagerController extends Controller
 {
     // Menampilkan halaman data Account Manager
     public function index()
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
+        }
+
         $accountManagers = AccountManager::with(['witel', 'divisi'])->paginate(10);
         $witels = Witel::all();
         $divisi = Divisi::all();
@@ -23,6 +29,11 @@ class AccountManagerController extends Controller
     // Menampilkan form untuk menambah Account Manager dan mengirim data Witel dan Divisi
     public function create()
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
+        }
+
         // Ambil data Witel dan Divisi untuk dikirim ke view
         $witels = Witel::all(); // Mengambil semua data Witel
         $divisi = Divisi::all(); // Mengambil semua data Divisi
@@ -36,6 +47,17 @@ class AccountManagerController extends Controller
     // Menyimpan Account Manager baru
     public function store(Request $request)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan Account Manager.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan Account Manager.');
+        }
+
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'nama' => 'required|string|unique:account_managers,nama',
@@ -90,6 +112,11 @@ class AccountManagerController extends Controller
     // Edit Account Manager
     public function edit($id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengedit Account Manager.');
+        }
+
         $accountManager = AccountManager::findOrFail($id);
         $witels = Witel::all();
         $divisi = Divisi::all();
@@ -100,6 +127,17 @@ class AccountManagerController extends Controller
     // Update Account Manager
     public function update(Request $request, $id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui Account Manager.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui Account Manager.');
+        }
+
         $accountManager = AccountManager::findOrFail($id);
 
         // Validasi data input
@@ -153,6 +191,11 @@ class AccountManagerController extends Controller
     // Hapus Account Manager
     public function destroy($id)
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menghapus Account Manager.');
+        }
+
         try {
             $accountManager = AccountManager::findOrFail($id);
             $accountManager->delete();

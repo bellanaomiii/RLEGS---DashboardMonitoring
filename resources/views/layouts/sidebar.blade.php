@@ -162,55 +162,66 @@
         <script src="sidebar/script.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/js/bootstrap-select.min.js"></script>
-
-        <!-- Tambahan script untuk perbaikan dropdown yang tidak berfungsi -->
         <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fix untuk dropdown toggle yang tidak berfungsi di beberapa halaman
-            var dropdownToggle = document.querySelectorAll('.dropdown-toggle');
+            $(document).ready(function() {
+                // Inisialisasi bootstrap-select dengan dropupAuto: false
+                if (typeof $.fn.selectpicker !== 'undefined') {
+                    $('.selectpicker').selectpicker({
+                        liveSearch: true,
+                        actionsBox: false,
+                        size: 5,
+                        dropupAuto: true  // Pastikan dropdown selalu muncul ke bawah
+                    });
 
-            // Pastikan dropdown bekerja di semua halaman
-            dropdownToggle.forEach(function(dropdown) {
-                dropdown.addEventListener('click', function(e) {
-                    // Hanya menjalankan manual jika built-in Bootstrap tidak bekerja
-                    if (!this.nextElementSibling.classList.contains('show')) {
-                        var dropdownMenu = this.nextElementSibling;
+                    // Auto-submit form saat pilihan berubah
+                    $('.selectpicker').on('changed.bs.select', function() {
+                        $(this).closest('form').submit();
+                    });
+                }
 
-                        // Coba toggle dengan class manual
-                        setTimeout(function() {
-                            if (!dropdownMenu.classList.contains('show')) {
-                                // Tutup dropdown lain yang mungkin terbuka
-                                document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
-                                    menu.classList.remove('show');
-                                });
-
-                                // Tampilkan dropdown ini
-                                dropdownMenu.classList.add('show');
+                // Perbaikan kondisi tutup dropdown
+                document.addEventListener('click', function(e) {
+                    // Jangan tutup dropdown bootstrap-select saat klik di dalamnya
+                    if (!e.target.closest('.nav-item.dropdown') && !e.target.closest('.bootstrap-select')) {
+                        document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                            // Jangan tutup dropdown bootstrap-select
+                            if (!menu.closest('.bootstrap-select')) {
+                                menu.classList.remove('show');
                             }
-                        }, 50);
+                        });
                     }
                 });
             });
 
-            // Tutup dropdown saat klik di luar
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.nav-item.dropdown')) {
-                    document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+            // Tambahkan kode ini di bagian bawah file sidebar.blade.php, di dalam tag script yang sudah ada
+$(document).ready(function() {
+    // Inisialisasi dropdown profil user
+    var userDropdown = document.querySelector('#navbarDropdown');
+    if (userDropdown) {
+        userDropdown.addEventListener('click', function(e) {
+            e.preventDefault();
+            var dropdownMenu = this.nextElementSibling;
+
+            // Toggle dropdown
+            if (dropdownMenu.classList.contains('show')) {
+                dropdownMenu.classList.remove('show');
+            } else {
+                // Tutup dropdown lain yang mungkin terbuka
+                document.querySelectorAll('.dropdown-menu.show').forEach(function(menu) {
+                    if (!menu.closest('.bootstrap-select')) {
                         menu.classList.remove('show');
-                    });
-                }
-            });
-
-            // Pastikan sidebar toggle juga berfungsi dengan baik
-            const sidebarToggle = document.getElementById('toggle-btn');
-            const sidebar = document.getElementById('sidebar');
-
-            if (sidebarToggle && sidebar) {
-                sidebarToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('collapsed');
+                    }
                 });
+
+                // Tampilkan dropdown ini
+                dropdownMenu.classList.add('show');
             }
         });
-        </script>
+    }
+
+    // Kode lain yang sudah ada...
+});
+
+            </script>
     </body>
 </html>

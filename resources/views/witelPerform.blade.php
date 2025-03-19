@@ -149,37 +149,43 @@
         </div>
     </div>
 
-    <div class="container-fluid mt-3">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="overview-container">
-                    <div class="overview-box active">Overview RLEGS</div>
-                    <div class="overview-box">Overview DPS</div>
-                    <div class="overview-box">Overview DGS</div>
-                    <div class="overview-box">Overview DSS</div>
+    <div class="witel-card">
+        <div class="container-fluid mt-3">
+            <div class="row">
+                <div class="col-md-2 ms-6">
+                    <div class="overview-container mb-4">
+                        <div class="overview-box active">Overview RLEGS</div>
+                        <div class="overview-box">Overview DPS</div>
+                        <div class="overview-box">Overview DGS</div>
+                        <div class="overview-box">Overview DSS</div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="col-md-8">
-                <div class="p-6 bg-white rounded shadow">
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-4">
-                            <div class="p-4 bg-gray-50 rounded">
-                                {!! $lineChart->container() !!}
+                
+                <div class="col-md-9 ms-4">
+                    <div class="row mb-5">
+                        <div class="col-md-8 mb-4">
+                            <div class="p-0 bg-white rounded shadow h-100">
+                                <div class="chart-container p-4 bg-gray-50 rounded h-180">
+                                    {!! $lineChart->container() !!}
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="col-md-6 mb-4">
-                            <div class="p-4 bg-gray-50 rounded">
-                                {!! $donutChart->container() !!}
+                        <div class="col-md-4 mb-4 mt-4">
+                            <div class= "bg-white rounded shadow">
+                                <div class="chart-container p-4 bg-gray-50 rounded">
+                                    {!! $donutChart->container() !!}
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="row g-4 mb-4">
+                    <div class="row mb-4">
                         <div class="col-12">
-                            <div class="p-4 bg-gray-50 rounded">
-                                {!! $barChart->container() !!}
+                            <div class="p-4 bg-white rounded shadow">
+                                <div class="chart-container p-4 bg-gray-50 rounded">
+                                    {!! $barChart->container() !!}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -187,6 +193,7 @@
             </div>
         </div>
     </div>
+
     
 </section>
 

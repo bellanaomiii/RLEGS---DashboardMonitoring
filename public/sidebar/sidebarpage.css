@@ -59,6 +59,11 @@ body{
     align-items: center;
 }
 
+#sidebar.expand ~ .container-leaderboard {
+    left: 170px;
+    width: calc(90% - 65px);
+}
+
 .bg-custom {
     background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298); /* Gradient Blue */
     padding: 30px;
@@ -371,7 +376,7 @@ a.sidebar-link:hover {
     text-align: center;
     cursor: pointer;
     transition: 0.3s ease;
-    width: calc(25% - 70px);
+    width: calc(25% - 60px);
     box-sizing: border-box;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -387,20 +392,26 @@ a.sidebar-link:hover {
 .overview-box {
     margin-top: 10px;
     margin-left: 45px;
-    background: #0e223e;
-    color: #fdfdfd;
+    background: #ffff;
+    color: #1a3a66;
     padding: 75px 85px;
     border-radius: 10px;
     cursor: pointer;
     transition: 0.3s ease;
     width: calc(25% - 30px);
     box-sizing: border-box;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     display: flex;
     text-align: center;
+    font-weight: bold;
     align-items: center;
     justify-content: center;
     height: 200px; 
+}
+
+.chart-container {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 
@@ -537,3 +548,5 @@ a.sidebar-link:hover {
   #filterSelect2 option:selected {
     color: white;
   }
+
+  

@@ -34,9 +34,9 @@
 
     <section class="d-flex justify-content-between align-items-center">
         <div class="container d-flex justify-content-start float-start">
-            <form action="{{ route('leaderboard') }}" method="GET" class="col-md-7 col-lg-5 d-flex p-2 float-start">
+            <form action="{{ route('leaderboard') }}" method="GET" class="col-md-7 col-lg-5 d-flex p-2 float-start ms-1">
                 <input class="form-control me-2" type="search" name="search" placeholder="Search Name" value="{{ request('search') }}">
-                <button class="btn gradient-btn" type="submit">Go</button>
+                <button class="btn gradient-btn text-white" type="submit">Go</button>
             </form>
         </div>
 
@@ -88,7 +88,7 @@
     {{-- Leaderboard AM --}}
     @forelse($accountManagers as $index => $am)
         <section class="container-leaderboard p-2">
-            <div class="container-fluid rounded-4 ms-0">
+            <div class="container-fluid rounded-4 ms-4">
                 <div class="row g-4 flex-column">
                     <div class="col-12">
                         <div class="card bg-white text-black">

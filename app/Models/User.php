@@ -51,9 +51,14 @@ class User extends Authenticatable
         return $this->accountManager ? $this->accountManager->nama : $this->name;
     }
 
-    // Mendapatkan profile image url
+    // Mendapatkan profile image url - DIPERBARUI dengan perlindungan null
     public function getProfileImageUrl()
     {
-        return $this->profile_image ? asset('storage/' . $this->profile_image) : asset('images/default-avatar.png');
+        // Selalu mengembalikan path yang valid, termasuk defaultnya
+        if (empty($this->profile_image) || !file_exists(storage_path('app/public/' . $this->profile_image))) {
+            return asset('img/profile.png');
+        }
+
+        return asset('storage/' . $this->profile_image);
     }
 }

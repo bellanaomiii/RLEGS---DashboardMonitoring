@@ -20,7 +20,7 @@
     {{-- <div class="row">
         <div class="col-sm-6 mb-3 mb-sm-0">
             <input type="text" class="form-control date-range-picker" data-coreui-toggle="date-range-picker" data-coreui-start-date="2022/08/03" data-coreui-end-date="2022/08/17" data-coreui-locale="en-US">
-        </div>    
+        </div>
         <div class="col-sm-6">
             <input type="text" class="form-control date-range-picker" data-coreui-start-date="2022/08/03" data-coreui-end-date="2022/08/17" data-coreui-locale="en-US">
         </div>
@@ -44,7 +44,7 @@
             </div>
         </div>
     </div>
-    
+
 
     {{--   <div class="row">
     <div class="col-sm-6 mb-3 mb-sm-0">
@@ -64,7 +64,7 @@
       </div>
     </div>
   </div> --}}
-    
+
     <!-- Filter Button and Content -->
     <div class="container d-flex justify-content-end mt-5">
         <div class="filter-container">
@@ -115,7 +115,7 @@
                             <label class="form-check-label" for="divisi3">DSS</label>
                         </div>
                     </div>
-        
+
                     {{-- <!-- Periode Content -->
                     <div class="filter-content" id="periodeContent" style="display: none;">
                         <div class="mb-5 mt-2">
@@ -143,7 +143,7 @@
                                 </div>
                             </div> --}}
                         {{-- </div>
-                    </div> --}} 
+                    </div> --}}
                 </div>
             </div>
         </div>
@@ -160,7 +160,7 @@
                         <div class="overview-box">Overview DSS</div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-9 ms-4">
                     <div class="row mb-5">
                         <div class="col-md-8 mb-4">
@@ -170,7 +170,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-4 mb-4 mt-4">
                             <div class= "bg-white rounded shadow">
                                 <div class="chart-container p-4 bg-gray-50 rounded">
@@ -179,7 +179,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="p-4 bg-white rounded shadow">
@@ -194,7 +194,7 @@
         </div>
     </div>
 
-    
+
 </section>
 
 <script src="{{ $lineChart->cdn() }}"></script>
@@ -203,7 +203,7 @@
 
 
 {{ $lineChart->script() }}
-{{ $barChart->script() }} 
+{{ $barChart->script() }}
 {{ $donutChart->script() }}
 
 

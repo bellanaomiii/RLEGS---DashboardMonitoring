@@ -63,7 +63,7 @@ class RegisteredUserController extends Controller
                 ]);
             } else {
                 return back()->withErrors([
-                    'account_manager_id' => 'Belum ada data Account Manager. Silakan daftar sebagai Admin terlebih dahulu atau hubungi administrator untuk menambahkan data Account Manager.'
+                    'account_manager_id' => 'Belum ada data Account Manager. Silakan hubungi administrator untuk menambahkan Anda dalam data Account Manager.'
                 ])->withInput();
             }
         }

@@ -30,8 +30,11 @@ Route::get('/search-account-managers', [RegisteredUserController::class, 'search
 
 // Menampilkan dashboard dengan data Witel dan Divisi
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Dashboard - dapat diakses oleh admin dan account manager
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+// Route untuk dashboard utama
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// Route baru untuk AJAX filter tahun
+Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
 
     // Data Revenue - authorization dilakukan di controller
     Route::get('/revenue_data', [RevenueController::class, 'index'])
@@ -49,7 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/revenue/{id}/edit', [RevenueController::class, 'edit'])->name('revenue.edit');
     Route::put('/revenue/{id}', [RevenueController::class, 'update'])->name('revenue.update');
     Route::delete('/revenue/{id}', [RevenueController::class, 'destroy'])->name('revenue.destroy');
-
+    // Tambahkan route ini
+    Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
+    Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/settings', [UserController::class, 'settings'])->name('settings');
+    
     // Revenue Excel routes
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
     Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');

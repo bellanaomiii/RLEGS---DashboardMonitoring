@@ -1,7 +1,6 @@
-// JavaScript for dashboard functionality
-
+// Unified dashboard.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Inisialisasi snackbar jika belum ada
+    // Inisialisasi snackbar
     if (!document.getElementById('snackbar')) {
         const snackbar = document.createElement('div');
         snackbar.id = 'snackbar';
@@ -9,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ====== Month Picker Implementation ======
-    const months = [
+    const monthNames = [
         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
         "Juli", "Agustus", "September", "Oktober", "November", "Desember"
     ];
@@ -29,9 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (monthYearInput && monthPicker) {
         // Set current year
         let currentYear = new Date().getFullYear();
-        let selectedMonth = null;
+        let selectedMonth = new Date().getMonth();
         let selectedYear = currentYear;
-        let selectedMonthIndex = null;
+        let isMonthPickerOpen = false;
 
         // Initialize month grid
         const monthGrid = document.getElementById('month_grid');
@@ -47,14 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Generate month grid
-        function generateMonthGrid() {
+        function renderMonthGrid() {
             if (!monthGrid) return;
 
             monthGrid.innerHTML = '';
-            months.forEach((month, index) => {
+            monthNames.forEach((month, index) => {
                 const monthItem = document.createElement('div');
                 monthItem.className = 'month-item';
-                if (selectedMonthIndex === index && selectedYear === currentYear) {
+                if (selectedMonth === index && selectedYear === currentYear) {
+                    monthItem.classList.add('selected');
                     monthItem.classList.add('active');
                 }
 
@@ -62,85 +62,92 @@ document.addEventListener('DOMContentLoaded', function() {
                 monthItem.dataset.month = index;
 
                 monthItem.addEventListener('click', function() {
-                    // Remove active class from all month items
+                    // Remove active/selected class from all month items
                     document.querySelectorAll('.month-item').forEach(item => {
+                        item.classList.remove('selected');
                         item.classList.remove('active');
                     });
 
-                    // Add active class to selected month
+                    // Add active/selected class to selected month
+                    this.classList.add('selected');
                     this.classList.add('active');
 
                     // Update selected month
-                    selectedMonth = month;
-                    selectedMonthIndex = parseInt(this.dataset.month);
+                    selectedMonth = index;
                 });
 
                 monthGrid.appendChild(monthItem);
             });
         }
 
-        // Navigate to previous year
-        if (prevYearButton) {
-            prevYearButton.addEventListener('click', function() {
-                currentYear--;
-                currentYearElement.textContent = currentYear;
-                generateMonthGrid();
-            });
-        }
-
-        // Navigate to next year
-        if (nextYearButton) {
-            nextYearButton.addEventListener('click', function() {
-                currentYear++;
-                currentYearElement.textContent = currentYear;
-                generateMonthGrid();
-            });
-        }
-
         // Show month picker when input is clicked
         monthYearInput.addEventListener('click', function() {
+            monthPicker.style.display = 'block';
             monthPicker.classList.add('active');
-            generateMonthGrid();
+            isMonthPickerOpen = true;
+            renderMonthGrid();
         });
+
+        // Year navigation
+        if (prevYearButton) {
+            prevYearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentYear--;
+                currentYearElement.textContent = currentYear;
+                renderMonthGrid();
+            });
+        }
+
+        if (nextYearButton) {
+            nextYearButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                currentYear++;
+                currentYearElement.textContent = currentYear;
+                renderMonthGrid();
+            });
+        }
 
         // Cancel month selection
         if (cancelButton) {
             cancelButton.addEventListener('click', function() {
+                monthPicker.style.display = 'none';
                 monthPicker.classList.remove('active');
+                isMonthPickerOpen = false;
             });
         }
 
         // Apply month selection
         if (applyButton) {
             applyButton.addEventListener('click', function() {
-                if (selectedMonth !== null && selectedMonthIndex !== null) {
-                    // Format display value
-                    monthYearInput.value = `${selectedMonth} ${currentYear}`;
+                const formattedDate = `${monthNames[selectedMonth]} ${currentYear}`;
+                monthYearInput.value = formattedDate;
 
-                    // Set hidden inputs
-                    if (hiddenMonthInput) hiddenMonthInput.value = monthCodes[selectedMonthIndex];
-                    if (hiddenYearInput) hiddenYearInput.value = currentYear;
-                    if (hiddenBulanInput) hiddenBulanInput.value = `${currentYear}-${monthCodes[selectedMonthIndex]}`;
+                // Set hidden inputs
+                if (hiddenMonthInput) hiddenMonthInput.value = monthCodes[selectedMonth];
+                if (hiddenYearInput) hiddenYearInput.value = currentYear;
+                if (hiddenBulanInput) hiddenBulanInput.value = `${currentYear}-${monthCodes[selectedMonth]}`;
 
-                    // Save selected values
-                    selectedYear = currentYear;
-                }
+                // Save selected values
+                selectedYear = currentYear;
 
+                monthPicker.style.display = 'none';
                 monthPicker.classList.remove('active');
+                isMonthPickerOpen = false;
             });
         }
 
         // Close month picker when clicking outside
         document.addEventListener('click', function(event) {
-            if (monthPicker && !monthPicker.contains(event.target) && event.target !== monthYearInput) {
+            if (monthPicker && isMonthPickerOpen && !monthPicker.contains(event.target) && event.target !== monthYearInput) {
+                monthPicker.style.display = 'none';
                 monthPicker.classList.remove('active');
+                isMonthPickerOpen = false;
             }
         });
 
         // Initialize with current month and year
         const now = new Date();
-        selectedMonth = months[now.getMonth()];
-        selectedMonthIndex = now.getMonth();
+        selectedMonth = now.getMonth();
         selectedYear = now.getFullYear();
         currentYear = now.getFullYear();
 
@@ -149,65 +156,139 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Set initial values for hidden inputs
-        if (monthYearInput) monthYearInput.value = `${selectedMonth} ${currentYear}`;
-        if (hiddenMonthInput) hiddenMonthInput.value = monthCodes[selectedMonthIndex];
+        if (monthYearInput) monthYearInput.value = `${monthNames[selectedMonth]} ${currentYear}`;
+        if (hiddenMonthInput) hiddenMonthInput.value = monthCodes[selectedMonth];
         if (hiddenYearInput) hiddenYearInput.value = currentYear;
-        if (hiddenBulanInput) hiddenBulanInput.value = `${currentYear}-${monthCodes[selectedMonthIndex]}`;
+        if (hiddenBulanInput) hiddenBulanInput.value = `${currentYear}-${monthCodes[selectedMonth]}`;
 
         // Generate month grid on initial load
-        generateMonthGrid();
+        renderMonthGrid();
     }
 
     // ====== Account Manager search functionality ======
     const accountManagerInput = document.getElementById('account_manager');
+    const accountManagerIdInput = document.getElementById('account_manager_id');
+    const accountManagerSuggestions = document.getElementById('account_manager_suggestions');
+
     if (accountManagerInput) {
         accountManagerInput.addEventListener('input', function() {
-            fetch("/search-am?search=" + this.value)
+            const search = this.value.trim();
+
+            if (search.length < 2) {
+                if (accountManagerSuggestions) {
+                    accountManagerSuggestions.innerHTML = '';
+                    accountManagerSuggestions.style.display = 'none';
+                }
+                return;
+            }
+
+            fetch('/search-am?search=' + encodeURIComponent(search))
                 .then(response => response.json())
                 .then(data => {
-                    let suggestionBox = document.getElementById('account_manager_suggestions');
-                    suggestionBox.innerHTML = ""; // Clear any previous suggestions
+                    if (!accountManagerSuggestions) return;
+
+                    accountManagerSuggestions.innerHTML = '';
+
                     if (data.length === 0) {
-                        suggestionBox.innerHTML = "<p class='p-3'>Data tidak ditemukan, silakan tambah Account Manager baru.</p>";
+                        const noResult = document.createElement('div');
+                        noResult.className = 'suggestion-item';
+                        noResult.textContent = 'Tidak ada hasil yang ditemukan';
+                        accountManagerSuggestions.appendChild(noResult);
+                    } else {
+                        data.forEach(am => {
+                            const item = document.createElement('div');
+                            item.className = 'suggestion-item';
+                            item.textContent = `${am.nama} - ${am.nik || 'NIK tidak tersedia'}`;
+
+                            item.addEventListener('click', () => {
+                                accountManagerInput.value = am.nama;
+                                if (accountManagerIdInput) {
+                                    accountManagerIdInput.value = am.id;
+                                }
+                                accountManagerSuggestions.style.display = 'none';
+                            });
+
+                            accountManagerSuggestions.appendChild(item);
+                        });
                     }
-                    data.forEach(am => {
-                        let item = document.createElement('div');
-                        item.textContent = am.nama;
-                        item.className = 'hover:bg-gray-100';
-                        item.onclick = function() {
-                            document.getElementById('account_manager').value = am.nama;
-                            document.getElementById('account_manager_id').value = am.id;
-                            suggestionBox.innerHTML = "";
-                        };
-                        suggestionBox.appendChild(item);
-                    });
+
+                    accountManagerSuggestions.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching account managers:', error);
+
+                    if (accountManagerSuggestions) {
+                        accountManagerSuggestions.innerHTML = '';
+                        const errorItem = document.createElement('div');
+                        errorItem.className = 'suggestion-item text-danger';
+                        errorItem.textContent = 'Error: Tidak dapat memuat data';
+                        accountManagerSuggestions.appendChild(errorItem);
+                        accountManagerSuggestions.style.display = 'block';
+                    }
                 });
         });
     }
 
     // ====== Corporate Customer search functionality ======
     const corporateCustomerInput = document.getElementById('corporate_customer');
+    const corporateCustomerIdInput = document.getElementById('corporate_customer_id');
+    const corporateCustomerSuggestions = document.getElementById('corporate_customer_suggestions');
+
     if (corporateCustomerInput) {
         corporateCustomerInput.addEventListener('input', function() {
-            fetch("/search-customer?search=" + this.value)
+            const search = this.value.trim();
+
+            if (search.length < 2) {
+                if (corporateCustomerSuggestions) {
+                    corporateCustomerSuggestions.innerHTML = '';
+                    corporateCustomerSuggestions.style.display = 'none';
+                }
+                return;
+            }
+
+            fetch('/search-customer?search=' + encodeURIComponent(search))
                 .then(response => response.json())
                 .then(data => {
-                    let suggestionBox = document.getElementById('corporate_customer_suggestions');
-                    suggestionBox.innerHTML = ""; // Clear any previous suggestions
+                    if (!corporateCustomerSuggestions) return;
+
+                    corporateCustomerSuggestions.innerHTML = '';
+
                     if (data.length === 0) {
-                        suggestionBox.innerHTML = "<p class='p-3'>Data tidak ditemukan, silakan tambah Corporate Customer baru.</p>";
+                        const noResult = document.createElement('div');
+                        noResult.className = 'suggestion-item';
+                        noResult.textContent = 'Tidak ada hasil yang ditemukan';
+                        corporateCustomerSuggestions.appendChild(noResult);
+                    } else {
+                        data.forEach(cc => {
+                            const item = document.createElement('div');
+                            item.className = 'suggestion-item';
+                            item.textContent = `${cc.nama} - NIPNAS: ${cc.nipnas || 'Tidak tersedia'}`;
+
+                            item.addEventListener('click', () => {
+                                corporateCustomerInput.value = cc.nama;
+                                if (corporateCustomerIdInput) {
+                                    corporateCustomerIdInput.value = cc.id;
+                                }
+                                corporateCustomerSuggestions.style.display = 'none';
+                            });
+
+                            corporateCustomerSuggestions.appendChild(item);
+                        });
                     }
-                    data.forEach(cust => {
-                        let item = document.createElement('div');
-                        item.textContent = cust.nama;
-                        item.className = 'hover:bg-gray-100';
-                        item.onclick = function() {
-                            document.getElementById('corporate_customer').value = cust.nama;
-                            document.getElementById('corporate_customer_id').value = cust.id;
-                            suggestionBox.innerHTML = "";
-                        };
-                        suggestionBox.appendChild(item);
-                    });
+
+                    corporateCustomerSuggestions.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching corporate customers:', error);
+
+                    if (corporateCustomerSuggestions) {
+                        corporateCustomerSuggestions.innerHTML = '';
+                        const errorItem = document.createElement('div');
+                        errorItem.className = 'suggestion-item text-danger';
+                        errorItem.textContent = 'Error: Tidak dapat memuat data';
+                        corporateCustomerSuggestions.appendChild(errorItem);
+                        corporateCustomerSuggestions.style.display = 'block';
+                    }
                 });
         });
     }
@@ -216,15 +297,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(event) {
         const amSuggestions = document.getElementById('account_manager_suggestions');
         const ccSuggestions = document.getElementById('corporate_customer_suggestions');
-        const accountManagerInput = document.getElementById('account_manager');
-        const corporateCustomerInput = document.getElementById('corporate_customer');
 
         if (accountManagerInput && amSuggestions && !accountManagerInput.contains(event.target) && !amSuggestions.contains(event.target)) {
-            amSuggestions.innerHTML = '';
+            amSuggestions.style.display = 'none';
         }
 
         if (corporateCustomerInput && ccSuggestions && !corporateCustomerInput.contains(event.target) && !ccSuggestions.contains(event.target)) {
-            ccSuggestions.innerHTML = '';
+            ccSuggestions.style.display = 'none';
         }
     });
 
@@ -233,21 +312,31 @@ document.addEventListener('DOMContentLoaded', function() {
         tab.addEventListener('click', function() {
             // Find the closest tab container
             const tabContainer = this.closest('.tab-menu-container');
-            const tabContents = tabContainer.parentElement.querySelectorAll('.tab-content');
+            const parentContainer = tabContainer.parentElement;
+            let contentContainer;
 
-            // Remove active class from all tabs and tab contents
-            tabContainer.querySelectorAll('.tab-item').forEach(item => item.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
+            // Check if parent is modal body, or use parent container
+            if (parentContainer.classList.contains('modal-body')) {
+                contentContainer = parentContainer;
+            } else {
+                contentContainer = tabContainer.parentElement;
+            }
 
-            // Add active class to selected tab
+            // Remove active class from all tabs in this container
+            tabContainer.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+
+            // Add active class to clicked tab
             this.classList.add('active');
 
-            // Get tab content id and activate it
-            const tabContentId = this.getAttribute('data-tab');
-            const tabContent = document.getElementById(tabContentId);
-            if (tabContent) {
-                tabContent.classList.add('active');
-            }
+            // Hide all tab contents in this container
+            contentContainer.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Show the selected tab content
+            const targetId = this.getAttribute('data-tab');
+            const targetContent = contentContainer.querySelector(`#${targetId}`);
+            if (targetContent) targetContent.classList.add('active');
         });
     });
 
@@ -280,337 +369,205 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     };
 
-    // ====== Helper function to get CSRF token ======
-    function getCSRFToken() {
-        return document.querySelector('meta[name="csrf-token"]')
-            ? document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            : '';
+    // Show snackbar if URL has success parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMsg = urlParams.get('success');
+    if (successMsg) {
+        window.showSnackbar(decodeURIComponent(successMsg));
     }
 
-    // ====== Revenue form submission ======
-    const revenueForm = document.getElementById('revenueForm');
-    if (revenueForm) {
-        revenueForm.addEventListener('submit', function(event) {
-            event.preventDefault();
+    // ====== Toggle filter area ==========
+    const filterToggle = document.getElementById('filterToggle');
+    const filterArea = document.getElementById('filterArea');
 
-            // Check if account_manager_id and corporate_customer_id are set
-            const amId = document.getElementById('account_manager_id').value;
-            const ccId = document.getElementById('corporate_customer_id').value;
-
-            if (!amId) {
-                showSnackbar('Silakan pilih Account Manager dari daftar yang tersedia.', 'error');
-                return;
+    if (filterToggle && filterArea) {
+        filterToggle.addEventListener('click', function() {
+            if (filterArea.style.display === 'none') {
+                filterArea.style.display = 'block';
+                filterToggle.classList.add('active');
+            } else {
+                filterArea.style.display = 'none';
+                filterToggle.classList.remove('active');
             }
-
-            if (!ccId) {
-                showSnackbar('Silakan pilih Corporate Customer dari daftar yang tersedia.', 'error');
-                return;
-            }
-
-            // Prepare form data
-            const formData = new FormData(this);
-
-            // Add bulan value from month and year inputs
-            const monthValue = document.getElementById('bulan_month').value;
-            const yearValue = document.getElementById('bulan_year').value;
-
-            if (monthValue && yearValue) {
-                formData.set('bulan', `${yearValue}-${monthValue}`);
-            }
-
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showSnackbar(data.message || 'Data revenue berhasil disimpan!', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showSnackbar(data.message || 'Gagal menyimpan data.', 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat menyimpan data.', 'error');
-                console.error('Error:', error);
-            });
         });
     }
 
-    // ====== Account Manager form submission (Manual) ======
-    const amForm = document.getElementById('amForm');
-    if (amForm) {
-        amForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
+    // ====== AJAX Form submissions ======
+    const setupFormSubmission = (formId, actionOnSuccess) => {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
 
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showSnackbar(data.message || 'Account Manager berhasil ditambahkan!', 'success');
-                    this.reset();
-                    document.querySelector('#addAccountManagerModal .btn-close').click();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showSnackbar(data.message || 'Gagal menambahkan Account Manager.', 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat menyimpan data.', 'error');
-                console.error('Error:', error);
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSnackbar(data.message || 'Data berhasil disimpan!', 'success');
+                        if (actionOnSuccess) actionOnSuccess(this, data);
+                    } else {
+                        showSnackbar(data.message || 'Gagal menyimpan data.', 'error');
+                    }
+                })
+                .catch(error => {
+                    showSnackbar('Terjadi kesalahan saat menyimpan data.', 'error');
+                    console.error('Error:', error);
+                });
             });
-        });
-    }
-
-    // ====== Account Manager Excel Import ======
-    const amImportForm = document.getElementById('amImportForm');
-    if (amImportForm) {
-        amImportForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let message = data.message || 'Data Account Manager berhasil diimpor!';
-                    if (data.data) {
-                        const importResults = data.data;
-                        message = `${importResults.imported} data Account Manager berhasil diimpor.`;
-                        if (importResults.duplicates > 0) {
-                            message += ` ${importResults.duplicates} data duplikat dilewati.`;
-                        }
-                        if (importResults.errors > 0) {
-                            message += ` ${importResults.errors} data gagal diimpor.`;
-                        }
-                    }
-                    showSnackbar(message, 'success');
-                    this.reset();
-                    document.querySelector('#addAccountManagerModal .btn-close').click();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    let errorMessage = data.message || 'Gagal mengimpor data.';
-                    if (data.errors && Array.isArray(data.errors)) {
-                        // Jika ada detail error yang dikirim dari server
-                        errorMessage += ' Detail: ' + data.errors.join('; ');
-                    }
-                    showSnackbar(errorMessage, 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat mengimpor data.', 'error');
-                console.error('Error:', error);
-            });
-        });
-    }
-
-    // ====== Corporate Customer form submission (Manual) ======
-    const ccForm = document.getElementById('ccForm');
-    if (ccForm) {
-        ccForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showSnackbar(data.message || 'Corporate Customer berhasil ditambahkan!', 'success');
-                    this.reset();
-                    document.querySelector('#addCorporateCustomerModal .btn-close').click();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showSnackbar(data.message || 'Gagal menambahkan Corporate Customer.', 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat menyimpan data.', 'error');
-                console.error('Error:', error);
-            });
-        });
-    }
-
-    // ====== Corporate Customer Excel Import ======
-    const ccImportForm = document.getElementById('ccImportForm');
-    if (ccImportForm) {
-        ccImportForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let message = data.message || 'Data Corporate Customer berhasil diimpor!';
-                    if (data.data) {
-                        const importResults = data.data;
-                        message = `${importResults.imported} data Corporate Customer berhasil diimpor.`;
-                        if (importResults.duplicates > 0) {
-                            message += ` ${importResults.duplicates} data duplikat dilewati.`;
-                        }
-                        if (importResults.errors > 0) {
-                            message += ` ${importResults.errors} data gagal diimpor.`;
-                        }
-                    }
-                    showSnackbar(message, 'success');
-                    this.reset();
-                    document.querySelector('#addCorporateCustomerModal .btn-close').click();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    let errorMessage = data.message || 'Gagal mengimpor data.';
-                    if (data.errors && Array.isArray(data.errors)) {
-                        // Jika ada detail error yang dikirim dari server
-                        errorMessage += ' Detail: ' + data.errors.join('; ');
-                    }
-                    showSnackbar(errorMessage, 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat mengimpor data.', 'error');
-                console.error('Error:', error);
-            });
-        });
-    }
-
-    // ====== Revenue Excel Import ======
-    const revenueImportForm = document.getElementById('revenueImportForm');
-    if (revenueImportForm) {
-        revenueImportForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const formData = new FormData(this);
-
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': getCSRFToken()
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let message = data.message || 'Data Revenue berhasil diimpor!';
-                    if (data.data) {
-                        const importResults = data.data;
-                        message = `${importResults.imported} data Revenue berhasil diimpor.`;
-                        if (importResults.duplicates > 0) {
-                            message += ` ${importResults.duplicates} data duplikat dilewati.`;
-                        }
-                        if (importResults.errors > 0) {
-                            message += ` ${importResults.errors} data gagal diimpor.`;
-                        }
-
-                        // If there are error details, create a more detailed message
-                        if (data.error_details && data.error_details.length > 0) {
-                            const errorList = data.error_details.join('\n');
-                            console.log('Import errors:', errorList);
-
-                            // Create an error summary message
-                            let errorSummary = `${importResults.errors} data gagal diimpor:`;
-                            if (data.error_details.length > 3) {
-                                // Only show the first 3 errors in the snackbar
-                                for (let i = 0; i < 3; i++) {
-                                    errorSummary += `\n- ${data.error_details[i]}`;
-                                }
-                                errorSummary += `\n... dan ${data.error_details.length - 3} error lainnya.`;
-                            } else {
-                                data.error_details.forEach(error => {
-                                    errorSummary += `\n- ${error}`;
-                                });
-                            }
-
-                            // Display a detailed error log in console
-                            console.log(errorSummary);
-
-                            // Show a dialog with detailed errors
-                            setTimeout(() => {
-                                alert('Detail error impor:\n\n' + errorSummary);
-                            }, 500);
-                        }
-                    }
-
-                    showSnackbar(message, 'success');
-                    this.reset();
-                    document.querySelector('#importRevenueModal .btn-close').click();
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    let errorMessage = data.message || 'Gagal mengimpor data.';
-                    if (data.errors && Array.isArray(data.errors)) {
-                        // Jika ada detail error yang dikirim dari server
-                        errorMessage += ' Detail: ' + data.errors.join('; ');
-                    }
-                    showSnackbar(errorMessage, 'error');
-                }
-            })
-            .catch(error => {
-                showSnackbar('Terjadi kesalahan saat mengimpor data.', 'error');
-                console.error('Error:', error);
-            });
-        });
-    }
-
-    // ====== Add icons to edit and delete buttons ======
-    document.querySelectorAll('a:contains("Edit")').forEach(link => {
-        const originalText = link.innerHTML;
-        link.innerHTML = `<i class="fas fa-edit"></i> ${originalText}`;
-        link.classList.add('edit-btn', 'action-btn');
-    });
-
-    document.querySelectorAll('button:contains("Hapus")').forEach(button => {
-        const originalText = button.innerHTML;
-        button.innerHTML = `<i class="fas fa-trash"></i> ${originalText}`;
-        button.classList.add('delete-btn', 'action-btn');
-    });
-
-    // Polyfill for :contains selector
-    jQuery.expr[':'].contains = function(a, i, m) {
-        return jQuery(a).text().toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        }
     };
+
+    // Setup form submissions
+    setupFormSubmission('revenueForm', (form, data) => {
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    setupFormSubmission('amForm', (form, data) => {
+        form.reset();
+        document.querySelector('#addAccountManagerModal .btn-close')?.click();
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    setupFormSubmission('amImportForm', (form, data) => {
+        form.reset();
+        document.querySelector('#addAccountManagerModal .btn-close')?.click();
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    setupFormSubmission('ccForm', (form, data) => {
+        form.reset();
+        document.querySelector('#addCorporateCustomerModal .btn-close')?.click();
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    setupFormSubmission('ccImportForm', (form, data) => {
+        form.reset();
+        document.querySelector('#addCorporateCustomerModal .btn-close')?.click();
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    setupFormSubmission('revenueImportForm', (form, data) => {
+        form.reset();
+        document.querySelector('#importRevenueModal .btn-close')?.click();
+        setTimeout(() => window.location.reload(), 1500);
+    });
+
+    // ====== Filter Revenue by Year (for dashboard) ======
+    const yearFilter = document.getElementById('yearFilter');
+    const applyYearFilter = document.getElementById('applyYearFilter');
+
+    if (yearFilter && applyYearFilter) {
+        // Event handler untuk tombol filter tahun
+        applyYearFilter.addEventListener('click', function() {
+            const year = yearFilter.value;
+            if (year && year >= 2000 && year <= 2100) {
+                filterRevenueByYear(year);
+            }
+        });
+
+        // Mendukung tombol Enter pada input filter tahun
+        yearFilter.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                applyYearFilter.click();
+            }
+        });
+    }
+
+    // Fungsi untuk memfilter revenue berdasarkan tahun (di dashboard)
+    function filterRevenueByYear(year) {
+        const monthlyRevenueTable = document.getElementById('monthlyRevenueTable');
+        if (!monthlyRevenueTable) return;
+
+        // Tampilkan loading state
+        monthlyRevenueTable.querySelector('tbody').innerHTML = '<tr><td colspan="5" class="text-center py-4"><i class="fas fa-spinner fa-spin fs-4"></i> Loading data...</td></tr>';
+
+        fetch('/dashboard/revenues?year=' + year)
+            .then(response => response.json())
+            .then(response => {
+                updateRevenueTable(response.data, response.year);
+            })
+            .catch(error => {
+                // Tampilkan pesan error
+                monthlyRevenueTable.querySelector('tbody').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle fs-4 mb-2"></i><br>Gagal memuat data. Silakan coba lagi.</td></tr>';
+                console.error('Error fetching revenue data:', error);
+            });
+    }
+
+    // Fungsi untuk mengupdate tabel revenue
+    function updateRevenueTable(data, year) {
+        const monthlyRevenueTable = document.getElementById('monthlyRevenueTable');
+        if (!monthlyRevenueTable) return;
+
+        const months = {
+            1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April',
+            5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus',
+            9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
+        };
+
+        let tableHtml = '';
+
+        if (data.length > 0) {
+            data.forEach(function(revenue) {
+                const achievement = revenue.target > 0
+                    ? Math.round((revenue.realisasi / revenue.target) * 100 * 10) / 10
+                    : 0;
+
+                const statusClass = achievement >= 100
+                    ? 'bg-success-soft'
+                    : (achievement >= 80 ? 'bg-warning-soft' : 'bg-danger-soft');
+
+                const statusIcon = achievement >= 100
+                    ? 'check-circle'
+                    : (achievement >= 80 ? 'clock' : 'times-circle');
+
+                const iconColorClass = achievement >= 100
+                    ? 'text-success'
+                    : (achievement >= 80 ? 'text-warning' : 'text-danger');
+
+                tableHtml += `
+                <tr>
+                    <td>${months[revenue.month] || 'Unknown'}</td>
+                    <td class="text-end">Rp ${formatNumber(revenue.target)}</td>
+                    <td class="text-end">Rp ${formatNumber(revenue.realisasi)}</td>
+                    <td class="text-end">
+                        <span class="status-badge ${statusClass}">${achievement}%</span>
+                    </td>
+                    <td class="text-center">
+                        <i class="fas fa-${statusIcon} ${iconColorClass}"></i>
+                    </td>
+                </tr>
+                `;
+            });
+        } else {
+            tableHtml = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    <i class="fas fa-chart-bar fs-4 d-block mb-2"></i>
+                    Tidak ada data revenue untuk tahun ${year}
+                </td>
+            </tr>
+            `;
+        }
+
+        monthlyRevenueTable.querySelector('tbody').innerHTML = tableHtml;
+
+        // Update judul filter jika ada
+        const yearFilterTitle = document.getElementById('yearFilterTitle');
+        if (yearFilterTitle) {
+            yearFilterTitle.textContent = yearFilterTitle.textContent.replace(/\(\d+\)/, `(${year})`);
+        }
+    }
+
+    // Helper function untuk format angka
+    function formatNumber(number) {
+        return new Intl.NumberFormat('id-ID').format(number);
+    }
 });

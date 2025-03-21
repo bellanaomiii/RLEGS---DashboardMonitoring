@@ -1,6 +1,9 @@
 // Unified dashboard.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Inisialisasi snackbar
+    // Initialize navbar dropdowns
+    initializeBootstrapComponents();
+
+    // Init snackbar if not exists
     if (!document.getElementById('snackbar')) {
         const snackbar = document.createElement('div');
         snackbar.id = 'snackbar';
@@ -26,9 +29,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthPicker = document.getElementById('month_picker');
 
     if (monthYearInput && monthPicker) {
-        // Set current year
-        let currentYear = new Date().getFullYear();
-        let selectedMonth = new Date().getMonth();
+        // Set current date
+        const nows = new Date();
+        let currentYear = nows.getFullYear();
+        let selectedMonth = nows.getMonth();
         let selectedYear = currentYear;
         let isMonthPickerOpen = false;
 
@@ -45,14 +49,16 @@ document.addEventListener('DOMContentLoaded', function() {
             currentYearElement.textContent = currentYear;
         }
 
-        // Generate month grid
+        // Generate month grid with animation effect
         function renderMonthGrid() {
             if (!monthGrid) return;
 
             monthGrid.innerHTML = '';
+
             monthNames.forEach((month, index) => {
                 const monthItem = document.createElement('div');
                 monthItem.className = 'month-item';
+
                 if (selectedMonth === index && selectedYear === currentYear) {
                     monthItem.classList.add('selected');
                     monthItem.classList.add('active');
@@ -60,6 +66,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 monthItem.textContent = month;
                 monthItem.dataset.month = index;
+
+                // Add small animation delay based on index
+                monthItem.style.opacity = '0';
+                monthItem.style.transform = 'translateY(8px)';
 
                 monthItem.addEventListener('click', function() {
                     // Remove active/selected class from all month items
@@ -77,15 +87,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 monthGrid.appendChild(monthItem);
+
+                // Trigger staggered animation
+                setTimeout(() => {
+                    monthItem.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    monthItem.style.opacity = '1';
+                    monthItem.style.transform = 'translateY(0)';
+                }, index * 20);
             });
         }
 
-        // Show month picker when input is clicked
+        // Show month picker with animation
         monthYearInput.addEventListener('click', function() {
             monthPicker.style.display = 'block';
-            monthPicker.classList.add('active');
+            monthPicker.style.opacity = '0';
+            monthPicker.style.transform = 'translateY(-10px)';
+
+            // Trigger animation
+            setTimeout(() => {
+                monthPicker.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                monthPicker.style.opacity = '1';
+                monthPicker.style.transform = 'translateY(0)';
+            }, 10);
+
             isMonthPickerOpen = true;
             renderMonthGrid();
+
+            if (currentYearElement) {
+                currentYearElement.textContent = currentYear;
+            }
         });
 
         // Year navigation
@@ -110,9 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Cancel month selection
         if (cancelButton) {
             cancelButton.addEventListener('click', function() {
-                monthPicker.style.display = 'none';
-                monthPicker.classList.remove('active');
-                isMonthPickerOpen = false;
+                closeMonthPicker();
             });
         }
 
@@ -130,18 +158,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Save selected values
                 selectedYear = currentYear;
 
-                monthPicker.style.display = 'none';
-                monthPicker.classList.remove('active');
-                isMonthPickerOpen = false;
+                closeMonthPicker();
             });
+        }
+
+        // Close month picker with animation
+        function closeMonthPicker() {
+            if (!monthPicker) return;
+
+            monthPicker.style.opacity = '0';
+            monthPicker.style.transform = 'translateY(-10px)';
+
+            setTimeout(() => {
+                monthPicker.style.display = 'none';
+                isMonthPickerOpen = false;
+            }, 200);
         }
 
         // Close month picker when clicking outside
         document.addEventListener('click', function(event) {
-            if (monthPicker && isMonthPickerOpen && !monthPicker.contains(event.target) && event.target !== monthYearInput) {
-                monthPicker.style.display = 'none';
-                monthPicker.classList.remove('active');
-                isMonthPickerOpen = false;
+            if (monthPicker && isMonthPickerOpen &&
+                !monthPicker.contains(event.target) &&
+                event.target !== monthYearInput) {
+                closeMonthPicker();
             }
         });
 
@@ -336,7 +375,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show the selected tab content
             const targetId = this.getAttribute('data-tab');
             const targetContent = contentContainer.querySelector(`#${targetId}`);
-            if (targetContent) targetContent.classList.add('active');
+            if (targetContent) {
+                targetContent.classList.add('active');
+
+                // Add a small animation
+                targetContent.style.opacity = '0';
+                targetContent.style.transform = 'translateY(10px)';
+
+                setTimeout(() => {
+                    targetContent.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    targetContent.style.opacity = '1';
+                    targetContent.style.transform = 'translateY(0)';
+                }, 10);
+            }
         });
     });
 
@@ -373,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const successMsg = urlParams.get('success');
     if (successMsg) {
-        window.showSnackbar(decodeURIComponent(successMsg));
+        window.showSnackbar(decodeURIComponent(successMsg), 'success');
     }
 
     // ====== Toggle filter area ==========
@@ -383,10 +434,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (filterToggle && filterArea) {
         filterToggle.addEventListener('click', function() {
             if (filterArea.style.display === 'none') {
+                // Show with animation
                 filterArea.style.display = 'block';
+                filterArea.style.opacity = '0';
+                filterArea.style.maxHeight = '0';
+
+                setTimeout(() => {
+                    filterArea.style.transition = 'opacity 0.3s ease, max-height 0.3s ease';
+                    filterArea.style.opacity = '1';
+                    filterArea.style.maxHeight = '500px'; // Adjust as needed
+                }, 10);
+
                 filterToggle.classList.add('active');
             } else {
-                filterArea.style.display = 'none';
+                // Hide with animation
+                filterArea.style.opacity = '0';
+                filterArea.style.maxHeight = '0';
+
+                setTimeout(() => {
+                    filterArea.style.display = 'none';
+                }, 300);
+
                 filterToggle.classList.remove('active');
             }
         });
@@ -569,5 +637,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper function untuk format angka
     function formatNumber(number) {
         return new Intl.NumberFormat('id-ID').format(number);
+    }
+
+    // Initialize Bootstrap components
+    function initializeBootstrapComponents() {
+        // Initialize all dropdowns
+        const dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+        if (dropdownElementList.length > 0) {
+            try {
+                const dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                    return new bootstrap.Dropdown(dropdownToggleEl);
+                });
+            } catch (e) {
+                console.error('Bootstrap initialization error:', e);
+            }
+        }
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        if (tooltipTriggerList.length > 0) {
+            try {
+                const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            } catch (e) {
+                console.error('Bootstrap tooltip initialization error:', e);
+            }
+        }
     }
 });

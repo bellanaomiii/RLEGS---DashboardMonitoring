@@ -7,6 +7,40 @@
 <!-- Font Awesome untuk ikon -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+    /* Perbaikan untuk bulan capaian */
+    .month-picker-container {
+        position: relative;
+        z-index: 1020;
+    }
+
+    .month-picker {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1050;
+        width: 320px;
+        margin-top: 5px;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    /* Perbaikan untuk form-row space */
+    .form-row {
+        margin-bottom: 5px;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    /* Perbaikan untuk tab pagination */
+    .tab-content {
+        position: relative;
+    }
+</style>
 @endsection
 
 @section('content')
@@ -19,23 +53,6 @@
         <p class="header-subtitle">
             Kelola dan monitoring data pendapatan Account Manager Telkom
         </p>
-    </div>
-
-    <!-- Welcome Section & Export Button -->
-    <div class="dashboard-card">
-        <div class="welcome-section">
-            <div class="welcome-text">
-                Selamat datang, {{ $user->name ?? 'User' }}!
-            </div>
-            <div class="welcome-actions">
-                <button class="btn-export me-2">
-                    <i class="fas fa-download"></i> Export Data
-                </button>
-                <button class="btn-import" data-bs-toggle="modal" data-bs-target="#importRevenueModal">
-                    <i class="fas fa-upload"></i> Import Excel
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Snackbar untuk notifikasi -->
@@ -69,6 +86,14 @@
             <div>
                 <h5 class="card-title">Tambah Data Revenue</h5>
                 <p class="text-muted small mb-0">Tambahkan data revenue baru untuk Account Manager</p>
+            </div>
+            <div class="d-flex">
+                <button class="btn-export me-2">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+                <button class="btn-import" data-bs-toggle="modal" data-bs-target="#importRevenueModal">
+                    <i class="fas fa-upload"></i> Import Excel
+                </button>
             </div>
         </div>
         <div class="form-section">
@@ -416,6 +441,59 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination untuk Account Manager -->
+                    @if(isset($accountManagers) && $accountManagers->hasPages())
+                    <div class="pagination-container">
+                        <ul class="pagination">
+                            <!-- Previous Page Link -->
+                            @if($accountManagers->onFirstPage())
+                                <li class="pagination-item">
+                                    <span class="pagination-link" aria-disabled="true">
+                                        <i class="fas fa-chevron-left"></i> Prev
+                                    </span>
+                                </li>
+                            @else
+                                <li class="pagination-item">
+                                    <a href="{{ $accountManagers->previousPageUrl() }}" class="pagination-link">
+                                        <i class="fas fa-chevron-left"></i> Prev
+                                    </a>
+                                </li>
+                            @endif
+
+                            <!-- Pagination Elements -->
+                            @foreach($accountManagers->getUrlRange(1, $accountManagers->lastPage()) as $page => $url)
+                                @if($page == $accountManagers->currentPage())
+                                    <li class="pagination-item">
+                                        <span class="pagination-link active">{{ $page }}</span>
+                                    </li>
+                                @else
+                                    <li class="pagination-item">
+                                        <a href="{{ $url }}" class="pagination-link">{{ $page }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
+
+                            <!-- Next Page Link -->
+                            @if($accountManagers->hasMorePages())
+                                <li class="pagination-item">
+                                    <a href="{{ $accountManagers->nextPageUrl() }}" class="pagination-link">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            @else
+                                <li class="pagination-item">
+                                    <span class="pagination-link" aria-disabled="true">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                </li>
+                            @endif
+                        </ul>
+                        <div class="pagination-info">
+                            Showing {{ $accountManagers->firstItem() }} to {{ $accountManagers->lastItem() }} of {{ $accountManagers->total() }} results
+                        </div>
+                    </div>
+                    @endif
                 </div>
             @endif
         </div>
@@ -462,6 +540,59 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination untuk Corporate Customer -->
+                    @if(isset($corporateCustomers) && $corporateCustomers->hasPages())
+                    <div class="pagination-container">
+                        <ul class="pagination">
+                            <!-- Previous Page Link -->
+                            @if($corporateCustomers->onFirstPage())
+                                <li class="pagination-item">
+                                    <span class="pagination-link" aria-disabled="true">
+                                        <i class="fas fa-chevron-left"></i> Prev
+                                    </span>
+                                </li>
+                            @else
+                                <li class="pagination-item">
+                                    <a href="{{ $corporateCustomers->previousPageUrl() }}" class="pagination-link">
+                                        <i class="fas fa-chevron-left"></i> Prev
+                                    </a>
+                                </li>
+                            @endif
+
+                            <!-- Pagination Elements -->
+                            @foreach($corporateCustomers->getUrlRange(1, $corporateCustomers->lastPage()) as $page => $url)
+                                @if($page == $corporateCustomers->currentPage())
+                                    <li class="pagination-item">
+                                        <span class="pagination-link active">{{ $page }}</span>
+                                    </li>
+                                @else
+                                    <li class="pagination-item">
+                                        <a href="{{ $url }}" class="pagination-link">{{ $page }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
+
+                            <!-- Next Page Link -->
+                            @if($corporateCustomers->hasMorePages())
+                                <li class="pagination-item">
+                                    <a href="{{ $corporateCustomers->nextPageUrl() }}" class="pagination-link">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            @else
+                                <li class="pagination-item">
+                                    <span class="pagination-link" aria-disabled="true">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                </li>
+                            @endif
+                        </ul>
+                        <div class="pagination-info">
+                            Showing {{ $corporateCustomers->firstItem() }} to {{ $corporateCustomers->lastItem() }} of {{ $corporateCustomers->total() }} results
+                        </div>
+                    </div>
+                    @endif
                 </div>
             @endif
         </div>
@@ -647,279 +778,81 @@
   </div>
 </div>
 
+@endsection
+
+@section('scripts')
+<!-- Load Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Load dashboard.js dengan versi baru untuk memastikan fresh load -->
+<script src="{{ asset('js/dashboard.js?v=' . time()) }}"></script>
+
+<!-- Inisialisasi manual untuk dropdown dan month-picker -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Tab Navigation
-        const tabs = document.querySelectorAll('.tab-item');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabsContainer = tab.closest('.tab-menu-container');
-                const parentContainer = tabsContainer.parentElement;
-                let contentContainer;
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap dropdown for profile menu
+    const profileDropdown = document.querySelector('#navbarDropdown');
+    if (profileDropdown) {
+        profileDropdown.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-                // Check if parent is modal body, or use parent container
-                if (parentContainer.classList.contains('modal-body')) {
-                    contentContainer = parentContainer;
+            const dropdownMenu = this.nextElementSibling;
+            if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                // Toggle dropdown
+                dropdownMenu.classList.toggle('show');
+                if (dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.setAttribute('data-bs-popper', 'static');
                 } else {
-                    contentContainer = tabsContainer.parentElement;
-                }
-
-                // Remove active class from all tabs in this container
-                tabsContainer.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-
-                // Add active class to clicked tab
-                tab.classList.add('active');
-
-                // Hide all tab contents in this container
-                contentContainer.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-
-                // Show the selected tab content
-                const targetId = tab.getAttribute('data-tab');
-                const targetContent = contentContainer.querySelector(`#${targetId}`);
-                if (targetContent) targetContent.classList.add('active');
-            });
-        });
-
-        // Month Picker
-        const monthYearPicker = document.getElementById('month_year_picker');
-        const monthPicker = document.getElementById('month_picker');
-        const monthGrid = document.getElementById('month_grid');
-        const currentYearElement = document.getElementById('current_year');
-
-        if (monthYearPicker) {
-            // Initialize current date
-            const now = new Date();
-            let currentYear = now.getFullYear();
-            let selectedMonth = now.getMonth();
-
-            // Month names
-            const monthNames = [
-                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-            ];
-
-            // Initial value
-            monthYearPicker.value = `${monthNames[selectedMonth]} ${currentYear}`;
-
-            // Update hidden inputs
-            document.getElementById('bulan_month').value = String(selectedMonth + 1).padStart(2, '0');
-            document.getElementById('bulan_year').value = currentYear;
-            document.getElementById('bulan').value = `${currentYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-
-            // Create month grid
-            function renderMonthGrid() {
-                monthGrid.innerHTML = '';
-                for (let i = 0; i < 12; i++) {
-                    const monthItem = document.createElement('div');
-                    monthItem.className = 'month-item';
-                    if (i === selectedMonth) {
-                        monthItem.classList.add('selected');
-                    }
-                    monthItem.textContent = monthNames[i];
-                    monthItem.dataset.month = i;
-
-                    monthItem.addEventListener('click', () => {
-                        document.querySelectorAll('.month-item').forEach(item => {
-                            item.classList.remove('selected');
-                        });
-                        monthItem.classList.add('selected');
-                        selectedMonth = i;
-                    });
-
-                    monthGrid.appendChild(monthItem);
+                    dropdownMenu.removeAttribute('data-bs-popper');
                 }
             }
-
-            // Show month picker on click
-            monthYearPicker.addEventListener('click', function() {
-                monthPicker.style.display = 'block';
-                renderMonthGrid();
-                if (currentYearElement) {
-                    currentYearElement.textContent = currentYear;
-                }
-            });
-
-            // Year navigation
-            document.getElementById('prev_year').addEventListener('click', function() {
-                currentYear--;
-                currentYearElement.textContent = currentYear;
-                renderMonthGrid();
-            });
-
-            document.getElementById('next_year').addEventListener('click', function() {
-                currentYear++;
-                currentYearElement.textContent = currentYear;
-                renderMonthGrid();
-            });
-
-            // Cancel button
-            document.getElementById('cancel_month').addEventListener('click', function() {
-                monthPicker.style.display = 'none';
-            });
-
-            // Apply button
-            document.getElementById('apply_month').addEventListener('click', function() {
-                monthYearPicker.value = `${monthNames[selectedMonth]} ${currentYear}`;
-
-                // Update hidden inputs
-                document.getElementById('bulan_month').value = String(selectedMonth + 1).padStart(2, '0');
-                document.getElementById('bulan_year').value = currentYear;
-                document.getElementById('bulan').value = `${currentYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-
-                monthPicker.style.display = 'none';
-            });
-
-            // Close month picker when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!monthYearPicker.contains(e.target) && !monthPicker.contains(e.target)) {
-                    monthPicker.style.display = 'none';
-                }
-            });
-        }
-
-        // Toggle filter area
-        const filterToggle = document.getElementById('filterToggle');
-        const filterArea = document.getElementById('filterArea');
-
-        if (filterToggle && filterArea) {
-            filterToggle.addEventListener('click', function() {
-                if (filterArea.style.display === 'none') {
-                    filterArea.style.display = 'block';
-                    filterToggle.classList.add('active');
-                } else {
-                    filterArea.style.display = 'none';
-                    filterToggle.classList.remove('active');
-                }
-            });
-        }
-
-        // Confirm delete
-        const deleteForms = document.querySelectorAll('.delete-form');
-        deleteForms.forEach(form => {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-                    this.submit();
-                }
-            });
         });
 
-        // Account Manager Suggestions (fix for 404 error)
-        const accountManagerInput = document.getElementById('account_manager');
-        const accountManagerIdInput = document.getElementById('account_manager_id');
-        const accountManagerSuggestions = document.getElementById('account_manager_suggestions');
-
-        if (accountManagerInput) {
-            accountManagerInput.addEventListener('input', function() {
-                const search = this.value.trim();
-
-                if (search.length < 2) {
-                    accountManagerSuggestions.innerHTML = '';
-                    accountManagerSuggestions.style.display = 'none';
-                    return;
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!profileDropdown.contains(e.target)) {
+                const dropdownMenu = profileDropdown.nextElementSibling;
+                if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.classList.remove('show');
                 }
+            }
+        });
+    }
 
-                // Fix: Use route('revenue.searchAccountManager') instead of route that doesn't exist
-                fetch('/search-am?search=' + encodeURIComponent(search))
-                    .then(response => response.json())
-                    .then(data => {
-                        accountManagerSuggestions.innerHTML = '';
+    // Fix for month picker visibility
+    const monthYearPicker = document.getElementById('month_year_picker');
+    const monthPicker = document.getElementById('month_picker');
 
-                        if (data.length === 0) {
-                            const noResult = document.createElement('div');
-                            noResult.className = 'suggestion-item';
-                            noResult.textContent = 'Tidak ada hasil yang ditemukan';
-                            accountManagerSuggestions.appendChild(noResult);
-                        } else {
-                            data.forEach(am => {
-                                const item = document.createElement('div');
-                                item.className = 'suggestion-item';
-                                item.textContent = `${am.nama} - ${am.nik || 'NIK tidak tersedia'}`;
-
-                                item.addEventListener('click', () => {
-                                    accountManagerInput.value = am.nama;
-                                    accountManagerIdInput.value = am.id;
-                                    accountManagerSuggestions.style.display = 'none';
-                                });
-
-                                accountManagerSuggestions.appendChild(item);
-                            });
-                        }
-
-                        accountManagerSuggestions.style.display = 'block';
-                    })
-                    .catch(error => {
-                        console.error('Error fetching account managers:', error);
-
-                        accountManagerSuggestions.innerHTML = '';
-                        const errorItem = document.createElement('div');
-                        errorItem.className = 'suggestion-item text-danger';
-                        errorItem.textContent = 'Error: Tidak dapat memuat data';
-                        accountManagerSuggestions.appendChild(errorItem);
-                        accountManagerSuggestions.style.display = 'block';
-                    });
-            });
+    if (monthYearPicker && monthPicker) {
+        // Ensure the month picker doesn't get hidden by parent containers
+        const monthPickerContainer = monthYearPicker.closest('.month-picker-container');
+        if (monthPickerContainer) {
+            monthPickerContainer.style.zIndex = '1030';
         }
 
-        // Corporate Customer Suggestions (fix for 404 error)
-        const corporateCustomerInput = document.getElementById('corporate_customer');
-        const corporateCustomerIdInput = document.getElementById('corporate_customer_id');
-        const corporateCustomerSuggestions = document.getElementById('corporate_customer_suggestions');
+        // Ensure month picker is visible when clicked
+        monthYearPicker.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-        if (corporateCustomerInput) {
-            corporateCustomerInput.addEventListener('input', function() {
-                const search = this.value.trim();
+            // Show month picker
+            monthPicker.style.display = 'block';
 
-                if (search.length < 2) {
-                    corporateCustomerSuggestions.innerHTML = '';
-                    corporateCustomerSuggestions.style.display = 'none';
-                    return;
-                }
+            // Ensure it's on top
+            monthPicker.style.zIndex = '1050';
 
-                // Fix: Use route('revenue.searchCorporateCustomer') instead of route that doesn't exist
-                fetch('/search-customer?search=' + encodeURIComponent(search))
-                    .then(response => response.json())
-                    .then(data => {
-                        corporateCustomerSuggestions.innerHTML = '';
-
-                        if (data.length === 0) {
-                            const noResult = document.createElement('div');
-                            noResult.className = 'suggestion-item';
-                            noResult.textContent = 'Tidak ada hasil yang ditemukan';
-                            corporateCustomerSuggestions.appendChild(noResult);
-                        } else {
-                            data.forEach(cc => {
-                                const item = document.createElement('div');
-                                item.className = 'suggestion-item';
-                                item.textContent = `${cc.nama} - NIPNAS: ${cc.nipnas || 'Tidak tersedia'}`;
-
-                                item.addEventListener('click', () => {
-                                    corporateCustomerInput.value = cc.nama;
-                                    corporateCustomerIdInput.value = cc.id;
-                                    corporateCustomerSuggestions.style.display = 'none';
-                                });
-
-                                corporateCustomerSuggestions.appendChild(item);
-                            });
-                        }
-
-                        corporateCustomerSuggestions.style.display = 'block';
-                    })
-                    .catch(error => {
-                        console.error('Error fetching corporate customers:', error);
-
-                        corporateCustomerSuggestions.innerHTML = '';
-                        const errorItem = document.createElement('div');
-                        errorItem.className = 'suggestion-item text-danger';
-                        errorItem.textContent = 'Error: Tidak dapat memuat data';
-                        corporateCustomerSuggestions.appendChild(errorItem);
-                        corporateCustomerSuggestions.style.display = 'block';
-                    });
-            });
-        }
-    });
+            // Check if we need to adjust position
+            const rect = monthPicker.getBoundingClientRect();
+            if (rect.bottom > window.innerHeight) {
+                monthPicker.style.top = 'auto';
+                monthPicker.style.bottom = '100%';
+            } else {
+                monthPicker.style.top = '100%';
+                monthPicker.style.bottom = 'auto';
+            }
+        });
+    }
+});
 </script>
 @endsection

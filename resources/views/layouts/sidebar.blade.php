@@ -27,8 +27,13 @@
             </div>                
             <ul class="sidebar-nav">
                 <li class="sidebar-item">
-                    <a href="{{ route('revenue.data') }}" class="sidebar-link">
-                        <i class="lni lni-dashboard-square-1"></i><span>Data Revenue</span>
+                    <a href="{{ route('dashboard') }}" class="sidebar-link">
+                        <i class="lni lni-dashboard-square-1"></i><span>Overview Data</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a href="{{ route('revenue.index') }}" class="sidebar-link">
+                        <i class="lni lni-file-pencil"></i><span>Data Revenue</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
@@ -64,7 +69,7 @@
                     </a>
                 </li>
                 <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
+                    <a href="{{ route('profile.edit') }}" class="sidebar-link">
                         <i class="lni lni-gear-1"></i><span>Settings</span>
                     </a>
                 </li>
@@ -102,10 +107,9 @@
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
                                     <li>
                                         <a class="dropdown-item" href="{{ route('profile.edit') }}">
-                                            {{ __('Profile') }}
+                                            {{ __('Settings') }}
                                         </a>
                                     </li>
-                                    <li><a class="dropdown-item" href="#">Settings</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form method="POST" action="{{ route('logout') }}" class="m-0">

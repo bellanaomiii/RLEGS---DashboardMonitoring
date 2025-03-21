@@ -207,11 +207,11 @@
 {{ $donutChart->script() }}
 
 
+<script src="sidebar/script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui@4.2.0/dist/js/coreui.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui-datepicker@1.0.0/dist/js/coreui-datepicker.min.js"></script>
 
-<script src="sidebar/script.js"></script>
 
 <style>
 /* Filter container positioning */

@@ -39,6 +39,10 @@ Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYea
     // Data Revenue - authorization dilakukan di controller
     Route::get('/revenue_data', [RevenueController::class, 'index'])
         ->name('revenue.data');
+
+    // Route untuk export Revenue
+
+    Route::get('/revenue/export', [RevenueController::class, 'export'])->name('revenue.export');
 });
 
 Route::middleware('auth')->group(function () {
@@ -56,7 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
-    
+
     // Revenue Excel routes
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
     Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');

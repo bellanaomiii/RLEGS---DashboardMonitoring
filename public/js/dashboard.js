@@ -1,6 +1,6 @@
-// Unified dashboard.js
+// Dashboard.js - Sistem monitoring revenue
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize navbar dropdowns
+    // Initialize Bootstrap components
     initializeBootstrapComponents();
 
     // Init snackbar if not exists
@@ -10,7 +10,33 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(snackbar);
     }
 
-    // ====== Month Picker Implementation ======
+    // ===== DASHBOARD CHART =====
+    if (document.getElementById('revenueChart')) {
+        initializeRevenueChart();
+    }
+
+    // ===== YEAR FILTER =====
+    const applyYearFilter = document.getElementById('applyYearFilter');
+    const yearFilter = document.getElementById('yearFilter');
+
+    if (applyYearFilter && yearFilter) {
+        // Event handler untuk tombol filter tahun
+        applyYearFilter.addEventListener('click', function() {
+            const year = yearFilter.value;
+            if (year && year >= 2000 && year <= 2100) {
+                filterRevenueByYear(year);
+            }
+        });
+
+        // Mendukung tombol Enter pada input filter tahun
+        yearFilter.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                applyYearFilter.click();
+            }
+        });
+    }
+
+    // ===== MONTH PICKER IMPLEMENTATION =====
     const monthNames = [
         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
         "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -23,16 +49,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Get elements
     const monthYearInput = document.getElementById('month_year_picker');
+    const openMonthPickerBtn = document.getElementById('open_month_picker');
     const hiddenMonthInput = document.getElementById('bulan_month');
     const hiddenYearInput = document.getElementById('bulan_year');
     const hiddenBulanInput = document.getElementById('bulan');
-    const monthPicker = document.getElementById('month_picker');
+    const monthPicker = document.getElementById('global_month_picker');
 
-    if (monthYearInput && monthPicker) {
+    // Ensure month picker is positioned at the document level
+    if (monthPicker) {
+        // Move it to body to ensure it's not constrained by parent elements
+        document.body.appendChild(monthPicker);
+
+        // Set initial styles for proper display
+        monthPicker.style.position = 'absolute'; // Changed from fixed to absolute
+        monthPicker.style.zIndex = '9999';
+        monthPicker.style.display = 'none';
+    }
+
+    if ((monthYearInput || openMonthPickerBtn) && monthPicker) {
         // Set current date
-        const nows = new Date();
-        let currentYear = nows.getFullYear();
-        let selectedMonth = nows.getMonth();
+        const now = new Date();
+        let currentYear = now.getFullYear();
+        let selectedMonth = now.getMonth();
         let selectedYear = currentYear;
         let isMonthPickerOpen = false;
 
@@ -47,6 +85,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set current year on initial load
         if (currentYearElement) {
             currentYearElement.textContent = currentYear;
+        }
+
+        // Year input handler - NEW FEATURE
+        const yearInput = document.getElementById('year_input');
+        if (yearInput) {
+            yearInput.addEventListener('change', function() {
+                const year = parseInt(this.value);
+                if (year && !isNaN(year) && year >= 1990 && year <= 2100) {
+                    currentYear = year;
+                    if (currentYearElement) {
+                        currentYearElement.textContent = currentYear;
+                    }
+                    renderMonthGrid();
+                }
+            });
         }
 
         // Generate month grid with animation effect
@@ -97,8 +150,40 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        // Function to position the month picker correctly
+        function positionMonthPicker() {
+            if (!monthYearInput || !monthPicker) return;
+
+            const inputRect = monthYearInput.getBoundingClientRect();
+
+            // Calculate position - adjust the 5px offset to position it closer to the input
+            const topPosition = inputRect.bottom + window.scrollY + 2; // Reduced from 5px to 2px
+            const leftPosition = inputRect.left + window.scrollX;
+
+            // Set positions
+            monthPicker.style.top = topPosition + 'px';
+            monthPicker.style.left = leftPosition + 'px';
+
+            // Ensure the month picker is visible in the viewport
+            const viewportHeight = window.innerHeight;
+            const monthPickerHeight = monthPicker.offsetHeight;
+
+            // If the picker would go off the bottom of the screen, position it above the input instead
+            if (topPosition + monthPickerHeight > viewportHeight + window.scrollY) {
+                monthPicker.style.top = (inputRect.top + window.scrollY - monthPickerHeight - 2) + 'px';
+            }
+        }
+
         // Show month picker with animation
-        monthYearInput.addEventListener('click', function() {
+        const openMonthPicker = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Position the picker correctly
+            positionMonthPicker();
+
             monthPicker.style.display = 'block';
             monthPicker.style.opacity = '0';
             monthPicker.style.transform = 'translateY(-10px)';
@@ -115,6 +200,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (currentYearElement) {
                 currentYearElement.textContent = currentYear;
+            }
+        };
+
+        // Register click events for both month input and open button
+        if (monthYearInput) {
+            monthYearInput.addEventListener('click', openMonthPicker);
+        }
+
+        if (openMonthPickerBtn) {
+            openMonthPickerBtn.addEventListener('click', openMonthPicker);
+        }
+
+        // Reposition on scroll and resize
+        window.addEventListener('scroll', function() {
+            if (isMonthPickerOpen) {
+                positionMonthPicker();
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            if (isMonthPickerOpen) {
+                positionMonthPicker();
             }
         });
 
@@ -179,13 +286,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('click', function(event) {
             if (monthPicker && isMonthPickerOpen &&
                 !monthPicker.contains(event.target) &&
-                event.target !== monthYearInput) {
+                (event.target !== monthYearInput && event.target !== openMonthPickerBtn) &&
+                !event.target.closest('.month-picker-container')) {
                 closeMonthPicker();
             }
         });
 
         // Initialize with current month and year
-        const now = new Date();
         selectedMonth = now.getMonth();
         selectedYear = now.getFullYear();
         currentYear = now.getFullYear();
@@ -400,34 +507,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ====== Function to show snackbar notifications ======
-    window.showSnackbar = function(message, type = 'info') {
-        const snackbar = document.getElementById('snackbar');
-        if (!snackbar) return;
-
-        snackbar.textContent = message;
-
-        // Remove existing classes
-        snackbar.classList.remove('hidden', 'show', 'success', 'error', 'info');
-
-        // Add appropriate classes
-        snackbar.classList.add('show', type);
-
-        // Hide the snackbar after 3 seconds
-        setTimeout(() => {
-            snackbar.classList.remove('show');
-            snackbar.classList.add('hidden');
-        }, 3000);
-    };
-
-    // Show snackbar if URL has success parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const successMsg = urlParams.get('success');
-    if (successMsg) {
-        window.showSnackbar(decodeURIComponent(successMsg), 'success');
-    }
-
-    // ====== Toggle filter area ==========
+    // ====== Filter toggle ======
     const filterToggle = document.getElementById('filterToggle');
     const filterArea = document.getElementById('filterArea');
 
@@ -458,6 +538,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 filterToggle.classList.remove('active');
             }
         });
+    }
+
+    // ====== Function to show snackbar notifications ======
+    window.showSnackbar = function(message, type = 'info') {
+        const snackbar = document.getElementById('snackbar');
+        if (!snackbar) return;
+
+        snackbar.textContent = message;
+
+        // Remove existing classes
+        snackbar.classList.remove('hidden', 'show', 'success', 'error', 'info');
+
+        // Add appropriate classes
+        snackbar.classList.add('show', type);
+
+        // Hide the snackbar after 3 seconds
+        setTimeout(() => {
+            snackbar.classList.remove('show');
+            snackbar.classList.add('hidden');
+        }, 3000);
+    };
+
+    // Show snackbar if URL has success parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMsg = urlParams.get('success');
+    if (successMsg) {
+        window.showSnackbar(decodeURIComponent(successMsg), 'success');
     }
 
     // ====== AJAX Form submissions ======
@@ -528,26 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => window.location.reload(), 1500);
     });
 
-    // ====== Filter Revenue by Year (for dashboard) ======
-    const yearFilter = document.getElementById('yearFilter');
-    const applyYearFilter = document.getElementById('applyYearFilter');
-
-    if (yearFilter && applyYearFilter) {
-        // Event handler untuk tombol filter tahun
-        applyYearFilter.addEventListener('click', function() {
-            const year = yearFilter.value;
-            if (year && year >= 2000 && year <= 2100) {
-                filterRevenueByYear(year);
-            }
-        });
-
-        // Mendukung tombol Enter pada input filter tahun
-        yearFilter.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                applyYearFilter.click();
-            }
-        });
-    }
+    // ====== Helper Functions ======
 
     // Fungsi untuk memfilter revenue berdasarkan tahun (di dashboard)
     function filterRevenueByYear(year) {
@@ -634,9 +722,66 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Helper function untuk format angka
+    // Format angka dengan separator ribuan
     function formatNumber(number) {
         return new Intl.NumberFormat('id-ID').format(number);
+    }
+
+    // Initialize Revenue Chart if exists
+    function initializeRevenueChart() {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+
+        // Data untuk chart sudah tersedia sebagai variabel PHP yang di-inject ke JavaScript
+        // Misalnya: const chartData = <?= json_encode($chartData) ?>;
+        // Di sini kita asumsikan data sudah tersedia dari window.chartData
+
+        if (typeof window.chartData !== 'undefined') {
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: window.chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Target Revenue',
+                            data: window.chartData.targets,
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Real Revenue',
+                            data: window.chartData.realisasi,
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Rp ' + formatNumber(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': Rp ' + formatNumber(context.raw);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     // Initialize Bootstrap components
@@ -666,3 +811,142 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap dropdown for profile menu
+    const profileDropdown = document.querySelector('#navbarDropdown');
+    if (profileDropdown) {
+        profileDropdown.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const dropdownMenu = this.nextElementSibling;
+            if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                // Toggle dropdown
+                dropdownMenu.classList.toggle('show');
+                if (dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.setAttribute('data-bs-popper', 'static');
+                } else {
+                    dropdownMenu.removeAttribute('data-bs-popper');
+                }
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!profileDropdown.contains(e.target)) {
+                const dropdownMenu = profileDropdown.nextElementSibling;
+                if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.classList.remove('show');
+                }
+            }
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Custom handling for month picker positioning
+    const monthYearInput = document.getElementById('month_year_picker');
+    const openMonthPickerBtn = document.getElementById('open_month_picker');
+    const monthPicker = document.getElementById('global_month_picker');
+
+    // Ensure month picker is at document level for best positioning
+    if (monthPicker && !document.body.contains(monthPicker)) {
+        document.body.appendChild(monthPicker);
+    }
+
+    if (monthPicker) {
+        // Set initial styles for proper positioning
+        monthPicker.style.position = 'absolute'; // Changed from fixed to absolute for better positioning
+        monthPicker.style.zIndex = '999999'; // Super high z-index to ensure it's on top
+        monthPicker.style.display = 'none';
+        // Add drop shadow for better visual appearance
+        monthPicker.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.2)';
+        // Round corners for better appearance
+        monthPicker.style.borderRadius = '8px';
+    }
+
+    // Function to position the month picker relative to its input
+    function positionMonthPicker() {
+        if (!monthYearInput || !monthPicker) return;
+
+        const inputRect = monthYearInput.getBoundingClientRect();
+
+        // Position closer to the input field (adjust this value as needed)
+        const topOffset = 2; // Reduced from 5px to 2px to appear closer
+
+        // Calculate position
+        const topPosition = inputRect.bottom + window.scrollY + topOffset;
+        const leftPosition = inputRect.left + window.scrollX;
+
+        // Set positions
+        monthPicker.style.top = topPosition + 'px';
+        monthPicker.style.left = leftPosition + 'px';
+
+        // Check if the picker would go off the viewport at the bottom
+        const viewportHeight = window.innerHeight;
+        const pickerHeight = monthPicker.offsetHeight || 350; // Fallback height if not rendered yet
+
+        // If it would go off the bottom, position it above the input instead
+        if (topPosition + pickerHeight > viewportHeight + window.scrollY) {
+            monthPicker.style.top = (inputRect.top + window.scrollY - pickerHeight - topOffset) + 'px';
+        }
+
+        // Ensure it's not positioned off-screen to the right
+        const viewportWidth = window.innerWidth;
+        const pickerWidth = monthPicker.offsetWidth || 350; // Fallback width
+
+        if (leftPosition + pickerWidth > viewportWidth) {
+            // Align with right edge of the input
+            monthPicker.style.left = (inputRect.right - pickerWidth + window.scrollX) + 'px';
+        }
+    }
+
+    // Override the month picker opening function
+    if (monthYearInput && openMonthPickerBtn && monthPicker) {
+        const customOpenMonthPicker = function(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Position the month picker properly
+            positionMonthPicker();
+
+            // Show with animation
+            monthPicker.style.display = 'block';
+            monthPicker.style.opacity = '0';
+            monthPicker.style.transform = 'translateY(-5px)'; // Reduced from -10px for subtler animation
+
+            // Apply animation
+            setTimeout(() => {
+                monthPicker.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+                monthPicker.style.opacity = '1';
+                monthPicker.style.transform = 'translateY(0)';
+            }, 10);
+        };
+
+        // Add our improved event listeners
+        monthYearInput.addEventListener('click', customOpenMonthPicker);
+        openMonthPickerBtn.addEventListener('click', customOpenMonthPicker);
+
+        // Handle window resize and scroll to reposition the picker
+        window.addEventListener('resize', function() {
+            if (monthPicker.style.display === 'block') {
+                positionMonthPicker();
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            if (monthPicker.style.display === 'block') {
+                positionMonthPicker();
+            }
+        });
+    }
+
+
+});
+
+
+
+

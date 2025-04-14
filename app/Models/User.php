@@ -17,7 +17,8 @@ class User extends Authenticatable
         'role',
         'account_manager_id',
         'profile_image',
-        'admin_code'
+        'admin_code',
+        'profile_image',
     ];
 
     protected $hidden = [

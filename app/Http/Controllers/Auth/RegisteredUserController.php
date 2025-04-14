@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AccountManager;
+use App\Models\Witel;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,10 +25,14 @@ class RegisteredUserController extends Controller
         // Mengambil data Account Manager untuk dropdown/autocomplete
         $accountManagers = AccountManager::select('id', 'nama', 'nik')->get();
 
-        // Periksa jika tidak ada Account Manager, tampilkan pesan
-        $noAccountManagers = $accountManagers->isEmpty();
+        // Mengambil data Witel untuk dropdown
+        $witels = Witel::select('id', 'nama')->get();
 
-        return view('auth.register', compact('accountManagers', 'noAccountManagers'));
+        // Periksa jika tidak ada Account Manager/Witel, tampilkan pesan
+        $noAccountManagers = $accountManagers->isEmpty();
+        $noWitels = $witels->isEmpty();
+
+        return view('auth.register', compact('accountManagers', 'witels', 'noAccountManagers', 'noWitels'));
     }
 
     /**
@@ -42,32 +47,46 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
-            'role' => ['required', 'string', 'in:admin,account_manager']
+            'role' => ['required', 'string', 'in:admin,account_manager,witel']
         ];
 
-        // Validasi khusus untuk admin
+        // Validasi khusus berdasarkan role
+        $roleSpecificRules = [];
+
         if ($request->role === 'admin') {
-            $rules = array_merge($commonRules, [
+            $roleSpecificRules = [
                 'name' => ['required', 'string', 'max:255'],
                 'admin_code' => ['required', 'string']
-            ]);
-        }
-        // Validasi khusus untuk account manager
-        else {
+            ];
+        } elseif ($request->role === 'account_manager') {
             // Periksa apakah ada account manager di database
             $accountManagersExist = AccountManager::count() > 0;
 
             if ($accountManagersExist) {
-                $rules = array_merge($commonRules, [
+                $roleSpecificRules = [
                     'account_manager_id' => ['required', 'exists:account_managers,id']
-                ]);
+                ];
             } else {
                 return back()->withErrors([
                     'account_manager_id' => 'Belum ada data Account Manager. Silakan hubungi administrator untuk menambahkan Anda dalam data Account Manager.'
                 ])->withInput();
             }
+        } elseif ($request->role === 'witel') {
+            // Periksa apakah ada witel di database
+            $witelsExist = Witel::count() > 0;
+
+            if ($witelsExist) {
+                $roleSpecificRules = [
+                    'witel_id' => ['required', 'exists:witel,id']
+                ];
+            } else {
+                return back()->withErrors([
+                    'witel_id' => 'Belum ada data Witel. Silakan hubungi administrator untuk menambahkan data Witel.'
+                ])->withInput();
+            }
         }
 
+        $rules = array_merge($commonRules, $roleSpecificRules);
         $validator = Validator::make($request->all(), $rules);
 
         // Validasi khusus untuk kode admin
@@ -83,37 +102,46 @@ class RegisteredUserController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        // Set data berdasarkan role
+        $userData = [
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'account_manager_id' => null,
+            'witel_id' => null,
+            'admin_code' => null,
+        ];
+
         // Proses untuk admin
         if ($request->role === 'admin') {
-            $name = $request->name;
-            $accountManagerId = null;
+            $userData['name'] = $request->name;
+            $userData['admin_code'] = $request->admin_code;
         }
         // Proses untuk account manager
-        else {
-            // Mendapatkan data AM untuk nama
+        elseif ($request->role === 'account_manager') {
             $accountManager = AccountManager::find($request->account_manager_id);
             if (!$accountManager) {
                 return back()->withErrors(['account_manager_id' => 'Account Manager tidak ditemukan.'])->withInput();
             }
-            $name = $accountManager->nama;
-            $accountManagerId = $request->account_manager_id;
+            $userData['name'] = $accountManager->nama;
+            $userData['account_manager_id'] = $request->account_manager_id;
+        }
+        // Proses untuk witel
+        elseif ($request->role === 'witel') {
+            $witel = Witel::find($request->witel_id);
+            if (!$witel) {
+                return back()->withErrors(['witel_id' => 'Witel tidak ditemukan.'])->withInput();
+            }
+            $userData['name'] = "Support Witel " . $witel->nama;
+            $userData['witel_id'] = $request->witel_id;
         }
 
         // Upload profile image jika ada
-        $profileImagePath = null;
         if ($request->hasFile('profile_image')) {
-            $profileImagePath = $request->file('profile_image')->store('profile-images', 'public');
+            $userData['profile_image'] = $request->file('profile_image')->store('profile-images', 'public');
         }
 
-        $user = User::create([
-            'name' => $name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'account_manager_id' => $accountManagerId,
-            'profile_image' => $profileImagePath,
-            'admin_code' => $request->role === 'admin' ? $request->admin_code : null,
-        ]);
+        $user = User::create($userData);
 
         event(new Registered($user));
 

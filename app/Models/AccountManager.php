@@ -36,4 +36,9 @@ class AccountManager extends Model
         return $this->belongsTo(Witel::class); // Setiap Account Manager terkait dengan satu Witel
     }
 
+    public function user()
+    {
+        return $this->hasOne(User::class, 'account_manager_id');
+    }
+
 }

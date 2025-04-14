@@ -61,16 +61,111 @@
         display: flex;
         align-items: center;
         white-space: nowrap;
+        position: relative;
+        padding-left: 28px;
+        cursor: pointer;
+        font-weight: 500;
     }
 
     .radio-container input[type="radio"] {
-        margin-right: 5px;
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+        height: 0;
+        width: 0;
+    }
+
+    .radio-checkmark {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 20px;
+        width: 20px;
+        background-color: #eee;
+        border-radius: 50%;
+        border: 1px solid #ddd;
+    }
+
+    .radio-container:hover input ~ .radio-checkmark {
+        background-color: #ccc;
+    }
+
+    .radio-container input:checked ~ .radio-checkmark {
+        background-color: #1C2955;
+    }
+
+    .radio-checkmark:after {
+        content: "";
+        position: absolute;
+        display: none;
+    }
+
+    .radio-container input:checked ~ .radio-checkmark:after {
+        display: block;
+    }
+
+    .radio-container .radio-checkmark:after {
+        top: 6px;
+        left: 6px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: white;
     }
 
     .period-display {
         margin-left: auto;
         font-weight: 500;
         white-space: nowrap;
+        color: #1C2955;
+    }
+
+    /* Filter info section */
+    .filter-info {
+        background-color: #f0f7ff;
+        border: 1px solid #c9e0ff;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-info-icon {
+        color: #1C2955;
+        font-size: 20px;
+        margin-right: 10px;
+    }
+
+    .filter-info-text {
+        flex-grow: 1;
+        font-size: 14px;
+    }
+
+    .filter-info-reset {
+        margin-left: 15px;
+    }
+
+    .reset-btn {
+        background-color: transparent;
+        color: #1C2955;
+        border: 1px solid #1C2955;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+    }
+
+    .reset-btn:hover {
+        background-color: #1C2955;
+        color: white;
+    }
+
+    .reset-btn i {
+        margin-right: 5px;
     }
 
     /* Search and filter area */
@@ -91,27 +186,52 @@
         display: flex;
     }
 
+    .search-input input {
+        border-radius: 8px 0 0 8px;
+        border: 1px solid #ced4da;
+        padding: 10px 15px;
+        font-size: 14px;
+        flex-grow: 1;
+    }
+
+    .search-input button {
+        border-radius: 0 8px 8px 0;
+        background-color: #1C2955;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .search-input button:hover {
+        background-color: #0e223e;
+    }
+
     .filter-area {
         flex: 0 0 65%;
         display: flex;
         align-items: center;
+        justify-content: flex-end;
     }
 
     .filter-label {
-        flex: 0 0 60px;
         font-weight: 500;
-        margin-right: 10px;
+        margin-right: 15px;
         white-space: nowrap;
     }
 
     .filter-selects {
-        flex: 1;
         display: flex;
         gap: 15px;
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .filter-group {
-        flex: 1;
+        width: 300px;
     }
 
     /* AM Cards */
@@ -123,6 +243,7 @@
         overflow: hidden;
         border: 1px solid #cacaca;
         transition: all 0.3s ease;
+        cursor: pointer;
     }
 
     .am-card:hover {
@@ -215,11 +336,15 @@
 
     /* Bootstrap select styling */
     .bootstrap-select > .dropdown-toggle {
-        height: 38px;
+        height: 40px;
         background-color: #1C2955;
         color: white !important;
         border: none;
         width: 100%;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
     .bootstrap-select > .dropdown-toggle.bs-placeholder {
@@ -241,14 +366,16 @@
     .filter-option-inner-inner {
         text-align: center !important;
         font-weight: 500;
+        font-size: 14px;
     }
 
     .bootstrap-select .dropdown-menu {
         max-width: 100%;
         min-width: 100%;
-        margin-top: 0;
+        margin-top: 5px;
         border: none;
         box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-radius: 8px;
     }
 
     /* Force dropdowns to appear below instead of above */
@@ -280,7 +407,7 @@
     <!-- Header Leaderboard -->
     <div class="header-leaderboard">
         <h1 class="header-title">
-            Peringkat Performa Account Manager⭐
+            Peringkat Performa Account Manager ⭐
         </h1>
         <p class="header-subtitle">
             Dashboard performa pendapatan Account Manager berdasarkan pendapatan nyata dan pencapaian target
@@ -292,28 +419,83 @@
         <div class="period-label">Pilih Periode:</div>
         <div class="period-options">
             <label class="radio-container">
-                <input type="radio" name="period" value="all_time" checked> Sepanjang Waktu
+                Year to Date
+                <input type="radio" name="period" value="all_time" {{ $currentPeriod == 'all_time' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
             </label>
             <label class="radio-container">
-                <input type="radio" name="period" value="current_month"> Bulan Ini
+                Bulan Ini
+                <input type="radio" name="period" value="current_month" {{ $currentPeriod == 'current_month' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
             </label>
         </div>
         <div class="period-display">
-            Tampilan: <strong>Peringkat Maret 2024</strong>
+            Tampilan: <strong>{{ $displayPeriod }}</strong>
         </div>
     </div>
+
+    <!-- Filter Info Section - Only show if filters are applied -->
+    @if(request('search') || request('filter_by') || request('region_filter'))
+    <div class="filter-info">
+        <div class="filter-info-icon">
+            <i class="lni lni-funnel"></i>
+        </div>
+        <div class="filter-info-text">
+            <strong>Menampilkan hasil peringkat</strong>
+            @if(request('search'))
+                untuk pencarian "<span class="text-primary fw-bold">{{ request('search') }}</span>"
+            @endif
+
+            @if(request('filter_by'))
+                @if(request('search')) dengan @endif
+                kriteria:
+                @foreach(request('filter_by') as $filter)
+                    <span class="text-primary fw-bold">{{ $filter }}</span>{{ !$loop->last ? ', ' : '' }}
+                @endforeach
+            @endif
+
+            @if(request('region_filter'))
+                @if(request('search') || request('filter_by')) di @endif
+                Witel:
+                @foreach(request('region_filter') as $region)
+                    <span class="text-primary fw-bold">{{ $region }}</span>{{ !$loop->last ? ', ' : '' }}
+                @endforeach
+            @endif
+        </div>
+        <div class="filter-info-reset">
+            <a href="{{ route('leaderboard', ['period' => request('period')]) }}" class="reset-btn">
+                <i class="lni lni-reload"></i> Reset Filter
+            </a>
+        </div>
+    </div>
+    @endif
 
     <!-- Search & Filter Area -->
     <div class="search-filter-container">
         <div class="search-box">
-            <form action="{{ route('leaderboard') }}" method="GET" class="search-input">
-                <input class="form-control" type="search" name="search" placeholder="Cari Nama" value="{{ request('search') }}">
-                <button class="btn btn-search ms-2" type="submit">Cari</button>
+            <form action="{{ route('leaderboard') }}" method="GET" id="searchForm" class="search-input">
+                <input type="search" name="search" placeholder="Cari nama account manager..." value="{{ request('search') }}">
+                <!-- Preserve all current filters when searching -->
+                @if(request('period'))
+                    <input type="hidden" name="period" value="{{ request('period') }}">
+                @endif
+                @if(request('filter_by'))
+                    @foreach(request('filter_by') as $filter)
+                        <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+                    @endforeach
+                @endif
+                @if(request('region_filter'))
+                    @foreach(request('region_filter') as $region)
+                        <input type="hidden" name="region_filter[]" value="{{ $region }}">
+                    @endforeach
+                @endif
+                <button type="submit">
+                    <i class="lni lni-search-alt"></i> Cari
+                </button>
             </form>
         </div>
 
         <div class="filter-area">
-            <div class="filter-label">Filter:</div>
             <div class="filter-selects">
                 <div class="filter-group">
                     <form id="filterForm" action="{{ route('leaderboard') }}" method="GET">
@@ -325,8 +507,19 @@
                                 Pencapaian Tertinggi
                             </option>
                         </select>
-                        @if(!empty(request('search')))
+                        <!-- Preserve search term when filtering -->
+                        @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        <!-- Preserve period when filtering -->
+                        @if(request('period'))
+                            <input type="hidden" name="period" value="{{ request('period') }}">
+                        @endif
+                        <!-- Preserve region filter when filtering by criteria -->
+                        @if(request('region_filter'))
+                            @foreach(request('region_filter') as $region)
+                                <input type="hidden" name="region_filter[]" value="{{ $region }}">
+                            @endforeach
                         @endif
                         <button type="submit" class="d-none" id="submitFilter">Submit</button>
                     </form>
@@ -335,17 +528,25 @@
                 <div class="filter-group">
                     <form id="filterForm2" action="{{ route('leaderboard') }}" method="GET">
                         <select class="selectpicker" id="filterSelect2" name="region_filter[]" multiple data-live-search="true" data-dropup-auto="false" title="Pilih Witel" data-width="100%">
-                            <option value="Suramadu">Suramadu</option>
-                            <option value="Nusa Tenggara">Nusa Tenggara</option>
-                            <option value="Jatim Barat">Jatim Barat</option>
-                            <option value="Yogya Jateng Selatan">Yogya Jateng Selatan</option>
-                            <option value="Bali">Bali</option>
-                            <option value="Semarang Jateng Utara">Semarang Jateng Utara</option>
-                            <option value="Solo Jateng Timur">Solo Jateng Timur</option>
-                            <option value="Jatim Timur">Jatim Timur</option>
+                            @foreach($witels as $witel)
+                                <option value="{{ $witel->nama }}" {{ in_array($witel->nama, request('region_filter', [])) ? 'selected' : '' }}>
+                                    {{ $witel->nama }}
+                                </option>
+                            @endforeach
                         </select>
-                        @if(!empty(request('search')))
+                        <!-- Preserve search term when filtering -->
+                        @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        <!-- Preserve period when filtering -->
+                        @if(request('period'))
+                            <input type="hidden" name="period" value="{{ request('period') }}">
+                        @endif
+                        <!-- Preserve criteria filter when filtering by region -->
+                        @if(request('filter_by'))
+                            @foreach(request('filter_by') as $filter)
+                                <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+                            @endforeach
                         @endif
                         <button type="submit" class="d-none" id="submitFilter2">Submit</button>
                     </form>
@@ -356,19 +557,19 @@
 
     <!-- Leaderboard AM Cards -->
     @forelse($accountManagers as $index => $am)
-        <div class="am-card">
+        <div class="am-card" onclick="window.location.href='{{ route('account_manager.detail', $am->id) }}'">
             <div class="am-card-body">
-                @if($index == 0)
+                @if($am->global_rank == 1)
                     <div class="am-rank text-gold">1</div>
-                @elseif($index == 1)
+                @elseif($am->global_rank == 2)
                     <div class="am-rank text-silver">2</div>
-                @elseif($index == 2)
+                @elseif($am->global_rank == 3)
                     <div class="am-rank text-bronze">3</div>
                 @else
-                    <div class="am-rank">{{ $index + 1 }}</div>
+                    <div class="am-rank">{{ $am->global_rank }}</div>
                 @endif
 
-                <img src="{{ asset('img/profile.png') }}" class="am-profile-pic" alt="{{ $am->nama }}">
+                <img src="{{ asset($am->user && $am->user->profile_image ? 'storage/'.$am->user->profile_image : 'img/profile.png') }}" class="am-profile-pic" alt="{{ $am->nama }}">
 
                 <div class="am-info">
                     <div class="am-name">{{ $am->nama }}</div>
@@ -386,7 +587,7 @@
                         <div class="achievement-label">Pencapaian</div>
                         <div class="achievement-value {{ $am->achievement_percentage < 100 ? 'text-danger' : 'text-success' }}">
                             <div class="achievement-icon">
-                                <i class="lni {{ $am->achievement_percentage < 100 ? 'lni-trend-down' : 'lni-trend-up-1' }}"></i>
+                                <i class="lni {{ $am->achievement_percentage < 100 ? 'lni-arrow-down' : 'lni-arrow-up' }}"></i>
                                 <span>{{ number_format($am->achievement_percentage, 2, ',', '.') }}%</span>
                             </div>
                         </div>
@@ -445,14 +646,18 @@ $(document).ready(function() {
     // Period selector functionality
     $('input[name="period"]').change(function() {
         var period = $(this).val();
-        // Lakukan perubahan tampilan sesuai periode yang dipilih
-        if (period === 'all_time') {
-            $('.period-display strong').text('Peringkat Sepanjang Waktu');
-        } else {
-            $('.period-display strong').text('Peringkat Maret 2024');
-        }
 
-        // Di sini bisa tambahkan AJAX request untuk mengambil data sesuai periode
+        // Clone form pencarian dan tambahkan parameter periode
+        var $form = $('#searchForm').clone();
+
+        // Hapus input hidden period yang mungkin sudah ada
+        $form.find('input[name="period"]').remove();
+
+        // Tambahkan input period baru
+        $form.append('<input type="hidden" name="period" value="' + period + '">');
+
+        // Submit form
+        $form.appendTo('body').submit();
     });
 });
 </script>

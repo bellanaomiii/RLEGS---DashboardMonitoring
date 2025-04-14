@@ -16,6 +16,7 @@ class User extends Authenticatable
         'password',
         'role',
         'account_manager_id',
+        'witel_id',
         'profile_image',
         'admin_code'
     ];
@@ -39,16 +40,32 @@ class User extends Authenticatable
         return $this->role === 'account_manager';
     }
 
+    public function isWitel()
+    {
+        return $this->role === 'witel';
+    }
+
     // Relasi dengan model AccountManager (nullable)
     public function accountManager()
     {
         return $this->belongsTo(AccountManager::class);
     }
 
-    // Mendapatkan nama lengkap dari account manager jika ada
-    public function getAccountManagerName()
+    // Relasi dengan model Witel (nullable)
+    public function witel()
     {
-        return $this->accountManager ? $this->accountManager->nama : $this->name;
+        return $this->belongsTo(Witel::class);
+    }
+
+    // Mendapatkan nama lengkap dari account manager atau witel jika ada
+    public function getDisplayName()
+    {
+        if ($this->isAccountManager() && $this->accountManager) {
+            return $this->accountManager->nama;
+        } elseif ($this->isWitel() && $this->witel) {
+            return "Witel " . $this->witel->nama;
+        }
+        return $this->name;
     }
 
     // Mendapatkan profile image url - DIPERBARUI dengan perlindungan null

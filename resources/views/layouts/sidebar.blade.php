@@ -24,7 +24,7 @@
                 <div class="sidebar-logo">
                     <a href="#">RLEGS</a>
                 </div>
-            </div>                
+            </div>
             <ul class="sidebar-nav">
                 <li class="sidebar-item">
                     <a href="{{ route('dashboard') }}" class="sidebar-link">

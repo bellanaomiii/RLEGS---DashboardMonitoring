@@ -13,6 +13,13 @@ use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AccountManagerDetailController;
+use App\Http\Controllers\WitelLeaderboardController;
+use App\Http\Controllers\DivisiLeaderboardController;
+use App\Http\Controllers\WitelPerformController;
+
+
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -96,6 +103,30 @@ Route::middleware('auth')->group(function () {
     // Leaderboard dan Witel Performance - dapat diakses semua user
     Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
+    Route::post('/witel-perform/update-charts', [WitelPerformController::class, 'updateCharts'])->name('witel.update-charts');
+    Route::post('/witel-perform/filter-by-divisi', [WitelPerformController::class, 'filterByDivisi'])->name('witel.filter-by-divisi');
+
+    // Tambahkan route berikut ke routes/web.php
+
+    Route::get('/leaderboardAM', [App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
+    Route::get('/account-manager/{id}', [App\Http\Controllers\AccountManagerDetailController::class, 'show'])->name('account_manager.detail');
+    Route::get('/witel/{witel_id}/leaderboard', [WitelLeaderboardController::class, 'index'])->name('witel.leaderboard');
+    Route::get('/divisi/{divisi_id}/leaderboard', [DivisiLeaderboardController::class, 'index'])->name('divisi.leaderboard');
+
+
+    // Tambahkan rute untuk detail Witel
+    Route::get('/witel/{id}', [WitelController::class, 'show'])->name('witel.detail');
+
+    // Tambahkan rute untuk detail Divisi
+    Route::get('/divisi/{id}', [DivisiController::class, 'show'])->name('divisi.detail');
+
+    // Rute untuk leaderboard Witel dan Divisi
+    Route::get('/witel/{id}/leaderboard', [WitelController::class, 'leaderboard'])->name('witel.leaderboard');
+    Route::get('/divisi/{id}/leaderboard', [DivisiController::class, 'leaderboard'])->name('divisi.leaderboard');
+
+
+
+
 
     // Sidebar route
     Route::get('/sidebarpage', function () {

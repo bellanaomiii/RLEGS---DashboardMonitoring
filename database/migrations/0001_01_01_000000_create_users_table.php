@@ -19,10 +19,17 @@ return new class extends Migration
             $table->string('password');
             $table->string('role')->default('account_manager'); // Default role
             $table->unsignedBigInteger('account_manager_id')->nullable(); // Harus nullable
+            $table->unsignedBigInteger('witel_id')->nullable(); // Untuk user witel
             $table->string('profile_image')->nullable();
             $table->string('admin_code')->nullable(); // Untuk verifikasi admin
             $table->rememberToken();
             $table->timestamps();
+
+            // Tambahkan foreign key ke tabel witel
+            $table->foreign('witel_id')
+                ->references('id')
+                ->on('witel')
+                ->onDelete('set null');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

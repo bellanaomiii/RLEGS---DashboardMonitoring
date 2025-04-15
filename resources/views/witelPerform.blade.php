@@ -22,6 +22,67 @@
         min-width: 200px;
     }
 
+/* Date filter styling - with WHITE TEXT color */
+.date-filter {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    border: 1px solid #2c5aa0;
+    border-radius: 6px;
+    background-color: #2c5aa0;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.date-filter:hover {
+    background-color: #224785;
+    border-color: #224785;
+}
+
+.date-filter i {
+    margin-right: 10px;
+    color: white;
+}
+
+.date-filter .fa-chevron-down {
+    margin-left: 10px;
+    font-size: 12px;
+    color: white;
+}
+
+#dateRangeText {
+    color: white;
+}
+    .date-filter .fa-chevron-down {
+        margin-left: 10px;
+        font-size: 12px;
+        color: white;
+    }
+
+    /* Filter button styling */
+    .filter-button {
+        display: flex;
+        align-items: center;
+        padding: 8px 15px;
+        border: 1px solid #2c5aa0;
+        border-radius: 6px;
+        background-color: #2c5aa0;
+        color: white;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .filter-button:hover {
+        background-color: #224785;
+        border-color: #224785;
+    }
+
+    .filter-button i {
+        color: white;
+    }
+
     /* Cleaner styling for filter panel */
     #filterPanel {
         position: absolute;
@@ -37,25 +98,28 @@
         display: none;
     }
 
-    /* Regions container styling */
+    /* Regions container styling - Horizontal Scrolling */
     .regions-container {
         display: flex;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
         margin-bottom: 25px;
+        padding-bottom: 5px;
+        gap: 8px;
         width: 100%;
+        -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
+        scrollbar-width: none;  /* Hide scrollbar Firefox */
+    }
+
+    .regions-container::-webkit-scrollbar {
+        display: none; /* Hide scrollbar Chrome, Safari, Opera */
     }
 
     .region-box {
         flex: 0 0 auto;
-        padding: 8px 12px;
+        padding: 8px 15px;
         text-align: center;
-        min-width: 100px;
-        font-size: 13px;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         cursor: pointer;
         transition: all 0.3s ease;
         border-radius: 6px;
@@ -64,7 +128,7 @@
     }
 
     .region-box.active {
-        background-color: #3b7ddd;
+        background-color: #2c5aa0;
         color: white;
         font-weight: 500;
     }
@@ -127,8 +191,8 @@
     }
 
     .filter-tab-btn.active {
-        color: #3b7ddd;
-        border-bottom-color: #3b7ddd;
+        color: #2c5aa0;
+        border-bottom-color: #2c5aa0;
     }
 
     /* Filter content */
@@ -143,6 +207,7 @@
 @endsection
 
 @section('content')
+{{-- untuk bisa commit  --}}
 <div class="main-content">
     <!-- Header Dashboard -->
     <div class="header-dashboard">
@@ -221,6 +286,7 @@
     <div class="filters-row">
         <!-- Date Filter -->
         <div class="date-filter-container">
+            <!-- PERBAIKAN: Hanya menggunakan satu elemen untuk date picker (tanpa input hidden) -->
             <div class="date-filter" id="dateRangeSelector">
                 <i class="far fa-calendar-alt"></i>
                 <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} - {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
@@ -230,7 +296,7 @@
 
         <!-- Divisi Filter Button -->
         <div class="divisi-filter-container">
-            <button class="filter-button" id="filterButton">
+            <button type="button" class="filter-button" id="filterButton">
                 <i class="fas fa-filter me-2"></i> Filter Divisi
                 <i class="fas fa-chevron-down ms-2"></i>
             </button>
@@ -256,7 +322,7 @@
                         </div>
                     @endforeach
                     <div class="d-flex justify-content-end mt-3">
-                        <button class="btn btn-sm btn-primary" id="applyDivisiFilter">Terapkan</button>
+                        <button type="button" class="btn btn-sm btn-primary" id="applyDivisiFilter">Terapkan</button>
                     </div>
                 </div>
 
@@ -271,7 +337,7 @@
                         <label class="form-check-label" for="treg2">TREG 3</label>
                     </div>
                     <div class="d-flex justify-content-end mt-3">
-                        <button class="btn btn-sm btn-primary" id="applyTregFilter">Terapkan</button>
+                        <button type="button" class="btn btn-sm btn-primary" id="applyTregFilter">Terapkan</button>
                     </div>
                 </div>
             </div>
@@ -286,7 +352,7 @@
         <!-- Alerts will be added dynamically -->
     </div>
 
-    <!-- Region Selection Buttons -->
+    <!-- Region Selection Buttons - Horizontal Scrolling -->
     <div class="regions-container">
         <div class="region-box {{ ($selectedRegion ?? 'all') == 'all' ? 'active' : '' }}" data-region="all">
             Semua Witel
@@ -394,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let barDivisionChartInstance;
     let performanceWitelChartInstance;
 
-    // Initialize date range picker
+    // PERBAIKAN: Initialize date range picker langsung pada elemen dateRangeSelector (div.date-filter)
     const dateRangePicker = flatpickr("#dateRangeSelector", {
         mode: "range",
         dateFormat: "Y-m-d",
@@ -422,38 +488,52 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${day} ${month} ${year}`;
     }
 
-    // FILTER BUTTON LOGIC
+    // FILTER BUTTON LOGIC - PERBAIKAN: Debugging dan event handler
     const filterButton = document.getElementById('filterButton');
     const filterPanel = document.getElementById('filterPanel');
     const filterOverlay = document.getElementById('filterOverlay');
 
-    // Toggle filter panel with vanilla JS
-    filterButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    // Log for debugging
+    console.log('Filter button element:', filterButton);
+    console.log('Filter panel element:', filterPanel);
+    console.log('Filter overlay element:', filterOverlay);
 
-        if (filterPanel.style.display === 'block') {
-            filterPanel.style.display = 'none';
-            filterOverlay.style.display = 'none';
-        } else {
-            filterPanel.style.display = 'block';
-            filterOverlay.style.display = 'block';
-        }
-    });
+    // Toggle filter panel with vanilla JS
+    if (filterButton) {
+        filterButton.addEventListener('click', function(e) {
+            console.log('Filter button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (filterPanel.style.display === 'block') {
+                filterPanel.style.display = 'none';
+                filterOverlay.style.display = 'none';
+            } else {
+                filterPanel.style.display = 'block';
+                filterOverlay.style.display = 'block';
+            }
+        });
+    } else {
+        console.error('Filter button not found');
+    }
 
     // Close filter panel when clicking on overlay
-    filterOverlay.addEventListener('click', function() {
-        filterPanel.style.display = 'none';
-        filterOverlay.style.display = 'none';
-    });
+    if (filterOverlay) {
+        filterOverlay.addEventListener('click', function() {
+            console.log('Filter overlay clicked');
+            filterPanel.style.display = 'none';
+            filterOverlay.style.display = 'none';
+        });
+    }
 
     // Close filter panel when clicking outside
     document.addEventListener('click', function(event) {
         if (
+            filterPanel &&
             filterPanel.style.display === 'block' &&
             !filterPanel.contains(event.target) &&
             event.target !== filterButton &&
-            !filterButton.contains(event.target)
+            !(filterButton && filterButton.contains(event.target))
         ) {
             filterPanel.style.display = 'none';
             filterOverlay.style.display = 'none';
@@ -482,45 +562,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Apply filter buttons
-    document.getElementById('applyDivisiFilter').addEventListener('click', function() {
-        // Get checked division checkboxes
-        const checkedDivisions = Array.from(
-            document.querySelectorAll('#divisiContent input:checked')
-        ).map(cb => cb.value);
+    const applyDivisiFilter = document.getElementById('applyDivisiFilter');
+    if (applyDivisiFilter) {
+        applyDivisiFilter.addEventListener('click', function() {
+            console.log('Apply divisi filter clicked');
+            // Get checked division checkboxes
+            const checkedDivisions = Array.from(
+                document.querySelectorAll('#divisiContent input:checked')
+            ).map(cb => cb.value);
 
-        // Apply division filter
-        if (checkedDivisions.length > 0) {
-            applyDivisiFilter(checkedDivisions);
-        } else {
-            showAlert('warning', 'Pilih minimal satu divisi untuk filter');
-        }
+            // Apply division filter
+            if (checkedDivisions.length > 0) {
+                applyDivisiFilterFunc(checkedDivisions);
+            } else {
+                showAlert('warning', 'Pilih minimal satu divisi untuk filter');
+            }
 
-        // Close filter panel
-        filterPanel.style.display = 'none';
-        filterOverlay.style.display = 'none';
-    });
+            // Close filter panel
+            filterPanel.style.display = 'none';
+            filterOverlay.style.display = 'none';
+        });
+    }
 
-    document.getElementById('applyTregFilter').addEventListener('click', function() {
-        // Get checked TREG checkboxes
-        const checkedTregs = Array.from(
-            document.querySelectorAll('#tregContent input:checked')
-        ).map(cb => cb.value);
+    const applyTregFilter = document.getElementById('applyTregFilter');
+    if (applyTregFilter) {
+        applyTregFilter.addEventListener('click', function() {
+            console.log('Apply treg filter clicked');
+            // Get checked TREG checkboxes
+            const checkedTregs = Array.from(
+                document.querySelectorAll('#tregContent input:checked')
+            ).map(cb => cb.value);
 
-        // Apply TREG filter
-        if (checkedTregs.length > 0) {
-            applyTregFilter(checkedTregs);
-        } else {
-            showAlert('warning', 'Pilih minimal satu TREG untuk filter');
-        }
+            // Apply TREG filter
+            if (checkedTregs.length > 0) {
+                applyTregFilterFunc(checkedTregs);
+            } else {
+                showAlert('warning', 'Pilih minimal satu TREG untuk filter');
+            }
 
-        // Close filter panel
-        filterPanel.style.display = 'none';
-        filterOverlay.style.display = 'none';
-    });
+            // Close filter panel
+            filterPanel.style.display = 'none';
+            filterOverlay.style.display = 'none';
+        });
+    }
 
     // Function to apply division filter
-    function applyDivisiFilter(divisionList) {
+    function applyDivisiFilterFunc(divisionList) {
         showLoading();
+        console.log('Applying division filter:', divisionList);
 
         // Get current date range and active region
         const dateRange = dateRangePicker.selectedDates;
@@ -569,8 +658,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to apply TREG filter
-    function applyTregFilter(tregList) {
+    function applyTregFilterFunc(tregList) {
         showLoading();
+        console.log('Applying TREG filter:', tregList);
 
         // Implementation for TREG filter would go here
         // For now, show message that this feature is under development
@@ -584,6 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     regionBoxes.forEach(box => {
         box.addEventListener('click', function() {
+            console.log('Region box clicked:', this.getAttribute('data-region'));
             // Remove active class from all region boxes
             regionBoxes.forEach(rb => rb.classList.remove('active'));
 
@@ -599,6 +690,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update charts with new date range
     function updateCharts(startDate, endDate) {
         showLoading();
+        console.log('Updating charts with date range:', formatDate(startDate), '-', formatDate(endDate));
 
         // Get active region
         const activeRegion = document.querySelector('.region-box.active');
@@ -652,6 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update charts based on region selection
     function updateChartsByRegion(region) {
         showLoading();
+        console.log('Updating charts by region:', region);
 
         // Get current date range
         const dateRange = dateRangePicker.selectedDates;
@@ -720,6 +813,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update summary cards with new data
     function updateSummaryCards(summaryData) {
         if (!summaryData) return;
+        console.log('Updating summary cards with data:', summaryData);
 
         // Update each division card with new data
         ['RLEGS', 'DSS', 'DPS', 'DGS'].forEach(division => {
@@ -780,6 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to show loading state
     function showLoading() {
+        console.log('Showing loading state');
         // Add loading overlay to chart containers
         document.querySelectorAll('.chart-body').forEach(container => {
             // Only add if not already present
@@ -794,6 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to hide loading state
     function hideLoading() {
+        console.log('Hiding loading state');
         // Remove loading overlays
         document.querySelectorAll('.loading-overlay').forEach(overlay => {
             overlay.remove();
@@ -802,6 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to show alert message
     function showAlert(type, message) {
+        console.log('Showing alert:', type, message);
         const alertContainer = document.getElementById('alertContainer');
         if (!alertContainer) return;
 
@@ -837,6 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to update all charts with new data
     function updateAllCharts(data) {
         if (!data) return;
+        console.log('Updating all charts with data:', data);
 
         // Update Line Chart
         if (data.lineChart && lineRevenueChartInstance) {
@@ -882,6 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize all charts
     function initializeCharts() {
+        console.log('Initializing charts');
         if (!chartData || Object.keys(chartData).length === 0) {
             console.warn('Chart data tidak tersedia');
             showAlert('warning', 'Data chart tidak tersedia. Menampilkan data default.');
@@ -1241,8 +1340,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCharts();
 
     // Log for debugging
-    console.log('Region boxes available:', document.qu
-    erySelectorAll('.region-box').length);
+    console.log('Region boxes available:', document.querySelectorAll('.region-box').length);
     console.log('Active region box:', document.querySelector('.region-box.active')?.getAttribute('data-region') || 'none');
 });
 </script>

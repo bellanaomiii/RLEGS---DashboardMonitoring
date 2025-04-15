@@ -124,9 +124,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/witel/{id}/leaderboard', [WitelController::class, 'leaderboard'])->name('witel.leaderboard');
     Route::get('/divisi/{id}/leaderboard', [DivisiController::class, 'leaderboard'])->name('divisi.leaderboard');
 
-
-
-
+    // Performansi Witel route
+    Route::get('/MonitoringLOP', function () {
+        return view('MonitoringLOP');
+    })->name('monitoring-LOP');
 
     // Sidebar route
     Route::get('/sidebarpage', function () {

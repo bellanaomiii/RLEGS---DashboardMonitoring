@@ -54,10 +54,10 @@
                     </ul>
                 </li>
                 <li class="sidebar-item">
-                    <a href="#" class="sidebar-link">
+                    <a href="{{ route('monitoring-LOP') }}" class="sidebar-link">
                         <i class="lni lni-user-multiple-4"></i><span>Top LOP</span>
                     </a>
-                </li>
+                </li>
                 <li class="sidebar-item">
                     <a href="#" class="sidebar-link">
                         <i class="lni lni-chromecast"></i><span>Aosodomoro</span>

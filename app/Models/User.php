@@ -18,7 +18,8 @@ class User extends Authenticatable
         'account_manager_id',
         'witel_id',
         'profile_image',
-        'admin_code'
+        'admin_code',
+        'profile_image',
     ];
 
     protected $hidden = [

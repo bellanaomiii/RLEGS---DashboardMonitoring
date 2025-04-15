@@ -83,6 +83,12 @@
         color: white;
     }
 
+    .filter-divisi-value {
+    font-weight: 600;
+    color: white;
+    margin-left: 5px;
+    }
+
     /* Cleaner styling for filter panel */
     #filterPanel {
         position: absolute;
@@ -98,43 +104,47 @@
         display: none;
     }
 
-    /* Regions container styling - Horizontal Scrolling */
     .regions-container {
         display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        margin-bottom: 25px;
-        padding-bottom: 5px;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
         width: 100%;
-        -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
-        scrollbar-width: none;  /* Hide scrollbar Firefox */
     }
-
-    .regions-container::-webkit-scrollbar {
-        display: none; /* Hide scrollbar Chrome, Safari, Opera */
+    
+    .region-row {
+        display: flex;
+        gap: 30px;
+        width: 100%;
+        margin-bottom: 10px;
     }
-
+    
     .region-box {
-        flex: 0 0 auto;
-        padding: 8px 15px;
-        text-align: center;
-        white-space: nowrap;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        flex: 1;
+        max-width: 345px; 
+        padding: 10px 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
         border-radius: 6px;
-        background-color: #f0f2f5;
+        text-align: center;
+        cursor: pointer;
+        font-size: 14px;
         color: #495057;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: all 0.2s ease;
     }
-
+    
+    .region-box:hover {
+        background-color: #e9ecef;
+        border-color: #ced4da;
+    }
+    
     .region-box.active {
-        background-color: #2c5aa0;
+        background-color: #1e5bb0;
         color: white;
-        font-weight: 500;
-    }
-
-    .region-box:hover:not(.active) {
-        background-color: #d8e0f0;
+        border-color: #1e5bb0;
     }
 
     /* Loading state for charts */
@@ -352,26 +362,54 @@
         <!-- Alerts will be added dynamically -->
     </div>
 
-    <!-- Region Selection Buttons - Horizontal Scrolling -->
     <div class="regions-container">
-        <div class="region-box {{ ($selectedRegion ?? 'all') == 'all' ? 'active' : '' }}" data-region="all">
-            Semua Witel
+        <!-- First Row -->
+        <div class="region-row">
+            <div class="region-box {{ ($selectedRegion ?? 'all') == 'all' ? 'active' : '' }}" data-region="all">
+                Semua Witel
+            </div>
+            
+            @if(isset($regions) && !empty($regions))
+                @php $regionCount = count($regions); $i = 0; @endphp
+                @foreach($regions as $region)
+                    @if($i < 3) <!-- Show first 3 regions + 'Semua Witel' in first row -->
+                        <div class="region-box {{ ($selectedRegion ?? '') == $region ? 'active' : '' }}" data-region="{{ $region }}">
+                            {{ $region }}
+                        </div>
+                    @endif
+                    @php $i++; @endphp
+                @endforeach
+            @else
+                <!-- Default Regions first row -->
+                @foreach(['Suramadu', 'Nusa Tenggara', 'Jatim Barat'] as $defaultRegion)
+                    <div class="region-box {{ ($selectedRegion ?? '') == $defaultRegion ? 'active' : '' }}" data-region="{{ $defaultRegion }}">
+                        {{ $defaultRegion }}
+                    </div>
+                @endforeach
+            @endif
         </div>
-
-        @if(isset($regions) && !empty($regions))
-            @foreach($regions as $region)
-                <div class="region-box {{ ($selectedRegion ?? '') == $region ? 'active' : '' }}" data-region="{{ $region }}">
-                    {{ $region }}
-                </div>
-            @endforeach
-        @else
-            <!-- Default Regions jika $regions tidak tersedia -->
-            @foreach(['Suramadu', 'Nusa Tenggara', 'Jatim Barat', 'Yogya Jateng Selatan', 'Bali', 'Semarang Jateng Utara', 'Solo Jateng Timur', 'Jatim Timur'] as $defaultRegion)
-                <div class="region-box {{ ($selectedRegion ?? '') == $defaultRegion ? 'active' : '' }}" data-region="{{ $defaultRegion }}">
-                    {{ $defaultRegion }}
-                </div>
-            @endforeach
-        @endif
+        
+        <!-- Second Row -->
+        <div class="region-row">
+            @if(isset($regions) && !empty($regions))
+                @php $i = 0; @endphp
+                @foreach($regions as $region)
+                    @if($i >= 3 && $i < 7) <!-- Show the remaining regions in second row (up to 4) -->
+                        <div class="region-box {{ ($selectedRegion ?? '') == $region ? 'active' : '' }}" data-region="{{ $region }}">
+                            {{ $region }}
+                        </div>
+                    @endif
+                    @php $i++; @endphp
+                @endforeach
+            @else
+                <!-- Default Regions second row -->
+                @foreach(['Yogya Jateng Selatan', 'Bali', 'Semarang Jateng Utara', 'Solo Jateng Timur'] as $defaultRegion)
+                    <div class="region-box {{ ($selectedRegion ?? '') == $defaultRegion ? 'active' : '' }}" data-region="{{ $defaultRegion }}">
+                        {{ $defaultRegion }}
+                    </div>
+                @endforeach
+            @endif
+        </div>
     </div>
 
     <!-- Charts in a single column layout -->
@@ -417,21 +455,6 @@
                 </div>
                 <div class="chart-body">
                     <div id="donutAchievementChart" style="height: 350px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Performance Witel Chart -->
-        <div class="col-12 chart-container">
-            <div class="chart-card">
-                <div class="chart-header">
-                    <div>
-                        <h5 class="chart-title">Performa Witel</h5>
-                        <p class="chart-subtitle">Perbandingan pencapaian antar witel</p>
-                    </div>
-                </div>
-                <div class="chart-body">
-                    <div id="performanceWitelChart" style="height: 350px;"></div>
                 </div>
             </div>
         </div>
@@ -606,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Function to apply division filter
+    // Modifikasi fungsi applyDivisiFilterFunc untuk memanggil updateFilterButtonText
     function applyDivisiFilterFunc(divisionList) {
         showLoading();
         console.log('Applying division filter:', divisionList);
@@ -622,6 +645,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format dates for API
         const formattedStartDate = formatDateForApi(startDate);
         const formattedEndDate = formatDateForApi(endDate);
+
+        // Update teks button filter dengan divisi yang dipilih
+        updateFilterButtonText(divisionList);
 
         // Make AJAX request to filter by division
         fetch('{{ route("witel.filter-by-divisi") }}', {
@@ -648,7 +674,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSummaryCards(data.summaryData);
 
             hideLoading();
-            showAlert('success', `Data difilter untuk divisi: ${divisionList.join(', ')}`);
         })
         .catch(error => {
             console.error('Error applying division filter:', error);
@@ -933,18 +958,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to update all charts with new data
     function updateAllCharts(data) {
-        if (!data) return;
-        console.log('Updating all charts with data:', data);
+    if (!data) return;
+    console.log('Updating all charts with data:', data);
 
-        // Update Line Chart
-        if (data.lineChart && lineRevenueChartInstance) {
-            lineRevenueChartInstance.updateOptions({
-                xaxis: {
-                    categories: data.lineChart.months
+    // Update Line Chart
+    if (data.barChart && lineRevenueChartInstance) {
+        lineRevenueChartInstance.updateOptions({
+            // Tetap gunakan bulan untuk categories pada x-axis
+            xaxis: {
+                categories: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
+            },
+            // Tapi gunakan data dari barChart untuk data series
+            series: [
+                {
+                    name: 'Target Revenue',
+                    data: data.barChart.series[0].data || []
                 },
-                series: data.lineChart.series
-            });
-        }
+                {
+                    name: 'Real Revenue',
+                    data: data.barChart.series[1].data || []
+                }
+            ]
+        });
+    }
 
         // Update Donut Chart
         if (data.donutChart && donutAchievementChartInstance) {
@@ -986,7 +1022,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('warning', 'Data chart tidak tersedia. Menampilkan data default.');
         }
 
-        // Line Revenue Chart
+        // Modified Line Revenue Chart options
         const lineChartOptions = {
             chart: {
                 type: 'line',
@@ -1007,13 +1043,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 width: 3
             },
             colors: ['#3b7ddd', '#10b981'],
-            series: chartData?.lineChart?.series || [{
-                name: new Date().getFullYear().toString(),
-                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            }, {
-                name: (new Date().getFullYear() - 1).toString(),
-                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            }],
+            series: [
+                {
+                    name: 'Target Revenue',
+                    // Gunakan data yang sama dengan bar chart untuk target revenue
+                    data: chartData?.barChart?.series?.[0]?.data || [0, 0, 0, 0]
+                }, 
+                {
+                    name: 'Real Revenue',
+                    // Gunakan data yang sama dengan bar chart untuk realisasi revenue
+                    data: chartData?.barChart?.series?.[1]?.data || [0, 0, 0, 0]
+                }
+            ],
             grid: {
                 borderColor: '#e0e0e0',
                 row: {
@@ -1025,7 +1066,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 size: 5
             },
             xaxis: {
-                categories: chartData?.lineChart?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                // Tetap menggunakan bulan untuk x-axis
+                categories: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'],
                 title: {
                     text: 'Bulan'
                 }
@@ -1343,5 +1385,84 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Region boxes available:', document.querySelectorAll('.region-box').length);
     console.log('Active region box:', document.querySelector('.region-box.active')?.getAttribute('data-region') || 'none');
 });
+</script>
+
+<script>
+function updateFilterButtonText(selectedDivisions) {
+    const filterButton = document.getElementById('filterButton');
+    
+    if (!filterButton) return;
+    
+    // Jika hanya ada satu divisi yang dipilih, tampilkan nama divisi
+    if (selectedDivisions.length === 1) {
+        // Ubah teks button menjadi nama divisi dengan teks putih
+        filterButton.innerHTML = `
+            <i class="fas fa-filter me-2"></i> 
+            Filter Divisi: <span class="filter-divisi-value">${selectedDivisions[0]}</span>
+            <i class="fas fa-chevron-down ms-auto"></i>
+        `;
+    } 
+    // Jika ada beberapa divisi yang dipilih
+    else if (selectedDivisions.length > 1 && selectedDivisions.length < 4) {
+        filterButton.innerHTML = `
+            <i class="fas fa-filter me-2"></i> 
+            Filter Divisi: <span class="filter-divisi-value">${selectedDivisions.length} Divisi</span>
+            <i class="fas fa-chevron-down ms-auto"></i>
+        `;
+    }
+    // Jika semua divisi dipilih atau tidak ada filter yang dipilih
+    else {
+        filterButton.innerHTML = `
+            <i class="fas fa-filter me-2"></i> 
+            Filter Divisi
+            <i class="fas fa-chevron-down ms-auto"></i>
+        `;
+    }
+    
+    // Tambahkan pesan alert yang menampilkan divisi yang difilter
+    showFilterAlert(selectedDivisions);
+}
+
+
+// Fungsi untuk menampilkan alert filter
+function showFilterAlert(selectedDivisions) {
+    // Jika semua divisi dipilih (4 divisi) atau tidak ada filter, jangan tampilkan alert
+    if (selectedDivisions.length >= 4 || selectedDivisions.length === 0) {
+        // Sembunyikan alert container
+        const alertContainer = document.getElementById('alertContainer');
+        if (alertContainer) {
+            alertContainer.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Buat teks alert berdasarkan jumlah divisi yang dipilih
+    let alertText = '';
+    if (selectedDivisions.length === 1) {
+        alertText = `Data difilter untuk divisi: ${selectedDivisions[0]}`;
+    } else {
+        alertText = `Data difilter untuk divisi: ${selectedDivisions.join(', ')}`;
+    }
+    
+    // Tampilkan alert info dengan teks yang sesuai
+    const alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) return;
+    
+    // Buat alert element dengan tombol close
+    const alert = document.createElement('div');
+    alert.className = `alert alert-light alert-dismissible fade show`;
+    alert.style.backgroundColor = '#e8f5e9'; // Warna hijau muda
+    alert.style.borderColor = '#c8e6c9';
+    alert.style.color = '#2e7d32';
+    alert.innerHTML = `
+        ${alertText}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Kosongkan container dan tambahkan alert baru
+    alertContainer.innerHTML = '';
+    alertContainer.appendChild(alert);
+    alertContainer.style.display = 'block';
+}
 </script>
 @endsection

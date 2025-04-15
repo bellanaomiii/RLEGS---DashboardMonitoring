@@ -212,7 +212,7 @@
     <!-- Header Dashboard -->
     <div class="header-dashboard">
         <h1 class="header-title">
-            <i class="fas fa-chart-line me-2"></i> Visualisasi Data Performa RLEGS
+            <i class="fas fa-chart-line me-2"></i> Visualisasi Data Performa RLEGS Telkom
         </h1>
         <p class="header-subtitle">
             Monitoring pendapatan witel dan divisi berdasarkan periode

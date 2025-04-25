@@ -6,8 +6,11 @@ use Illuminate\Http\Request;
 use App\Models\AccountManager;
 use App\Models\Witel;
 use App\Models\Divisi;
+use App\Models\Regional;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Collection;
 
 class AccountManagerController extends Controller
 {
@@ -19,14 +22,24 @@ class AccountManagerController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
         }
 
-        $accountManagers = AccountManager::with(['witel', 'divisi'])->paginate(10);
-        $witels = Witel::all();
-        $divisi = Divisi::all();
+        // Eager loading dengan divisis dan regional
+        $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
 
-        return view('account_manager.index', compact('accountManagers', 'witels', 'divisi'));
+        // Pastikan data divisi, witel dan regional selalu berupa Collection
+        $witels = Witel::select('id', 'nama')->get();
+        $divisi = Divisi::select('id', 'nama')->get();
+        $regionals = Regional::select('id', 'nama')->get();
+
+        Log::info('Data untuk index:', [
+            'divisi_count' => $divisi->count(),
+            'regional_count' => $regionals->count(),
+            'witel_count' => $witels->count()
+        ]);
+
+        return view('account_manager.index', compact('accountManagers', 'witels', 'divisi', 'regionals'));
     }
 
-    // Menampilkan form untuk menambah Account Manager dan mengirim data Witel dan Divisi
+    // Menampilkan form untuk menambah Account Manager
     public function create()
     {
         // Cek apakah user adalah admin
@@ -34,19 +47,83 @@ class AccountManagerController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
         }
 
-        // Ambil data Witel dan Divisi untuk dikirim ke view
-        $witels = Witel::all(); // Mengambil semua data Witel
-        $divisi = Divisi::all(); // Mengambil semua data Divisi
-        $accountManagers = AccountManager::with(['witel', 'divisi'])->paginate(10);
-        $corporateCustomers = collect([]); // Empty collection to avoid undefined variable
+        // Ambil data Witel, Divisi, dan Regional untuk dikirim ke view
+        $witels = Witel::select('id', 'nama')->get();
+        $divisi = Divisi::select('id', 'nama')->get();
+        $regionals = Regional::select('id', 'nama')->get();
 
-        // Kirim data Witel dan Divisi ke view
-        return view('dashboard', compact('witels', 'divisi', 'accountManagers', 'corporateCustomers'));
+        Log::info('Data untuk create:', [
+            'divisi_count' => $divisi->count(),
+            'regional_count' => $regionals->count(),
+            'witel_count' => $witels->count()
+        ]);
+
+        // Eager loading dengan divisis dan regional
+        $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
+        $corporateCustomers = collect([]);
+
+        return view('dashboard', compact('witels', 'divisi', 'regionals', 'accountManagers', 'corporateCustomers'));
+    }
+
+    // Method untuk mendapatkan data untuk modal
+    public function getFormData()
+    {
+        try {
+            $witels = Witel::select('id', 'nama')->get();
+            $divisi = Divisi::select('id', 'nama')->get();
+            $regionals = Regional::select('id', 'nama')->get();
+
+            Log::info('Data form untuk modal:', [
+                'divisi_count' => $divisi->count(),
+                'regional_count' => $regionals->count(),
+                'witels_count' => $witels->count()
+            ]);
+
+            return [
+                'witels' => $witels,
+                'divisi' => $divisi,
+                'regionals' => $regionals
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting form data: ' . $e->getMessage());
+            return [
+                'witels' => collect([]),
+                'divisi' => collect([]),
+                'regionals' => collect([])
+            ];
+        }
+    }
+
+    // Method untuk modal tambah Account Manager
+    public function showAddModal()
+    {
+        $data = $this->getFormData();
+        return view('account_manager.modal.add', $data);
+    }
+
+    // Handler untuk AJAX request mendapatkan data divisi
+    public function getDivisi()
+    {
+        try {
+            $divisi = Divisi::select('id', 'nama')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $divisi
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data divisi: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Menyimpan Account Manager baru
     public function store(Request $request)
     {
+        // Log request data untuk debugging
+        Log::info('AccountManager store request data:', $request->all());
+
         // Cek apakah user adalah admin
         if (Auth::user()->role !== 'admin') {
             if ($request->ajax()) {
@@ -61,12 +138,15 @@ class AccountManagerController extends Controller
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'nama' => 'required|string|unique:account_managers,nama',
-            'nik' => 'required|digits:5|unique:account_managers,nik', // Validasi NIK 5 digit
-            'witel_id' => 'required|exists:witel,id', // Pastikan witel_id ada
-            'divisi_id' => 'required|exists:divisi,id', // Pastikan divisi_id ada
+            'nik' => 'required|digits:5|unique:account_managers,nik',
+            'witel_id' => 'required|exists:witel,id',
+            'regional_id' => 'required|exists:regional,id',
+            'divisi_ids' => 'required', // Validasi untuk multiple divisi
         ]);
 
         if ($validator->fails()) {
+            Log::warning('AccountManager validation failed:', $validator->errors()->toArray());
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -79,15 +159,29 @@ class AccountManagerController extends Controller
         }
 
         try {
-            // Membuat Account Manager baru
-            AccountManager::create([
+            // Buat account manager baru
+            $accountManager = AccountManager::create([
                 'nama' => $request->nama,
                 'nik' => $request->nik,
-                'witel_id' => $request->witel_id,  // Menambahkan witel_id
-                'divisi_id' => $request->divisi_id, // Menambahkan divisi_id
+                'witel_id' => $request->witel_id,
+                'regional_id' => $request->regional_id,
             ]);
 
-            // Return JSON response untuk AJAX request
+            // Hubungkan dengan divisi yang dipilih
+            if (!empty($request->divisi_ids)) {
+                $divisiIds = explode(',', $request->divisi_ids);
+                // Filter untuk memastikan nilai valid
+                $divisiIds = array_filter($divisiIds, function ($value) {
+                    return !empty($value) && is_numeric($value);
+                });
+
+                if (!empty($divisiIds)) {
+                    $accountManager->divisis()->attach($divisiIds);
+                    Log::info('Attached divisi IDs:', $divisiIds);
+                }
+            }
+
+            // Return response sesuai request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
@@ -95,9 +189,14 @@ class AccountManagerController extends Controller
                 ]);
             }
 
-            // Mengembalikan response dengan status sukses
             return redirect()->route('dashboard')->with('success', 'Account Manager berhasil ditambahkan!');
         } catch (\Exception $e) {
+            Log::error('Error creating AccountManager: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            // Response error
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -117,16 +216,35 @@ class AccountManagerController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengedit Account Manager.');
         }
 
-        $accountManager = AccountManager::findOrFail($id);
-        $witels = Witel::all();
-        $divisi = Divisi::all();
+        try {
+            $accountManager = AccountManager::with(['divisis', 'regional'])->findOrFail($id);
+            $witels = Witel::select('id', 'nama')->get();
+            $divisi = Divisi::select('id', 'nama')->get();
+            $regionals = Regional::select('id', 'nama')->get();
 
-        return view('account_manager.edit', compact('accountManager', 'witels', 'divisi'));
+            Log::info('Data untuk edit:', [
+                'account_manager_id' => $id,
+                'divisi_count' => $divisi->count(),
+                'regional_count' => $regionals->count(),
+                'selected_divisis' => $accountManager->divisis->pluck('id')->toArray()
+            ]);
+
+            return view('account_manager.edit', compact('accountManager', 'witels', 'divisi', 'regionals'));
+        } catch (\Exception $e) {
+            Log::error('Error loading edit form: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Gagal memuat data Account Manager: ' . $e->getMessage());
+        }
     }
 
     // Update Account Manager
     public function update(Request $request, $id)
     {
+        // Log request data untuk debugging
+        Log::info('AccountManager update request data:', [
+            'id' => $id,
+            'data' => $request->all()
+        ]);
+
         // Cek apakah user adalah admin
         if (Auth::user()->role !== 'admin') {
             if ($request->ajax()) {
@@ -138,35 +256,57 @@ class AccountManagerController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui Account Manager.');
         }
 
-        $accountManager = AccountManager::findOrFail($id);
+        try {
+            $accountManager = AccountManager::findOrFail($id);
 
-        // Validasi data input
-        $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|unique:account_managers,nama,' . $id,
-            'nik' => 'required|digits:5|unique:account_managers,nik,' . $id,
-            'witel_id' => 'required|exists:witel,id',
-            'divisi_id' => 'required|exists:divisi,id',
-        ]);
+            // Validasi data input
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|string|unique:account_managers,nama,' . $id,
+                'nik' => 'required|digits:5|unique:account_managers,nik,' . $id,
+                'witel_id' => 'required|exists:witel,id',
+                'regional_id' => 'required|exists:regional,id',
+                'divisi_ids' => 'required', // Untuk multiple divisi
+            ]);
 
-        if ($validator->fails()) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validasi gagal',
-                    'errors' => $validator->errors()
-                ], 422);
+            if ($validator->fails()) {
+                Log::warning('AccountManager update validation failed:', $validator->errors()->toArray());
+
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validasi gagal',
+                        'errors' => $validator->errors()
+                    ], 422);
+                }
+
+                return redirect()->back()->withErrors($validator)->withInput();
             }
 
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        try {
+            // Update data dasar account manager
             $accountManager->update([
                 'nama' => $request->nama,
                 'nik' => $request->nik,
                 'witel_id' => $request->witel_id,
-                'divisi_id' => $request->divisi_id,
+                'regional_id' => $request->regional_id,
             ]);
+
+            // Sync divisi
+            if (!empty($request->divisi_ids)) {
+                $divisiIds = explode(',', $request->divisi_ids);
+                // Filter untuk memastikan nilai valid
+                $divisiIds = array_filter($divisiIds, function($value) {
+                    return !empty($value) && is_numeric($value);
+                });
+
+                if (!empty($divisiIds)) {
+                    $accountManager->divisis()->sync($divisiIds);
+                    Log::info('Synced divisi IDs:', $divisiIds);
+                }
+            } else {
+                // Jika tidak ada divisi, hapus semua relasi
+                $accountManager->divisis()->detach();
+                Log::info('Detached all divisi relations');
+            }
 
             if ($request->ajax()) {
                 return response()->json([
@@ -177,6 +317,12 @@ class AccountManagerController extends Controller
 
             return redirect()->route('dashboard')->with('success', 'Account Manager berhasil diperbarui!');
         } catch (\Exception $e) {
+            Log::error('Error updating AccountManager: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -198,23 +344,86 @@ class AccountManagerController extends Controller
 
         try {
             $accountManager = AccountManager::findOrFail($id);
+
+            // Hapus relasi divisi terlebih dahulu
+            $accountManager->divisis()->detach();
+
+            // Hapus account manager
             $accountManager->delete();
 
             return redirect()->route('dashboard')->with('success', 'Account Manager berhasil dihapus!');
         } catch (\Exception $e) {
+            Log::error('Error deleting AccountManager: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
             return redirect()->route('dashboard')->with('error', 'Gagal menghapus Account Manager: ' . $e->getMessage());
         }
     }
 
-    // Fungsi pencarian Account Manager untuk autocomplete
+    // Pencarian Account Manager
     public function search(Request $request)
     {
         $search = $request->get('search');
         $accountManagers = AccountManager::where('nama', 'like', "%{$search}%")
-                           ->orWhere('nik', 'like', "%{$search}%")
-                           ->limit(10)
-                           ->get();
+            ->orWhere('nik', 'like', "%{$search}%")
+            ->limit(10)
+            ->get();
 
         return response()->json($accountManagers);
+    }
+
+    // Method untuk RevenueData view
+    public function showRevenueData()
+    {
+        try {
+            // Pastikan data divisi dan regional adalah Collection, bukan boolean
+            $divisi = Divisi::select('id', 'nama')->get();
+            $witels = Witel::select('id', 'nama')->get();
+            $regionals = Regional::select('id', 'nama')->get();
+            $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
+            $corporateCustomers = collect([]);
+            $revenues = collect([]);
+            $yearRange = range(date('Y') - 5, date('Y') + 5);
+
+            Log::info('Data untuk revenueData:', [
+                'divisi_count' => $divisi->count(),
+                'regional_count' => $regionals->count(),
+                'witel_count' => $witels->count()
+            ]);
+
+            return view('revenueData', compact('divisi', 'witels', 'regionals', 'accountManagers', 'corporateCustomers', 'revenues', 'yearRange'));
+        } catch (\Exception $e) {
+            Log::error('Error loading revenueData: ' . $e->getMessage());
+            return view('revenueData', [
+                'divisi' => collect([]),
+                'witels' => collect([]),
+                'regionals' => collect([]),
+                'accountManagers' => collect([]),
+                'corporateCustomers' => collect([]),
+                'revenues' => collect([]),
+                'yearRange' => range(date('Y') - 5, date('Y') + 5),
+                'error' => 'Gagal memuat data: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    // Handler untuk AJAX request mendapatkan data regional
+    public function getRegional()
+    {
+        try {
+            $regionals = Regional::select('id', 'nama')->get();
+            return response()->json([
+                'success' => true,
+                'data' => $regionals
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data regional: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

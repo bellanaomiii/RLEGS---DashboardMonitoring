@@ -12,8 +12,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use Exception;
 
 class RegisteredUserController extends Controller
 {
@@ -22,17 +25,33 @@ class RegisteredUserController extends Controller
      */
     public function create(): View
     {
-        // Mengambil data Account Manager untuk dropdown/autocomplete
-        $accountManagers = AccountManager::select('id', 'nama', 'nik')->get();
+        try {
+            // Mengambil data Account Manager untuk dropdown/autocomplete
+            $accountManagers = AccountManager::select('id', 'nama', 'nik')->get();
 
-        // Mengambil data Witel untuk dropdown
-        $witels = Witel::select('id', 'nama')->get();
+            // Mengambil data Witel untuk dropdown
+            $witels = Witel::select('id', 'nama')->get();
 
-        // Periksa jika tidak ada Account Manager/Witel, tampilkan pesan
-        $noAccountManagers = $accountManagers->isEmpty();
-        $noWitels = $witels->isEmpty();
+            // Periksa jika tidak ada Account Manager/Witel, tampilkan pesan
+            $noAccountManagers = $accountManagers->isEmpty();
+            $noWitels = $witels->isEmpty();
 
-        return view('auth.register', compact('accountManagers', 'witels', 'noAccountManagers', 'noWitels'));
+            return view('auth.register', compact('accountManagers', 'witels', 'noAccountManagers', 'noWitels'));
+        } catch (Exception $e) {
+            Log::error('Error loading registration page: ', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Fall back to basic registration page if data loading fails
+            return view('auth.register', [
+                'accountManagers' => collect([]),
+                'witels' => collect([]),
+                'noAccountManagers' => true,
+                'noWitels' => true,
+                'error' => 'Terjadi kesalahan saat memuat data. Silakan coba lagi nanti.'
+            ]);
+        }
     }
 
     /**
@@ -42,112 +61,165 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        // Validasi dasar untuk semua role
-        $commonRules = [
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
-            'role' => ['required', 'string', 'in:admin,account_manager,witel']
-        ];
+        try {
+            Log::info('Registration attempt:', [
+                'email' => $request->email,
+                'role' => $request->role
+            ]);
 
-        // Validasi khusus berdasarkan role
-        $roleSpecificRules = [];
-
-        if ($request->role === 'admin') {
-            $roleSpecificRules = [
-                'name' => ['required', 'string', 'max:255'],
-                'admin_code' => ['required', 'string']
+            // Validasi dasar untuk semua role
+            $commonRules = [
+                'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
+                'password' => ['required', 'confirmed', Rules\Password::defaults()],
+                'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+                'role' => ['required', 'string', 'in:admin,account_manager,witel']
             ];
-        } elseif ($request->role === 'account_manager') {
-            // Periksa apakah ada account manager di database
-            $accountManagersExist = AccountManager::count() > 0;
 
-            if ($accountManagersExist) {
+            // Validasi khusus berdasarkan role
+            $roleSpecificRules = [];
+
+            if ($request->role === 'admin') {
                 $roleSpecificRules = [
-                    'account_manager_id' => ['required', 'exists:account_managers,id']
+                    'name' => ['required', 'string', 'max:255'],
+                    'admin_code' => ['required', 'string']
                 ];
-            } else {
-                return back()->withErrors([
-                    'account_manager_id' => 'Belum ada data Account Manager. Silakan hubungi administrator untuk menambahkan Anda dalam data Account Manager.'
-                ])->withInput();
-            }
-        } elseif ($request->role === 'witel') {
-            // Periksa apakah ada witel di database
-            $witelsExist = Witel::count() > 0;
+            } elseif ($request->role === 'account_manager') {
+                // Periksa apakah ada account manager di database
+                $accountManagersExist = AccountManager::count() > 0;
 
-            if ($witelsExist) {
-                $roleSpecificRules = [
-                    'witel_id' => ['required', 'exists:witel,id']
-                ];
-            } else {
-                return back()->withErrors([
-                    'witel_id' => 'Belum ada data Witel. Silakan hubungi administrator untuk menambahkan data Witel.'
-                ])->withInput();
-            }
-        }
-
-        $rules = array_merge($commonRules, $roleSpecificRules);
-        $validator = Validator::make($request->all(), $rules);
-
-        // Validasi khusus untuk kode admin
-        if ($request->role === 'admin') {
-            $validator->after(function ($validator) use ($request) {
-                if ($request->admin_code !== '123456') {
-                    $validator->errors()->add('admin_code', 'Kode admin tidak valid.');
+                if ($accountManagersExist) {
+                    $roleSpecificRules = [
+                        'account_manager_id' => ['required', 'exists:account_managers,id']
+                    ];
+                } else {
+                    Log::warning('Registration failed: No account managers available');
+                    return back()->withErrors([
+                        'account_manager_id' => 'Belum ada data Account Manager. Silakan hubungi administrator untuk menambahkan Anda dalam data Account Manager.'
+                    ])->withInput();
                 }
-            });
-        }
+            } elseif ($request->role === 'witel') {
+                // Periksa apakah ada witel di database
+                $witelsExist = Witel::count() > 0;
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
-        // Set data berdasarkan role
-        $userData = [
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'account_manager_id' => null,
-            'witel_id' => null,
-            'admin_code' => null,
-        ];
-
-        // Proses untuk admin
-        if ($request->role === 'admin') {
-            $userData['name'] = $request->name;
-            $userData['admin_code'] = $request->admin_code;
-        }
-        // Proses untuk account manager
-        elseif ($request->role === 'account_manager') {
-            $accountManager = AccountManager::find($request->account_manager_id);
-            if (!$accountManager) {
-                return back()->withErrors(['account_manager_id' => 'Account Manager tidak ditemukan.'])->withInput();
+                if ($witelsExist) {
+                    $roleSpecificRules = [
+                        'witel_id' => ['required', 'exists:witel,id']
+                    ];
+                } else {
+                    Log::warning('Registration failed: No witel available');
+                    return back()->withErrors([
+                        'witel_id' => 'Belum ada data Witel. Silakan hubungi administrator untuk menambahkan data Witel.'
+                    ])->withInput();
+                }
             }
-            $userData['name'] = $accountManager->nama;
-            $userData['account_manager_id'] = $request->account_manager_id;
-        }
-        // Proses untuk witel
-        elseif ($request->role === 'witel') {
-            $witel = Witel::find($request->witel_id);
-            if (!$witel) {
-                return back()->withErrors(['witel_id' => 'Witel tidak ditemukan.'])->withInput();
+
+            $rules = array_merge($commonRules, $roleSpecificRules);
+            $validator = Validator::make($request->all(), $rules);
+
+            // Validasi khusus untuk kode admin
+            if ($request->role === 'admin') {
+                $validator->after(function ($validator) use ($request) {
+                    if ($request->admin_code !== '123456') {
+                        $validator->errors()->add('admin_code', 'Kode admin tidak valid.');
+                    }
+                });
             }
-            $userData['name'] = "Support Witel " . $witel->nama;
-            $userData['witel_id'] = $request->witel_id;
+
+            if ($validator->fails()) {
+                Log::warning('Registration validation failed', [
+                    'errors' => $validator->errors()->toArray()
+                ]);
+                return back()->withErrors($validator)->withInput();
+            }
+
+            // Set data berdasarkan role
+            $userData = [
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => $request->role,
+                'account_manager_id' => null,
+                'witel_id' => null,
+                'admin_code' => null,
+            ];
+
+            // Proses untuk admin
+            if ($request->role === 'admin') {
+                $userData['name'] = $request->name;
+                $userData['admin_code'] = $request->admin_code;
+            }
+            // Proses untuk account manager
+            elseif ($request->role === 'account_manager') {
+                try {
+                    $accountManager = AccountManager::findOrFail($request->account_manager_id);
+                    $userData['name'] = $accountManager->nama;
+                    $userData['account_manager_id'] = $accountManager->id;
+                } catch (Exception $e) {
+                    Log::error('Account Manager not found', [
+                        'account_manager_id' => $request->account_manager_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    return back()->withErrors(['account_manager_id' => 'Account Manager tidak ditemukan.'])->withInput();
+                }
+            }
+            // Proses untuk witel
+            elseif ($request->role === 'witel') {
+                try {
+                    $witel = Witel::findOrFail($request->witel_id);
+                    $userData['name'] = "Support Witel " . $witel->nama;
+                    $userData['witel_id'] = $witel->id;
+                } catch (Exception $e) {
+                    Log::error('Witel not found', [
+                        'witel_id' => $request->witel_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    return back()->withErrors(['witel_id' => 'Witel tidak ditemukan.'])->withInput();
+                }
+            }
+
+            // Upload profile image jika ada
+            if ($request->hasFile('profile_image') && $request->file('profile_image')->isValid()) {
+                try {
+                    $path = $request->file('profile_image')->store('profile-images', 'public');
+                    $userData['profile_image'] = $path;
+                    Log::info('Profile image uploaded successfully', ['path' => $path]);
+                } catch (Exception $e) {
+                    Log::error('Failed to upload profile image', [
+                        'error' => $e->getMessage()
+                    ]);
+                    // Continue registration even if image upload fails
+                }
+            }
+
+            Log::info('Creating user with data:', [
+                'name' => $userData['name'] ?? 'Not provided',
+                'email' => $userData['email'],
+                'role' => $userData['role']
+            ]);
+
+            $user = User::create($userData);
+
+            Log::info('User created successfully', [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email
+            ]);
+
+            event(new Registered($user));
+
+            Auth::login($user);
+
+            return redirect(route('dashboard', absolute: false));
+        } catch (Exception $e) {
+            Log::error('Registration failed with exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'data' => $request->except(['password', 'password_confirmation'])
+            ]);
+
+            return back()->withErrors([
+                'general' => 'Terjadi kesalahan saat mendaftar: ' . $e->getMessage()
+            ])->withInput($request->except(['password', 'password_confirmation']));
         }
-
-        // Upload profile image jika ada
-        if ($request->hasFile('profile_image')) {
-            $userData['profile_image'] = $request->file('profile_image')->store('profile-images', 'public');
-        }
-
-        $user = User::create($userData);
-
-        event(new Registered($user));
-
-        Auth::login($user);
-
-        return redirect(route('dashboard', absolute: false));
     }
 
     /**
@@ -155,13 +227,24 @@ class RegisteredUserController extends Controller
      */
     public function searchAccountManagers(Request $request)
     {
-        $search = $request->input('search', '');
+        try {
+            $search = $request->input('search', '');
 
-        $accountManagers = AccountManager::where('nama', 'LIKE', "%{$search}%")
-            ->orWhere('nik', 'LIKE', "%{$search}%")
-            ->limit(10)
-            ->get(['id', 'nama', 'nik']);
+            $accountManagers = AccountManager::where('nama', 'LIKE', "%{$search}%")
+                ->orWhere('nik', 'LIKE', "%{$search}%")
+                ->limit(10)
+                ->get(['id', 'nama', 'nik']);
 
-        return response()->json($accountManagers);
+            return response()->json($accountManagers);
+        } catch (Exception $e) {
+            Log::error('Error searching account managers', [
+                'search' => $request->input('search'),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'error' => 'Terjadi kesalahan saat mencari data Account Manager'
+            ], 500);
+        }
     }
 }

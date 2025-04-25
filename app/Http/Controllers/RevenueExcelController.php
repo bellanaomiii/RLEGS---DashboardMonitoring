@@ -5,100 +5,202 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\RevenueImport;
+use App\Exports\RevenueExport;
+use App\Exports\RevenueTemplateExport;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\AccountManager;
 use App\Models\CorporateCustomer;
+use App\Models\Divisi;
+use Illuminate\Support\Facades\Auth;
+use App\Jobs\ImportRevenueJob;
+use Illuminate\Support\Str;
 
 class RevenueExcelController extends Controller
 {
     /**
-     * Import data dari file Excel
+     * Import data dari file Excel menggunakan queue
      */
     public function import(Request $request)
     {
+        // Tingkatkan batas eksekusi dan memori
+        ini_set('max_execution_time', 300); // 5 menit
+        ini_set('memory_limit', '512M');    // Tingkatkan memori
+
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengimpor data revenue.'
+                ], 403);
+            }
+            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengimpor data revenue.');
+        }
+
         try {
-            // Validasi file Excel yang diupload
+            // Validasi file yang diupload
             $request->validate([
-                'file' => 'required|mimes:xlsx,xls,csv',
+                'file' => 'required|mimes:xlsx,xls,csv|max:10240', // Max 10MB
             ]);
 
-            // Debug log untuk tracking
-            Log::info('Mulai proses import Excel Revenue');
+            // Ambil file
+            $file = $request->file('file');
+            $originalName = $file->getClientOriginalName();
 
-            // Impor data dari file Excel menggunakan Maatwebsite Excel
-            $import = new RevenueImport;
-            Excel::import($import, $request->file('file'));
+            // Log informasi file untuk debugging
+            Log::info('File Excel diupload', [
+                'file_name' => $originalName,
+                'file_size' => $file->getSize(),
+                'file_type' => $file->getMimeType()
+            ]);
 
-            // Dapatkan informasi hasil import
+            // Pastikan master data tersedia
+            $this->checkMasterData();
+
+            // Buat nama file yang aman untuk disimpan
+            $safeName = time() . '_' . Str::slug(pathinfo($originalName, PATHINFO_FILENAME), '_') . '.' . $file->getClientOriginalExtension();
+
+            // Simpan file ke sistem file
+            // Menggunakan public path agar lebih mudah diakses
+            $publicPath = 'imports/' . $safeName;
+            $file->move(public_path('imports'), $safeName);
+
+            // Verifikasi file telah disimpan
+            if (!file_exists(public_path($publicPath))) {
+                throw new \Exception("File gagal disimpan ke public/imports");
+            }
+
+            Log::info('File telah disimpan', [
+                'public_path' => $publicPath,
+                'full_path' => public_path($publicPath),
+                'exists' => file_exists(public_path($publicPath))
+            ]);
+
+            // Opsi 1: Gunakan Queue (uncomment untuk menggunakan)
+            ImportRevenueJob::dispatch($publicPath, Auth::id(), $originalName);
+            $message = 'File excel sedang diproses di background. Proses ini bisa memakan waktu beberapa menit tergantung ukuran file.';
+
+            // Opsi 2: Proses langsung tanpa queue (uncomment untuk debugging)
+            /*
+            $import = new RevenueImport();
+            Excel::import($import, public_path($publicPath));
             $results = $import->getImportResults();
+
             $importedCount = $results['imported'];
             $duplicateCount = $results['duplicates'];
             $errorCount = $results['errors'];
-            $errorDetails = $results['error_details'] ?? [];
 
             $message = "$importedCount data Revenue berhasil diimpor.";
             if ($duplicateCount > 0) {
-                $message .= " $duplicateCount data duplikat dilewati.";
+                $message .= " $duplicateCount data duplikat diperbarui.";
             }
             if ($errorCount > 0) {
                 $message .= " $errorCount data gagal diimpor.";
             }
+            */
 
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => $message,
-                    'data' => $results,
-                    'error_details' => $errorDetails
+                    'processing' => true
                 ]);
             }
 
-            // Mengembalikan response setelah impor selesai
-            Log::info('Import Excel Revenue berhasil: ' . $message);
-            return redirect()->route('dashboard')->with('success', $message);
+            // Mengembalikan response
+            Log::info('Import diproses', [
+                'public_path' => $publicPath,
+                'user_id' => Auth::id()
+            ]);
 
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            // Khusus untuk error validasi Excel
-            $failures = $e->failures();
-
-            $errorMessages = [];
-            foreach ($failures as $failure) {
-                $row = $failure->row();
-                $column = $failure->attribute();
-                $error = $failure->errors()[0];
-                $errorMessages[] = "Baris $row, kolom $column: $error";
-            }
-
-            $errorMessage = implode("<br>", $errorMessages);
-            Log::error('Excel validation error: ' . $errorMessage);
-
-            // Return JSON response untuk AJAX request
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validasi gagal',
-                    'errors' => $errorMessages
-                ], 422);
-            }
-
-            return redirect()->route('dashboard')
-                ->with('error', 'Error validasi Excel: ' . $errorMessage);
+            return redirect()->route('revenue.data')->with('info', $message);
 
         } catch (\Exception $e) {
-            // Untuk error umum lainnya
-            Log::error('Import error: ' . $e->getMessage());
+            // Log error detail
+            Log::error('Error saat memulai import: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal mengimpor data: ' . $e->getMessage()
+                    'message' => 'Gagal memulai import data: ' . $e->getMessage()
                 ], 500);
             }
 
-            return redirect()->route('dashboard')->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+            return redirect()->route('revenue.data')->with('error', 'Gagal memulai import data: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Endpoint untuk memeriksa status import
+     */
+    public function checkImportStatus()
+    {
+        $userId = Auth::id();
+
+        // Cek apakah ada hasil import di cache
+        if (\Illuminate\Support\Facades\Cache::has("import_result_" . $userId)) {
+            $result = \Illuminate\Support\Facades\Cache::pull("import_result_" . $userId); // get and delete
+
+            return response()->json([
+                'status' => 'completed',
+                'success' => true,
+                'message' => $result['message'],
+                'error_details' => $result['error_details'] ?? []
+            ]);
+        }
+
+        // Cek apakah ada error import di cache
+        if (\Illuminate\Support\Facades\Cache::has("import_error_" . $userId)) {
+            $error = \Illuminate\Support\Facades\Cache::pull("import_error_" . $userId); // get and delete
+
+            return response()->json([
+                'status' => 'error',
+                'success' => false,
+                'message' => $error['message']
+            ]);
+        }
+
+        // Cek apakah ada kegagalan import di cache
+        if (\Illuminate\Support\Facades\Cache::has("import_failed_" . $userId)) {
+            $failed = \Illuminate\Support\Facades\Cache::pull("import_failed_" . $userId); // get and delete
+
+            return response()->json([
+                'status' => 'failed',
+                'success' => false,
+                'message' => $failed['message']
+            ]);
+        }
+
+        // Jika tidak ada hasil, berarti masih diproses
+        return response()->json([
+            'status' => 'processing',
+            'message' => 'Import masih diproses. Silakan coba lagi dalam beberapa saat.'
+        ]);
+    }
+
+    /**
+     * Export data revenue ke Excel
+     */
+    public function export()
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('revenue.data')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengekspor data revenue.');
+        }
+
+        try {
+            Log::info('Memulai proses export Excel Revenue');
+            return Excel::download(new RevenueExport, 'revenue-data-' . date('Y-m-d') . '.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Export error: ' . $e->getMessage());
+            return redirect()->route('revenue.data')->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
         }
     }
 
@@ -107,75 +209,45 @@ class RevenueExcelController extends Controller
      */
     public function downloadTemplate()
     {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return redirect()->route('revenue.data')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mendownload template.');
+        }
+
         try {
-            // Cek apakah file template sudah ada
-            $filePath = public_path('templates/Template_Revenue.xlsx');
-            $templateDirectory = public_path('templates');
-
-            // Create the directory if it doesn't exist
-            if (!file_exists($templateDirectory)) {
-                mkdir($templateDirectory, 0755, true);
-            }
-
-            // Dapatkan beberapa contoh Account Manager dan Corporate Customer yang ada di database
-            $accountManagerExample = AccountManager::first() ? AccountManager::first()->nama : 'Nama Account Manager';
-            $corporateCustomerExample = CorporateCustomer::first() ? CorporateCustomer::first()->nama : 'Nama Corporate Customer';
-
-            // Create example Excel template
-            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-
-            // Set headers
-            $sheet->setCellValue('A1', 'account_manager');
-            $sheet->setCellValue('B1', 'corporate_customer');
-            $sheet->setCellValue('C1', 'target_revenue');
-            $sheet->setCellValue('D1', 'real_revenue');
-            $sheet->setCellValue('E1', 'bulan');
-
-            // Add example data
-            $sheet->setCellValue('A2', $accountManagerExample);
-            $sheet->setCellValue('B2', $corporateCustomerExample);
-            $sheet->setCellValue('C2', '100000000');
-            $sheet->setCellValue('D2', '95000000');
-            $sheet->setCellValue('E2', '01/2023');
-
-            // Add notes
-            $sheet->setCellValue('A4', 'Catatan:');
-            $sheet->setCellValue('A5', '- Kolom account_manager harus sama persis dengan nama Account Manager yang ada di database');
-            $sheet->setCellValue('A6', '- Kolom corporate_customer harus sama persis dengan nama Corporate Customer yang ada di database');
-            $sheet->setCellValue('A7', '- Format bulan adalah MM/YYYY (contoh: 01/2023 untuk Januari 2023)');
-            $sheet->setCellValue('A8', '- Data tidak boleh duplikat (kombinasi account_manager, corporate_customer, dan bulan harus unik)');
-
-            // Style the header
-            $sheet->getStyle('A1:E1')->getFont()->setBold(true);
-            $sheet->getStyle('A1:E1')->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('DDEBF7');
-
-            // Style the notes
-            $sheet->getStyle('A4')->getFont()->setBold(true);
-            $sheet->mergeCells('A5:E5');
-            $sheet->mergeCells('A6:E6');
-            $sheet->mergeCells('A7:E7');
-            $sheet->mergeCells('A8:E8');
-
-            // Auto-size columns
-            foreach(range('A','E') as $column) {
-                $sheet->getColumnDimension($column)->setAutoSize(true);
-            }
-
-            // Save the file
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            $writer->save($filePath);
-
-            if (file_exists($filePath)) {
-                return response()->download($filePath);
-            } else {
-                return redirect()->route('dashboard')->with('error', 'Template tidak dapat dibuat.');
-            }
+            Log::info('Mendownload template Excel Revenue');
+            return Excel::download(new RevenueTemplateExport, 'template-revenue-' . date('Y-m-d') . '.xlsx');
         } catch (\Exception $e) {
-            Log::error('Error generating template: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Gagal membuat template: ' . $e->getMessage());
+            Log::error('Template error: ' . $e->getMessage());
+            return redirect()->route('revenue.data')->with('error', 'Gagal mendownload template: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Memeriksa keberadaan master data yang diperlukan
+     */
+    private function checkMasterData()
+    {
+        $accountManagerCount = AccountManager::count();
+        $corporateCustomerCount = CorporateCustomer::count();
+        $divisiCount = Divisi::count();
+
+        Log::info('Master data check', [
+            'account_manager_count' => $accountManagerCount,
+            'corporate_customer_count' => $corporateCustomerCount,
+            'divisi_count' => $divisiCount
+        ]);
+
+        if ($accountManagerCount == 0) {
+            throw new \Exception('Data Account Manager tidak tersedia. Harap tambahkan data Account Manager terlebih dahulu.');
+        }
+
+        if ($corporateCustomerCount == 0) {
+            throw new \Exception('Data Corporate Customer tidak tersedia. Harap tambahkan data Corporate Customer terlebih dahulu.');
+        }
+
+        if ($divisiCount == 0) {
+            throw new \Exception('Data Divisi tidak tersedia. Harap tambahkan data Divisi terlebih dahulu.');
         }
     }
 }

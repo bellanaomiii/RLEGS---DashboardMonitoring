@@ -17,6 +17,9 @@ use App\Http\Controllers\AccountManagerDetailController;
 use App\Http\Controllers\WitelLeaderboardController;
 use App\Http\Controllers\DivisiLeaderboardController;
 use App\Http\Controllers\WitelPerformController;
+use App\Http\Controllers\RegionalController;
+use App\Http\Controllers\DivisiController;
+use App\Http\Controllers\WitelController;
 
 
 
@@ -67,6 +70,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
+    // Import route (menggunakan queue)
+    Route::post('/revenue/import', [App\Http\Controllers\RevenueExcelController::class, 'import'])->name('revenue.import');
+    // Check status import
+    Route::get('/revenue/import-status', [App\Http\Controllers\RevenueExcelController::class, 'checkImportStatus'])->name('revenue.import.status');
+    Route::get('/test-import', function () {
+        // Ambil file sample (ganti dengan path file Excel Anda)
+        $filePath = 'sample.xlsx';
+        $fullPath = public_path($filePath);
+
+        if (file_exists($fullPath)) {
+            $import = new \App\Imports\RevenueImport();
+            \Maatwebsite\Excel\Facades\Excel::import($import, $fullPath);
+            $results = $import->getImportResults();
+            return response()->json($results);
+        }
+
+        return "File tidak ditemukan: " . $fullPath;
+    });
+
 
     // Revenue Excel routes
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
@@ -83,6 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account_manager.edit');
     Route::put('/account-manager/{id}', [AccountManagerController::class, 'update'])->name('account_manager.update');
     Route::delete('/account-manager/{id}', [AccountManagerController::class, 'destroy'])->name('account_manager.destroy');
+    Route::get('/api/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions']);
+    Route::get('/api/account-manager/{id}/divisi', [App\Http\Controllers\RevenueController::class, 'getAccountManagerDivisions'])->name('api.account-manager.divisi');
 
     // Account Manager Excel routes
     Route::post('/account-manager/import', [AccountManagerExcelController::class, 'import'])->name('account_manager.import');
@@ -113,6 +137,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/witel/{witel_id}/leaderboard', [WitelLeaderboardController::class, 'index'])->name('witel.leaderboard');
     Route::get('/divisi/{divisi_id}/leaderboard', [DivisiLeaderboardController::class, 'index'])->name('divisi.leaderboard');
 
+
+    // Routes untuk Regional
+    Route::get('/regionals', 'RegionalController@index')->name('regional.index');
+    Route::get('/regionals/create', 'RegionalController@create')->name('regional.create');
+    Route::post('/regionals', 'RegionalController@store')->name('regional.store');
+    Route::get('/regionals/{regional}/edit', 'RegionalController@edit')->name('regional.edit');
+    Route::put('/regionals/{regional}', 'RegionalController@update')->name('regional.update');
+    Route::delete('/regionals/{regional}', 'RegionalController@destroy')->name('regional.destroy');
+
+// API endpoint untuk mengambil data Regional (jika diperlukan)
+Route::get('/api/regionals', 'RegionalController@getRegionals')->name('api.regionals');
 
     // Tambahkan rute untuk detail Witel
     Route::get('/witel/{id}', [WitelController::class, 'show'])->name('witel.detail');

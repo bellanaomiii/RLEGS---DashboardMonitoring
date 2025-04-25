@@ -5,28 +5,39 @@ use Illuminate\Http\Request;
 use App\Models\CorporateCustomer;
 use App\Imports\CorporateCustomerImport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
 
 class CorporateCustomerExcelController extends Controller
 {
     /**
-     * Import data dari file Excel
+     * Import data dari file Excel/CSV
      */
     public function import(Request $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
-        ]);
-
         try {
+            // Validasi file yang diupload
+            $request->validate([
+                'file' => 'required|mimes:txt,xlsx,xls,csv|max:10240', // Max 10MB
+            ]);
+
+            // Debug log untuk tracking
+            Log::info('Starting Corporate Customer Excel/CSV import process', [
+                'file_name' => $request->file('file')->getClientOriginalName(),
+                'file_size' => $request->file('file')->getSize(),
+                'file_type' => $request->file('file')->getMimeType()
+            ]);
+
+            // Impor data dari file Excel/CSV menggunakan Maatwebsite Excel
             $import = new CorporateCustomerImport;
             Excel::import($import, $request->file('file'));
 
             // Dapatkan informasi hasil import
             $results = $import->getImportResults();
             $importedCount = $results['imported'];
+            $updatedCount = $results['updated'];
             $duplicateCount = $results['duplicates'];
 
-            $message = "$importedCount data Corporate Customer berhasil diimpor.";
+            $message = "Data Corporate Customer berhasil diproses: $importedCount baru ditambahkan, $updatedCount diperbarui.";
             if ($duplicateCount > 0) {
                 $message .= " $duplicateCount data duplikat dilewati.";
             }
@@ -40,8 +51,12 @@ class CorporateCustomerExcelController extends Controller
                 ]);
             }
 
+            // Mengembalikan response setelah impor selesai
+            Log::info('Corporate Customer Excel/CSV import completed successfully', $results);
             return redirect()->route('dashboard')->with('success', $message);
+
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            // Khusus untuk error validasi Excel
             $failures = $e->failures();
 
             $errorMessages = [];
@@ -53,6 +68,7 @@ class CorporateCustomerExcelController extends Controller
             }
 
             $errorMessage = implode("<br>", $errorMessages);
+            Log::error('Corporate Customer Excel/CSV validation error', ['errors' => $errorMessages]);
 
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
@@ -63,23 +79,30 @@ class CorporateCustomerExcelController extends Controller
                 ], 422);
             }
 
-            return redirect()->route('dashboard')
-                ->with('error', 'Validasi gagal:<br>' . $errorMessage);
+            return redirect()->route('dashboard')->with('error', 'Error validasi Excel/CSV: ' . $errorMessage);
+
         } catch (\Exception $e) {
+            // Untuk error umum lainnya
+            Log::error('Corporate Customer import error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             // Return JSON response untuk AJAX request
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error: ' . $e->getMessage()
+                    'message' => 'Gagal mengimpor data: ' . $e->getMessage()
                 ], 500);
             }
 
-            return redirect()->route('dashboard')->with('error', 'Error: ' . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
         }
     }
 
     /**
-     * Download template Excel
+     * Download template Excel/CSV
      */
     public function downloadTemplate()
     {

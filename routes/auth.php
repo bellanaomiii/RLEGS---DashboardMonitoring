@@ -15,8 +15,7 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
-
+    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
     // Tambahkan route search account manager
     Route::get('search-account-managers', [RegisteredUserController::class, 'searchAccountManagers'])
         ->name('search.account-managers');
@@ -60,5 +59,5 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
-        
+
 });

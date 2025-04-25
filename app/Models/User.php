@@ -17,9 +17,9 @@ class User extends Authenticatable
         'role',
         'account_manager_id',
         'witel_id',
+        'regional_id', // Tambahkan regional_id
         'profile_image',
         'admin_code',
-        'profile_image',
     ];
 
     protected $hidden = [
@@ -56,6 +56,12 @@ class User extends Authenticatable
     public function witel()
     {
         return $this->belongsTo(Witel::class);
+    }
+
+    // Relasi dengan model Regional (nullable)
+    public function regional()
+    {
+        return $this->belongsTo(Regional::class);
     }
 
     // Mendapatkan nama lengkap dari account manager atau witel jika ada

@@ -21,9 +21,6 @@ use App\Http\Controllers\RegionalController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\WitelController;
 
-
-
-
 Route::get('/', function () {
     return view('auth.login');
 });
@@ -40,18 +37,17 @@ Route::get('/search-account-managers', [RegisteredUserController::class, 'search
 
 // Menampilkan dashboard dengan data Witel dan Divisi
 Route::middleware(['auth', 'verified'])->group(function () {
-// Route untuk dashboard utama
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Route untuk dashboard utama
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-// Route baru untuk AJAX filter tahun
-Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
+    // Route baru untuk AJAX filter tahun
+    Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
 
     // Data Revenue - authorization dilakukan di controller
     Route::get('/revenue_data', [RevenueController::class, 'index'])
         ->name('revenue.data');
 
     // Route untuk export Revenue
-
     Route::get('/revenue/export', [RevenueController::class, 'export'])->name('revenue.export');
 });
 
@@ -88,7 +84,6 @@ Route::middleware('auth')->group(function () {
 
         return "File tidak ditemukan: " . $fullPath;
     });
-
 
     // Revenue Excel routes
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
@@ -127,37 +122,41 @@ Route::middleware('auth')->group(function () {
     // Leaderboard dan Witel Performance - dapat diakses semua user
     Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
+
+    // Witel Performance routes diperbaiki
     Route::post('/witel-perform/update-charts', [WitelPerformController::class, 'updateCharts'])->name('witel.update-charts');
     Route::post('/witel-perform/filter-by-divisi', [WitelPerformController::class, 'filterByDivisi'])->name('witel.filter-by-divisi');
 
-    // Tambahkan route berikut ke routes/web.php
+    // Tambahkan routes yang hilang ini
+    Route::post('/witel-perform/filter-by-witel', [WitelPerformController::class, 'filterByWitel'])->name('witel.filter-by-witel');
+    Route::post('/witel-perform/filter-by-regional', [WitelPerformController::class, 'filterByRegional'])->name('witel.filter-by-regional');
 
+    // Tambahkan route berikut ke routes/web.php
     Route::get('/leaderboardAM', [App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('/account-manager/{id}', [App\Http\Controllers\AccountManagerDetailController::class, 'show'])->name('account_manager.detail');
     Route::get('/witel/{witel_id}/leaderboard', [WitelLeaderboardController::class, 'index'])->name('witel.leaderboard');
     Route::get('/divisi/{divisi_id}/leaderboard', [DivisiLeaderboardController::class, 'index'])->name('divisi.leaderboard');
 
-
     // Routes untuk Regional
-    Route::get('/regionals', 'RegionalController@index')->name('regional.index');
-    Route::get('/regionals/create', 'RegionalController@create')->name('regional.create');
-    Route::post('/regionals', 'RegionalController@store')->name('regional.store');
-    Route::get('/regionals/{regional}/edit', 'RegionalController@edit')->name('regional.edit');
-    Route::put('/regionals/{regional}', 'RegionalController@update')->name('regional.update');
-    Route::delete('/regionals/{regional}', 'RegionalController@destroy')->name('regional.destroy');
+    Route::get('/regionals', [RegionalController::class, 'index'])->name('regional.index');
+    Route::get('/regionals/create', [RegionalController::class, 'create'])->name('regional.create');
+    Route::post('/regionals', [RegionalController::class, 'store'])->name('regional.store');
+    Route::get('/regionals/{regional}/edit', [RegionalController::class, 'edit'])->name('regional.edit');
+    Route::put('/regionals/{regional}', [RegionalController::class, 'update'])->name('regional.update');
+    Route::delete('/regionals/{regional}', [RegionalController::class, 'destroy'])->name('regional.destroy');
 
-// API endpoint untuk mengambil data Regional (jika diperlukan)
-Route::get('/api/regionals', 'RegionalController@getRegionals')->name('api.regionals');
+    // API endpoint untuk mengambil data Regional (jika diperlukan)
+    Route::get('/api/regionals', [RegionalController::class, 'getRegionals'])->name('api.regionals');
 
-    // Tambahkan rute untuk detail Witel
-    Route::get('/witel/{id}', [WitelController::class, 'show'])->name('witel.detail');
+    // // Tambahkan rute untuk detail Witel
+    // Route::get('/witel/{id}', [WitelController::class, 'show'])->name('witel.detail');
 
-    // Tambahkan rute untuk detail Divisi
-    Route::get('/divisi/{id}', [DivisiController::class, 'show'])->name('divisi.detail');
+    // // Tambahkan rute untuk detail Divisi
+    // Route::get('/divisi/{id}', [DivisiController::class, 'show'])->name('divisi.detail');
 
-    // Rute untuk leaderboard Witel dan Divisi
-    Route::get('/witel/{id}/leaderboard', [WitelController::class, 'leaderboard'])->name('witel.leaderboard');
-    Route::get('/divisi/{id}/leaderboard', [DivisiController::class, 'leaderboard'])->name('divisi.leaderboard');
+    // // Rute untuk leaderboard Witel dan Divisi
+    // Route::get('/witel/{id}/leaderboard', [WitelController::class, 'leaderboard'])->name('witel.leaderboard');
+    // Route::get('/divisi/{id}/leaderboard', [DivisiController::class, 'leaderboard'])->name('divisi.leaderboard');
 
     // Performansi Witel route
     Route::get('/MonitoringLOP', function () {

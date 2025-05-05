@@ -98,14 +98,14 @@
                     <i class="lni lni-id-card"></i>
                     <span>NIK: {{ $accountManager->nik }}</span>
                 </div>
-                <a href="{{ route('witel.detail', $accountManager->witel->id ?? 0) }}" class="meta-item">
+                <div class="meta-item">
                     <i class="lni lni-map-marker"></i>
                     <span>WITEL: {{ $accountManager->witel->nama ?? 'N/A' }}</span>
-                </a>
-                <a href="{{ route('divisi.detail', $accountManager->divisi->id ?? 0) }}" class="meta-item">
+                </div>
+                <div class="meta-item">
                     <i class="lni lni-network"></i>
-                    <span>DIVISI: {{ $accountManager->divisi->nama ?? 'N/A' }}</span>
-                </a>
+                    <span>DIVISI: {{ ($accountManager->divisis->isNotEmpty() ? $accountManager->divisis->first()->nama : 'N/A') }}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -122,17 +122,21 @@
         }
 
         $witelRankIcon = "1-10.svg";
-        if ($witelRanking['position'] > 10 && $witelRanking['position'] <= 50) {
-            $witelRankIcon = "10-50.svg";
-        } elseif ($witelRanking['position'] > 50) {
-            $witelRankIcon = "up100.svg";
+        if (is_numeric($witelRanking['position'])) {
+            if ($witelRanking['position'] > 10 && $witelRanking['position'] <= 50) {
+                $witelRankIcon = "10-50.svg";
+            } elseif ($witelRanking['position'] > 50) {
+                $witelRankIcon = "up100.svg";
+            }
         }
 
         $divisionRankIcon = "1-10.svg";
-        if ($divisionRanking['position'] > 10 && $divisionRanking['position'] <= 50) {
-            $divisionRankIcon = "10-50.svg";
-        } elseif ($divisionRanking['position'] > 50) {
-            $divisionRankIcon = "up100.svg";
+        if (is_numeric($divisionRanking['position'])) {
+            if ($divisionRanking['position'] > 10 && $divisionRanking['position'] <= 50) {
+                $divisionRankIcon = "10-50.svg";
+            } elseif ($divisionRanking['position'] > 50) {
+                $divisionRankIcon = "up100.svg";
+            }
         }
 
         // Calculate ranking changes
@@ -230,11 +234,12 @@
             <div class="ranking-title">Peringkat Global</div>
             <div class="ranking-value">
                 {{ $globalRanking['position'] }} dari {{ $globalRanking['total'] }}
-                <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
-                    <i class="lni {{ $globalChangeIcon }}"></i>
-                </span>
+                @if ($globalChange != 0)
+                    <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
+                        <i class="lni {{ $globalChangeIcon }}"></i>
+                    </span>
+                @endif
             </div>
-
             <span class="rank-change-detail {{ $globalChangeBadgeClass }}">{{ $globalChangeText }} dari {{ $previousMonthID }}</span>
         </div>
         @if($globalChange != 0)
@@ -242,15 +247,10 @@
                 <i class="lni {{ $globalChangeIcon }}"></i>
                 {{ $globalBadgeText }}
             </div>
-        @else
-            <div class="rank-badge {{ $globalChangeBadgeClass }}">
-                <i class="lni {{ $globalChangeIcon }}"></i>
-                {{ $globalBadgeText }}
-            </div>
         @endif
     </a>
 
-    <a href="{{ route('witel.leaderboard', $accountManager->witel_id ?? 0) }}" class="ranking-card witel">
+    <div class="ranking-card witel">
         <div class="ranking-icon">
             <img src="{{ asset('img/' . $witelRankIcon) }}" alt="Peringkat" width="40" height="40">
         </div>
@@ -258,26 +258,27 @@
             <div class="ranking-title">Peringkat Witel</div>
             <div class="ranking-value">
                 {{ $witelRanking['position'] }} dari {{ $witelRanking['total'] }}
-                <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
-                    <i class="lni {{ $witelChangeIcon }}"></i>
-                </span>
+                @if ($witelChange != 0 && is_numeric($witelRanking['position']))
+                    <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
+                        <i class="lni {{ $witelChangeIcon }}"></i>
+                    </span>
+                @endif
             </div>
-            <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
+            @if(is_numeric($witelRanking['position']))
+                <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
+            @else
+                <span class="rank-change-detail text-muted">belum ada data</span>
+            @endif
         </div>
-        @if($witelChange != 0)
-            <div class="rank-badge {{ $witelChangeBadgeClass }}">
-                <i class="lni {{ $witelChangeIcon }}"></i>
-                {{ $witelBadgeText }}
-            </div>
-        @else
+        @if($witelChange != 0 && is_numeric($witelRanking['position']))
             <div class="rank-badge {{ $witelChangeBadgeClass }}">
                 <i class="lni {{ $witelChangeIcon }}"></i>
                 {{ $witelBadgeText }}
             </div>
         @endif
-    </a>
+    </div>
 
-    <a href="{{ route('divisi.leaderboard', $accountManager->divisi_id ?? 0) }}" class="ranking-card division">
+    <div class="ranking-card division">
         <div class="ranking-icon">
             <img src="{{ asset('img/' . $divisionRankIcon) }}" alt="Peringkat" width="40" height="40">
         </div>
@@ -285,24 +286,25 @@
             <div class="ranking-title">Peringkat Divisi</div>
             <div class="ranking-value">
                 {{ $divisionRanking['position'] }} dari {{ $divisionRanking['total'] }}
-                <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
-                    <i class="lni {{ $divisionChangeIcon }}"></i>
-                </span>
+                @if ($divisionChange != 0 && is_numeric($divisionRanking['position']))
+                    <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
+                        <i class="lni {{ $divisionChangeIcon }}"></i>
+                    </span>
+                @endif
             </div>
-            <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
+            @if(is_numeric($divisionRanking['position']))
+                <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
+            @else
+                <span class="rank-change-detail text-muted">belum ada data</span>
+            @endif
         </div>
-        @if($divisionChange != 0)
-            <div class="rank-badge {{ $divisionChangeBadgeClass }}">
-                <i class="lni {{ $divisionChangeIcon }}"></i>
-                {{ $divisionBadgeText }}
-            </div>
-        @else
+        @if($divisionChange != 0 && is_numeric($divisionRanking['position']))
             <div class="rank-badge {{ $divisionChangeBadgeClass }}">
                 <i class="lni {{ $divisionChangeIcon }}"></i>
                 {{ $divisionBadgeText }}
             </div>
         @endif
-    </a>
+    </div>
 </div>
 
     <!-- Content Tabs -->

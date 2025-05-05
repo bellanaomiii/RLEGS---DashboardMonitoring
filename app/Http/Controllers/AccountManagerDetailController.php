@@ -17,7 +17,7 @@ class AccountManagerDetailController extends Controller
         $selectedYear = $request->input('year', Carbon::now()->year);
 
         // Get the account manager with relationships
-        $accountManager = AccountManager::with(['witel', 'divisi', 'corporateCustomers', 'user', 'revenues'])
+        $accountManager = AccountManager::with(['witel', 'divisis', 'corporateCustomers', 'user', 'revenues'])
             ->findOrFail($id);
 
         // Get global ranking data with previous month comparison
@@ -218,8 +218,8 @@ class AccountManagerDetailController extends Controller
 
     private function getDivisionRanking($accountManager)
     {
-        // Only proceed if divisi_id is set
-        if (!$accountManager->divisi_id) {
+        // Check if account manager has any divisions
+        if ($accountManager->divisis->isEmpty()) {
             return [
                 'position' => 'N/A',
                 'total' => 0,
@@ -228,13 +228,18 @@ class AccountManagerDetailController extends Controller
             ];
         }
 
+        // Get the first division (assuming account manager has at least one)
+        $divisionId = $accountManager->divisis->first()->id;
+
         // Get current month and previous month
         $currentMonth = Carbon::now()->format('m');
         $previousMonth = Carbon::now()->subMonth()->format('m');
         $currentYear = Carbon::now()->format('Y');
 
         // Get current month ranking within division
-        $divisionAMs = AccountManager::where('divisi_id', $accountManager->divisi_id)
+        $divisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
+                $query->where('divisi_id', $divisionId);
+            })
             ->select('account_managers.*')
             ->selectSub(function ($query) use ($currentMonth, $currentYear) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')
@@ -255,7 +260,9 @@ class AccountManagerDetailController extends Controller
         $currentPosition = $currentPosition !== false ? $currentPosition + 1 : count($divisionAMs);
 
         // Get previous month ranking within division
-        $previousDivisionAMs = AccountManager::where('divisi_id', $accountManager->divisi_id)
+        $previousDivisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
+                $query->where('divisi_id', $divisionId);
+            })
             ->select('account_managers.*')
             ->selectSub(function ($query) use ($previousMonth, $currentYear) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')

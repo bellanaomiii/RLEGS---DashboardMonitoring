@@ -15,7 +15,8 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
+    Route::post('register', [RegisteredUserController::class, 'store']);
+
     // Tambahkan route search account manager
     Route::get('search-account-managers', [RegisteredUserController::class, 'searchAccountManagers'])
         ->name('search.account-managers');

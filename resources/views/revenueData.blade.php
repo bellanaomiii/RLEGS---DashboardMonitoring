@@ -49,10 +49,10 @@
         <!-- Header Dashboard -->
         <div class="header-dashboard">
             <h1 class="header-title">
-                Data Revenue Account Manager <span class="ms-2">📊</span>
+                Data Revenue Account Manager 
             </h1>
             <p class="header-subtitle">
-                Kelola dan monitoring data pendapatan Account Manager Telkom
+                Kelola dan Monitoring Data Pendapatan Account Manager RLEGS
             </p>
         </div>
 

@@ -11,10 +11,10 @@
     <!-- Header Dashboard -->
     <div class="header-dashboard">
         <h1 class="header-title">
-            Dashboard Performa <span class="ms-2">⭐</span>
+            Dashboard Performansi
         </h1>
         <p class="header-subtitle">
-            Monitoring dan analisis performa pendapatan Account Manager
+            Monitoring dan Analisis Performa Pendapatan Account Manager
         </p>
     </div>
 
@@ -129,8 +129,7 @@
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <img src="{{ asset('img/profile.png') }}"
-                                                 class="am-profile-pic" style="width: 32px; height: 32px;" alt="{{ $am->nama }}">
+                                            <img src="{{ asset($am->user && $am->user->profile_image ? 'storage/'.$am->user->profile_image : 'img/profile.png') }}" class="am-profile-pic" alt="{{ $am->nama }}">
                                             <span class="ms-2">{{ $am->nama }}</span>
                                         </div>
                                     </td>
@@ -293,13 +292,16 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="d-flex align-items-center mb-3">
-                            <img src="{{ asset('img/profile.png') }}" class="am-profile-pic" style="width: 60px; height: 60px;" alt="Profile">
+                            <img src="{{ asset($accountManager->user && $accountManager->user->profile_image ? 'storage/'.$accountManager->user->profile_image : 'img/profile.png') }}" 
+                                class="am-profile-pic" 
+                                alt="{{ $accountManager->nama ?? 'Profile' }}">
+                    
                             <div class="ms-3">
                                 <h5 class="mb-1">{{ $accountManager->nama ?? 'N/A' }}</h5>
                                 <p class="text-muted mb-0">{{ $accountManager->nik ?? 'N/A' }}</p>
                             </div>
                         </div>
-                    </div>
+                    </div>                    
                     <div class="col-md-6">
                         <div class="card bg-light rounded-3 border-0">
                             <div class="card-body">

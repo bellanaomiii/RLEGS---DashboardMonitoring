@@ -53,7 +53,7 @@
                         </li>
                     </ul>
                 </li>
-                <li class="sidebar-item">
+                {{-- <li class="sidebar-item">
                     <a href="{{ route('monitoring-LOP') }}" class="sidebar-link">
                         <i class="lni lni-user-multiple-4"></i><span>Top LOP</span>
                     </a>
@@ -67,13 +67,13 @@
                     <a href="#" class="sidebar-link">
                         <i class="lni lni-target-user"></i><span>EDK</span>
                     </a>
-                </li>
-                <li class="sidebar-item">
-                    <a href="{{ route('profile.edit') }}" class="sidebar-link">
-                        <i class="lni lni-gear-1"></i><span>Settings</span>
-                    </a>
-                </li>
+                </li> --}}
             </ul>
+            <div class="sidebar-footer">
+                <a href="{{ route('profile.edit') }}" class="sidebar-link">
+                    <i class="lni lni-gear-1"></i><span>Settings</span>
+                </a>
+            </div>
             <div class="sidebar-footer">
                 <a href="{{ route('logout') }}" class="sidebar-link">
                     <i class="lni lni-exit"></i><span>Logout</span>
@@ -88,11 +88,11 @@
                     </button>
                     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                         <ul class="navbar-nav align-items-center">
-                            <li class="nav-item">
+                            {{-- <li class="nav-item">
                                 <a href="#" class="nav-link">
                                     <i class="lni lni-bell-1 fs-4 mt-2"></i>
                                 </a>
-                            </li>
+                            </li> --}}
                             <li class="nav-item dropdown ms-1">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <div class="avatar-container me-2">

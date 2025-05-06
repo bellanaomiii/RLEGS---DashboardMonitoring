@@ -407,10 +407,10 @@
     <!-- Header Leaderboard -->
     <div class="header-leaderboard">
         <h1 class="header-title">
-            Peringkat Performa Account Manager ⭐
+            Leaderboard Performa Account Manager 
         </h1>
         <p class="header-subtitle">
-            Dashboard performa pendapatan Account Manager berdasarkan pendapatan nyata dan pencapaian target
+            Dashboard Performa Pendapatan dan Pencapaian Account Manager RLEGS
         </p>
     </div>
 

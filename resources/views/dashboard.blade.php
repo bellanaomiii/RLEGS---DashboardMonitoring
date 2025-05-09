@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Dashboard Performa')
+@section('title', 'Dashboard Performansi AM')
 
 @section('styles')
 <link rel="stylesheet" href="{{ asset('css/overview.css') }}">

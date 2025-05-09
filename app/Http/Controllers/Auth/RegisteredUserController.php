@@ -205,10 +205,9 @@ class RegisteredUserController extends Controller
             ]);
 
             event(new Registered($user));
+            return redirect(route('login', absolute: false))
+                ->with('success', 'Pendaftaran berhasil! Silakan login dengan akun yang telah Anda buat.');
 
-            Auth::login($user);
-
-            return redirect(route('dashboard', absolute: false));
         } catch (Exception $e) {
             Log::error('Registration failed with exception', [
                 'message' => $e->getMessage(),

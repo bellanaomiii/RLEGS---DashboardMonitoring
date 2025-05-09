@@ -41,6 +41,26 @@
             margin-right: 4px;
             font-size: 12px;
         }
+
+        .btn-export {
+            background-color: #0a1f44; 
+            color: white !important; 
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        #filterToggle:hover {
+            color: inherit; 
+            background-color: #0a1f44; 
+        }
+
+        #filterToggle:hover .fas {
+            color: white;
+        }
+
     </style>
 @endsection
 
@@ -91,10 +111,10 @@
                 </div>
                 <div class="d-flex">
                     <a href="{{ route('revenue.export') }}" class="btn-export me-2">
-                        <i class="fas fa-download"></i> Export Data
+                        <i class=" fas fa-download me-1"></i> Export Data
                     </a>
                     <button class="btn-import" data-bs-toggle="modal" data-bs-target="#importRevenueModal">
-                        <i class="fas fa-upload"></i> Import Excel
+                        <i class=" fas fa-upload me-1"></i> Import Excel
                     </button>
                 </div>
             </div>
@@ -203,7 +223,7 @@
                         <div class="input-group">
                             <input class="form-control" type="search" id="globalSearch" placeholder="Cari data..."
                                 autocomplete="off" value="{{ request('search') }}">
-                            <button class="btn btn-primary" type="button" id="searchButton">
+                            <button class="btn btn-primary px-3 py-1" type="button" id="searchButton" style="min-width: 5px;">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>

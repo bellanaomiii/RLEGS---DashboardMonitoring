@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Visualisasi Data Performa RLEGS')
+@section('title', 'Data Performansi RLEGS')
 
 @section('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
@@ -252,10 +252,10 @@
         <!-- Header Dashboard -->
         <div class="header-dashboard">
             <h1 class="header-title">
-                <i class="fas fa-chart-line me-2"></i> Visualisasi Data Performa RLEGS Telkom
+                Data Performanasi RLEGS 
             </h1>
             <p class="header-subtitle">
-                Monitoring pendapatan witel dan divisi berdasarkan periode
+                Monitoring Pendapatan Witel dan Divisi berdasarkan Periode
             </p>
         </div>
 

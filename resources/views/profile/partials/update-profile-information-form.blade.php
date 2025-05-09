@@ -96,12 +96,50 @@
         </div>
     </form>
 
-    <script>
-        document.getElementById('profile_image').addEventListener('change', function() {
-            const fileName = this.files[0] ? this.files[0].name : 'Belum ada file yang dipilih';
-            document.getElementById('file-name-am').textContent = fileName;
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const profileImageInput = document.getElementById('profile_image');
+        
+        profileImageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            
+            if (file) {
+                // Untuk menampilkan nama file jika diperlukan
+                if (document.getElementById('file-name-am')) {
+                    document.getElementById('file-name-am').textContent = file.name;
+                }
+                
+                const reader = new FileReader();
+                const profileImage = document.querySelector('.profile-image');
+                const profilePlaceholder = document.querySelector('.profile-image-placeholder');
+                
+                reader.onload = function(e) {
+                    // Jika ada gambar profil, update source-nya
+                    if (profileImage) {
+                        profileImage.src = e.target.result;
+                    } 
+                    // Jika tidak ada gambar (menggunakan placeholder), buat elemen gambar baru
+                    else if (profilePlaceholder) {
+                        // Sembunyikan placeholder
+                        profilePlaceholder.style.display = 'none';
+                        
+                        // Buat elemen gambar baru
+                        const newImage = document.createElement('img');
+                        newImage.src = e.target.result;
+                        newImage.className = 'profile-image';
+                        newImage.alt = 'Profile Image';
+                        
+                        // Tambahkan gambar ke wrapper
+                        const wrapper = document.querySelector('.profile-image-wrapper');
+                        wrapper.appendChild(newImage);
+                    }
+                };
+                
+                reader.readAsDataURL(file);
+            }
         });
-    </script>
+    });
+</script>
 
     <style>
         /* Profile Form Styles */

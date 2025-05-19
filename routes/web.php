@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
 
     // Data Revenue - authorization dilakukan di controller
-    Route::get('/revenue_data', [RevenueController::class, 'showRevenueData'])  // <-- Penting: Route ini yang diperbaiki
+    Route::get('/revenue_data', [RevenueController::class, 'showRevenueData'])
         ->name('revenue.data');
 
     // Route untuk export Revenue
@@ -66,20 +66,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
-    
+
     // Import route (menggunakan queue)
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
-    
+
     // Check status import
     Route::get('/revenue/import-status', [RevenueExcelController::class, 'checkImportStatus'])->name('revenue.import.status');
-    
+
     // Revenue Excel routes
     Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');
 
     // Search routes - available for all authenticated users
     Route::get('/search-am', [RevenueController::class, 'searchAccountManager'])->name('revenue.searchAccountManager');
     Route::get('/search-customer', [RevenueController::class, 'searchCorporateCustomer'])->name('revenue.searchCorporateCustomer');
-    
+
     // Global search route
     Route::get('/global-search', [RevenueController::class, 'search'])->name('revenue.search');
 
@@ -90,20 +90,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account_manager.edit');
     Route::put('/account-manager/{id}', [AccountManagerController::class, 'update'])->name('account_manager.update');
     Route::delete('/account-manager/{id}', [AccountManagerController::class, 'destroy'])->name('account_manager.destroy');
-    
+
     // Divisi untuk Account Manager
     Route::get('/api/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('api.account-manager.divisi');
-    
-    // API Routes untuk Edit via AJAX
+
+    // API Routes untuk Edit via AJAX - PERBAIKAN UTAMA DISINI
     Route::get('/api/account-manager/{id}/edit', [AccountManagerController::class, 'getAccountManagerData']);
-    Route::post('/api/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager']);
+    // Ubah dari POST ke PUT untuk update
+    Route::put('/api/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager']);
 
     Route::get('/api/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'getCorporateCustomerData']);
-    Route::post('/api/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer']);
+    // Ubah dari POST ke PUT untuk update
+    Route::put('/api/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer']);
 
     Route::get('/api/revenue/{id}/edit', [RevenueController::class, 'getRevenueData']);
-    Route::post('/api/revenue/{id}/update', [RevenueController::class, 'updateRevenue']);
-    
+    // Ubah dari POST ke PUT untuk update
+    Route::put('/api/revenue/{id}/update', [RevenueController::class, 'updateRevenue']);
+
     // Account Manager Excel routes
     Route::post('/account-manager/import', [AccountManagerExcelController::class, 'import'])->name('account_manager.import');
     Route::get('/account-manager/template', [AccountManagerExcelController::class, 'downloadTemplate'])->name('account_manager.template');

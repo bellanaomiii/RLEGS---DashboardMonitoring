@@ -80,6 +80,88 @@
     .tab-button:last-child {
         border-top-right-radius: 15px;
     }
+
+    /* Style untuk division tabs */
+    .division-tabs {
+        display: flex;
+        overflow-x: auto;
+        padding: 10px 0;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        gap: 10px;
+    }
+
+    .division-tab {
+        padding: 8px 16px;
+        border-radius: 20px;
+        background-color: #f3f4f6;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.3s ease;
+    }
+
+    .division-tab.active {
+        background-color: #1C2955;
+        color: white;
+    }
+
+    /* Divisi badge untuk heading */
+    .divisi-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        background-color: #e5e7eb;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+    }
+
+    /* Display divisi list di profil */
+    .divisi-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 5px;
+    }
+
+    .divisi-pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        background-color: #e5e7eb;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Perbaikan tampilan card ranking */
+    .rankings-container .row {
+        margin-right: -10px;
+        margin-left: -10px;
+    }
+
+    .rankings-container .col-md-4 {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+
+    .ranking-card {
+        height: 100%;
+        margin-bottom: 0;
+    }
+
+    /* Perbaikan filter spacing */
+    .filters-container {
+        display: flex;
+        align-items: center;
+        gap: 12px; /* Tambahkan gap untuk dropdown filters */
+    }
+
+    /* Perbaikan selector divisi di profile */
+    .division-ranking-selector {
+        margin-left: 15px;
+    }
 </style>
 @endsection
 
@@ -92,7 +174,21 @@
                  class="profile-avatar" alt="{{ $accountManager->nama }}">
         </div>
         <div class="profile-details">
-            <h2 class="profile-name">{{ $accountManager->nama }}</h2>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="profile-name mb-0">{{ $accountManager->nama }}</h2>
+
+                @if(count($divisionRankings) > 0)
+                <div class="division-ranking-selector">
+                    <select id="division-ranking-select" class="selectpicker" title="Pilih Divisi" data-style="btn-sm btn-outline-secondary">
+                        @foreach($divisionRankings as $divisiId => $ranking)
+                            <option value="{{ $divisiId }}" {{ $selectedDivisiId == $divisiId ? 'selected' : '' }}>
+                                {{ $ranking['nama'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+            </div>
             <div class="profile-meta">
                 <div class="meta-item">
                     <i class="lni lni-id-card"></i>
@@ -104,7 +200,14 @@
                 </div>
                 <div class="meta-item">
                     <i class="lni lni-network"></i>
-                    <span>DIVISI: {{ ($accountManager->divisis->isNotEmpty() ? $accountManager->divisis->first()->nama : 'N/A') }}</span>
+                    <span>DIVISI: </span>
+                    <div class="divisi-list">
+                        @forelse($accountManager->divisis as $divisi)
+                            <span class="divisi-pill">{{ $divisi->nama }}</span>
+                        @empty
+                            <span>N/A</span>
+                        @endforelse
+                    </div>
                 </div>
             </div>
         </div>
@@ -127,15 +230,6 @@
                 $witelRankIcon = "10-50.svg";
             } elseif ($witelRanking['position'] > 50) {
                 $witelRankIcon = "up100.svg";
-            }
-        }
-
-        $divisionRankIcon = "1-10.svg";
-        if (is_numeric($divisionRanking['position'])) {
-            if ($divisionRanking['position'] > 10 && $divisionRanking['position'] <= 50) {
-                $divisionRankIcon = "10-50.svg";
-            } elseif ($divisionRanking['position'] > 50) {
-                $divisionRankIcon = "up100.svg";
             }
         }
 
@@ -182,27 +276,6 @@
             $witelBadgeText = 'Tetap';
         }
 
-        $divisionChange = isset($divisionRanking['position_change']) ? $divisionRanking['position_change'] : 0;
-        if ($divisionChange > 0) {
-            $divisionChangeClass = 'text-success';
-            $divisionChangeBadgeClass = 'up';
-            $divisionChangeIcon = 'lni-arrow-up';
-            $divisionChangeText = 'naik ' . $divisionChange;
-            $divisionBadgeText = 'Naik ' . $divisionChange;
-        } elseif ($divisionChange < 0) {
-            $divisionChangeClass = 'text-danger';
-            $divisionChangeBadgeClass = 'down';
-            $divisionChangeIcon = 'lni-arrow-down';
-            $divisionChangeText = 'turun ' . abs($divisionChange);
-            $divisionBadgeText = 'Turun ' . abs($divisionChange);
-        } else {
-            $divisionChangeClass = 'text-muted';
-            $divisionChangeBadgeClass = 'neutral';
-            $divisionChangeIcon = 'lni-minus';
-            $divisionChangeText = 'tetap';
-            $divisionBadgeText = 'Tetap';
-        }
-
         $currentMonth = date('F');
         $previousMonth = date('F', strtotime('-1 month'));
 
@@ -226,84 +299,142 @@
         $previousMonthID = $monthNames[$previousMonth] ?? $previousMonth;
     @endphp
 
-    <a href="{{ route('leaderboard') }}" class="ranking-card global">
-        <div class="ranking-icon">
-            <img src="{{ asset('img/' . $globalRankIcon) }}" alt="Peringkat" width="40" height="40">
-        </div>
-        <div class="ranking-info">
-            <div class="ranking-title">Peringkat Global</div>
-            <div class="ranking-value">
-                {{ $globalRanking['position'] }} dari {{ $globalRanking['total'] }}
-                @if ($globalChange != 0)
-                    <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <a href="{{ route('leaderboard') }}" class="ranking-card global">
+                <div class="ranking-icon">
+                    <img src="{{ asset('img/' . $globalRankIcon) }}" alt="Peringkat" width="40" height="40">
+                </div>
+                <div class="ranking-info">
+                    <div class="ranking-title">Peringkat Global</div>
+                    <div class="ranking-value">
+                        {{ $globalRanking['position'] }} dari {{ $globalRanking['total'] }}
+                        @if ($globalChange != 0)
+                            <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
+                                <i class="lni {{ $globalChangeIcon }}"></i>
+                            </span>
+                        @endif
+                    </div>
+                    <span class="rank-change-detail {{ $globalChangeBadgeClass }}">{{ $globalChangeText }} dari {{ $previousMonthID }}</span>
+                </div>
+                @if($globalChange != 0)
+                    <div class="rank-badge {{ $globalChangeBadgeClass }}">
                         <i class="lni {{ $globalChangeIcon }}"></i>
-                    </span>
+                        {{ $globalBadgeText }}
+                    </div>
                 @endif
-            </div>
-            <span class="rank-change-detail {{ $globalChangeBadgeClass }}">{{ $globalChangeText }} dari {{ $previousMonthID }}</span>
+            </a>
         </div>
-        @if($globalChange != 0)
-            <div class="rank-badge {{ $globalChangeBadgeClass }}">
-                <i class="lni {{ $globalChangeIcon }}"></i>
-                {{ $globalBadgeText }}
-            </div>
-        @endif
-    </a>
 
-    <div class="ranking-card witel">
-        <div class="ranking-icon">
-            <img src="{{ asset('img/' . $witelRankIcon) }}" alt="Peringkat" width="40" height="40">
-        </div>
-        <div class="ranking-info">
-            <div class="ranking-title">Peringkat Witel</div>
-            <div class="ranking-value">
-                {{ $witelRanking['position'] }} dari {{ $witelRanking['total'] }}
-                @if ($witelChange != 0 && is_numeric($witelRanking['position']))
-                    <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
+        <div class="col-md-4 mb-3">
+            <div class="ranking-card witel">
+                <div class="ranking-icon">
+                    <img src="{{ asset('img/' . $witelRankIcon) }}" alt="Peringkat" width="40" height="40">
+                </div>
+                <div class="ranking-info">
+                    <div class="ranking-title">Peringkat Witel</div>
+                    <div class="ranking-value">
+                        {{ $witelRanking['position'] }} dari {{ $witelRanking['total'] }}
+                        @if ($witelChange != 0 && is_numeric($witelRanking['position']))
+                            <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
+                                <i class="lni {{ $witelChangeIcon }}"></i>
+                            </span>
+                        @endif
+                    </div>
+                    @if(is_numeric($witelRanking['position']))
+                        <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
+                    @else
+                        <span class="rank-change-detail text-muted">belum ada data</span>
+                    @endif
+                </div>
+                @if($witelChange != 0 && is_numeric($witelRanking['position']))
+                    <div class="rank-badge {{ $witelChangeBadgeClass }}">
                         <i class="lni {{ $witelChangeIcon }}"></i>
-                    </span>
+                        {{ $witelBadgeText }}
+                    </div>
                 @endif
             </div>
-            @if(is_numeric($witelRanking['position']))
-                <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
-            @else
-                <span class="rank-change-detail text-muted">belum ada data</span>
-            @endif
         </div>
-        @if($witelChange != 0 && is_numeric($witelRanking['position']))
-            <div class="rank-badge {{ $witelChangeBadgeClass }}">
-                <i class="lni {{ $witelChangeIcon }}"></i>
-                {{ $witelBadgeText }}
-            </div>
-        @endif
-    </div>
 
-    <div class="ranking-card division">
-        <div class="ranking-icon">
-            <img src="{{ asset('img/' . $divisionRankIcon) }}" alt="Peringkat" width="40" height="40">
-        </div>
-        <div class="ranking-info">
-            <div class="ranking-title">Peringkat Divisi</div>
-            <div class="ranking-value">
-                {{ $divisionRanking['position'] }} dari {{ $divisionRanking['total'] }}
-                @if ($divisionChange != 0 && is_numeric($divisionRanking['position']))
-                    <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
-                        <i class="lni {{ $divisionChangeIcon }}"></i>
-                    </span>
+        <div class="col-md-4 mb-3">
+            <!-- Division Rankings -->
+            <div class="division-rankings-container">
+                @if(count($divisionRankings) > 0)
+                    @foreach($divisionRankings as $divisiId => $ranking)
+                        @php
+                            $divisiRankIcon = "1-10.svg";
+                            if (is_numeric($ranking['position'])) {
+                                if ($ranking['position'] > 10 && $ranking['position'] <= 50) {
+                                    $divisiRankIcon = "10-50.svg";
+                                } elseif ($ranking['position'] > 50) {
+                                    $divisiRankIcon = "up100.svg";
+                                }
+                            }
+
+                            $divisionChange = isset($ranking['position_change']) ? $ranking['position_change'] : 0;
+                            if ($divisionChange > 0) {
+                                $divisionChangeClass = 'text-success';
+                                $divisionChangeBadgeClass = 'up';
+                                $divisionChangeIcon = 'lni-arrow-up';
+                                $divisionChangeText = 'naik ' . $divisionChange;
+                                $divisionBadgeText = 'Naik ' . $divisionChange;
+                            } elseif ($divisionChange < 0) {
+                                $divisionChangeClass = 'text-danger';
+                                $divisionChangeBadgeClass = 'down';
+                                $divisionChangeIcon = 'lni-arrow-down';
+                                $divisionChangeText = 'turun ' . abs($divisionChange);
+                                $divisionBadgeText = 'Turun ' . abs($divisionChange);
+                            } else {
+                                $divisionChangeClass = 'text-muted';
+                                $divisionChangeBadgeClass = 'neutral';
+                                $divisionChangeIcon = 'lni-minus';
+                                $divisionChangeText = 'tetap';
+                                $divisionBadgeText = 'Tetap';
+                            }
+                        @endphp
+
+                        <div class="ranking-card division division-rank-card" data-divisi-id="{{ $divisiId }}" style="{{ $selectedDivisiId == $divisiId || (empty($selectedDivisiId) && $divisiId == array_key_first($divisionRankings)) ? '' : 'display: none;' }}">
+                            <div class="ranking-icon">
+                                <img src="{{ asset('img/' . $divisiRankIcon) }}" alt="Peringkat" width="40" height="40">
+                            </div>
+                            <div class="ranking-info">
+                                <div class="ranking-title">Peringkat Divisi <span class="divisi-badge">{{ $ranking['nama'] }}</span></div>
+                                <div class="ranking-value">
+                                    {{ $ranking['position'] }} dari {{ $ranking['total'] }}
+                                    @if ($divisionChange != 0 && is_numeric($ranking['position']))
+                                        <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
+                                            <i class="lni {{ $divisionChangeIcon }}"></i>
+                                        </span>
+                                    @endif
+                                </div>
+                                @if(is_numeric($ranking['position']))
+                                    <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
+                                @else
+                                    <span class="rank-change-detail text-muted">belum ada data</span>
+                                @endif
+                            </div>
+                            @if($divisionChange != 0 && is_numeric($ranking['position']))
+                                <div class="rank-badge {{ $divisionChangeBadgeClass }}">
+                                    <i class="lni {{ $divisionChangeIcon }}"></i>
+                                    {{ $divisionBadgeText }}
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                @else
+                    <div class="ranking-card division">
+                        <div class="ranking-icon">
+                            <img src="{{ asset('img/up100.svg') }}" alt="Peringkat" width="40" height="40">
+                        </div>
+                        <div class="ranking-info">
+                            <div class="ranking-title">Peringkat Divisi</div>
+                            <div class="ranking-value">N/A</div>
+                            <span class="rank-change-detail text-muted">belum ada data</span>
+                        </div>
+                    </div>
                 @endif
             </div>
-            @if(is_numeric($divisionRanking['position']))
-                <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
-            @else
-                <span class="rank-change-detail text-muted">belum ada data</span>
-            @endif
         </div>
-        @if($divisionChange != 0 && is_numeric($divisionRanking['position']))
-            <div class="rank-badge {{ $divisionChangeBadgeClass }}">
-                <i class="lni {{ $divisionChangeIcon }}"></i>
-                {{ $divisionBadgeText }}
-            </div>
-        @endif
     </div>
 </div>
 
@@ -327,7 +458,21 @@
                 </div>
 
                 <div class="filters-container">
-                    <div class="filter-group me-2">
+                    <!-- Division Selector -->
+                    @if(count($accountManager->divisis) > 1)
+                    <div class="filter-group">
+                        <select id="divisiFilter" class="selectpicker" title="Pilih Divisi">
+                            <option value="all">Semua Divisi</option>
+                            @foreach($accountManager->divisis as $divisi)
+                                <option value="{{ $divisi->id }}" {{ $selectedDivisiId == $divisi->id ? 'selected' : '' }}>
+                                    {{ $divisi->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+
+                    <div class="filter-group">
                         <select id="filterCustomer" class="selectpicker" title="Filter">
                             <option value="all">Semua</option>
                             <option value="highest_achievement">Pencapaian Tertinggi</option>
@@ -345,8 +490,18 @@
                 </div>
             </div>
 
-            <!-- Customer Table -->
-            <div class="data-card">
+            <!-- Division Tabs for Customer Data -->
+            @if(count($accountManager->divisis) > 1)
+            <div class="division-tabs" id="customerDivisionTabs">
+                <div class="division-tab active" data-divisi-id="all">Semua Divisi</div>
+                @foreach($accountManager->divisis as $divisi)
+                    <div class="division-tab" data-divisi-id="{{ $divisi->id }}">{{ $divisi->nama }}</div>
+                @endforeach
+            </div>
+            @endif
+
+            <!-- Customer Tables for Each Division -->
+            <div id="all-divisions-customer-table" class="data-card division-customer-table active">
                 @if(count($customerRevenues) > 0)
                     <div class="table-responsive">
                         <table class="data-table">
@@ -354,6 +509,7 @@
                                 <tr>
                                     <th>Customer</th>
                                     <th>NIPNAS</th>
+                                    <th>Divisi</th>
                                     <th>Target Revenue</th>
                                     <th>Real Revenue</th>
                                     <th>Pencapaian</th>
@@ -367,6 +523,23 @@
                                         </td>
                                         <td>
                                             <div class="nipnas">{{ $customer->nipnas }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="customer-divisi">
+                                                @php
+                                                    $divisiId = $customer->divisi_id ?? null;
+                                                    $divisiNama = '';
+                                                    if ($divisiId) {
+                                                        foreach($accountManager->divisis as $divisi) {
+                                                            if ($divisi->id == $divisiId) {
+                                                                $divisiNama = $divisi->nama;
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                @endphp
+                                                {{ $divisiNama ?: 'Semua' }}
+                                            </div>
                                         </td>
                                         <td>Rp {{ number_format($customer->total_target, 0, ',', '.') }}</td>
                                         <td>Rp {{ number_format($customer->total_revenue, 0, ',', '.') }}</td>
@@ -397,6 +570,61 @@
                     </div>
                 @endif
             </div>
+
+            <!-- Individual Division Customer Tables -->
+            @foreach($accountManager->divisis as $divisi)
+                <div id="divisi-{{ $divisi->id }}-customer-table" class="data-card division-customer-table" style="display: none;">
+                    @if(isset($customerRevenuesByDivisi[$divisi->id]) && count($customerRevenuesByDivisi[$divisi->id]) > 0)
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>NIPNAS</th>
+                                        <th>Target Revenue</th>
+                                        <th>Real Revenue</th>
+                                        <th>Pencapaian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($customerRevenuesByDivisi[$divisi->id] as $customer)
+                                        <tr>
+                                            <td>
+                                                <div class="customer-name">{{ $customer->nama }}</div>
+                                            </td>
+                                            <td>
+                                                <div class="nipnas">{{ $customer->nipnas }}</div>
+                                            </td>
+                                            <td>Rp {{ number_format($customer->total_target, 0, ',', '.') }}</td>
+                                            <td>Rp {{ number_format($customer->total_revenue, 0, ',', '.') }}</td>
+                                            <td>
+                                                @php
+                                                    $achievementClass = 'badge-danger';
+                                                    if ($customer->achievement >= 100) {
+                                                        $achievementClass = 'badge-success';
+                                                    } elseif ($customer->achievement >= 80) {
+                                                        $achievementClass = 'badge-warning';
+                                                    }
+                                                @endphp
+                                                <span class="achievement-badge {{ $achievementClass }}">
+                                                    {{ number_format($customer->achievement, 2, ',', '.') }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fas fa-folder-open"></i>
+                            </div>
+                            <p class="empty-text">Tidak ada data customer untuk divisi {{ $divisi->nama }} di tahun {{ $selectedYear }}</p>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
         </div>
 
         <!-- Tab Content - Performance Analysis -->
@@ -405,180 +633,379 @@
                 <div class="tab-content-title">
                     <i class="fas fa-chart-line"></i> Analisis Performa & Insight
                 </div>
-            </div>
 
-            <!-- Total Revenue Summary - NEW SECTION -->
-            <div class="total-revenue-summary">
-                <div class="revenue-icon">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div class="revenue-content">
-                    <div class="revenue-label">Total Pendapatan Sepanjang Waktu</div>
-                    <div class="revenue-value">
-                        @php
-                            $totalAllTimeRevenue = $accountManager->revenues->sum('real_revenue');
-                            if ($totalAllTimeRevenue >= 1000000000) {
-                                echo 'Rp ' . number_format($totalAllTimeRevenue / 1000000000, 2, ',', '.') . ' Miliar';
-                            } elseif ($totalAllTimeRevenue >= 1000000) {
-                                echo 'Rp ' . number_format($totalAllTimeRevenue / 1000000, 2, ',', '.') . ' Juta';
-                            } else {
-                                echo 'Rp ' . number_format($totalAllTimeRevenue, 0, ',', '.');
-                            }
-                        @endphp
-                    </div>
-                    <div class="revenue-period">Sejak {{ date('Y', strtotime('-3 years')) }} hingga {{ date('Y') }}</div>
-                </div>
-            </div>
-
-            <!-- Insights Section -->
-            <div class="insight-summary-card">
-                <div class="insight-header">
-                    <i class="fas fa-lightbulb"></i>
-                    <h4>Ringkasan Performa</h4>
-                </div>
-                <div class="insight-body">
-                    <p>{{ $insights['message'] }}</p>
-
-                    <p>Berdasarkan analisis data selama {{ date('Y') }}, Account Manager <strong>{{ $accountManager->nama }}</strong>
-                    menunjukkan pencapaian yang {{ $insights['avg_achievement'] >= 90 ? 'sangat baik' : ($insights['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
-                    Dengan rata-rata pencapaian <strong>{{ number_format($insights['avg_achievement'], 2) }}%</strong> dan
-                    tren performa yang {{ $insights['trend'] == 'up' ? 'meningkat' : ($insights['trend'] == 'down' ? 'menurun' : 'stabil') }}.</p>
-                </div>
-            </div>
-
-            <div class="insight-metrics">
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="metric-content">
-                        <div class="metric-label">Pencapaian Tertinggi</div>
-                        <div class="metric-value">{{ $insights['best_achievement_month'] ? number_format($insights['best_achievement_month']['achievement'], 2) . '%' : 'N/A' }}</div>
-                        <div class="metric-period">
-                            @if($insights['best_achievement_month'])
-                                @php
-                                    $monthNames = [
-                                        'January' => 'Januari',
-                                        'February' => 'Februari',
-                                        'March' => 'Maret',
-                                        'April' => 'April',
-                                        'May' => 'Mei',
-                                        'June' => 'Juni',
-                                        'July' => 'Juli',
-                                        'August' => 'Agustus',
-                                        'September' => 'September',
-                                        'October' => 'Oktober',
-                                        'November' => 'November',
-                                        'December' => 'Desember'
-                                    ];
-                                    $monthName = $insights['best_achievement_month']['month_name'];
-                                    echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
-                                @endphp
-                            @endif
-                        </div>
+                <!-- Division Selector for Performance -->
+                @if(count($accountManager->divisis) > 1)
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <select id="performanceDivisiFilter" class="selectpicker" title="Pilih Divisi">
+                            <option value="all">Semua Divisi</option>
+                            @foreach($accountManager->divisis as $divisi)
+                                <option value="{{ $divisi->id }}" {{ $selectedDivisiId == $divisi->id ? 'selected' : '' }}>
+                                    {{ $divisi->nama }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
+                @endif
+            </div>
 
-                <div class="metric-card">
-                    <div class="metric-icon">
+            <!-- Division Tabs for Performance -->
+            @if(count($accountManager->divisis) > 1)
+            <div class="division-tabs" id="performanceDivisionTabs">
+                <div class="division-tab active" data-divisi-id="all">Semua Divisi</div>
+                @foreach($accountManager->divisis as $divisi)
+                    <div class="division-tab" data-divisi-id="{{ $divisi->id }}">{{ $divisi->nama }}</div>
+                @endforeach
+            </div>
+            @endif
+
+            <!-- Total Revenue Summary - Combined -->
+            <div id="all-divisions-performance" class="division-performance active">
+                <div class="total-revenue-summary">
+                    <div class="revenue-icon">
                         <i class="fas fa-money-bill-wave"></i>
                     </div>
-                    <div class="metric-content">
-                        <div class="metric-label">Pendapatan Tertinggi</div>
-                        <div class="metric-value">
-                            @if($insights['best_revenue_month'])
+                    <div class="revenue-content">
+                        <div class="revenue-label">Total Pendapatan Sepanjang Waktu</div>
+                        <div class="revenue-value">
+                            @php
+                                $totalAllTimeRevenue = $accountManager->revenues->sum('real_revenue');
+                                if ($totalAllTimeRevenue >= 1000000000) {
+                                    echo 'Rp ' . number_format($totalAllTimeRevenue / 1000000000, 2, ',', '.') . ' Miliar';
+                                } elseif ($totalAllTimeRevenue >= 1000000) {
+                                    echo 'Rp ' . number_format($totalAllTimeRevenue / 1000000, 2, ',', '.') . ' Juta';
+                                } else {
+                                    echo 'Rp ' . number_format($totalAllTimeRevenue, 0, ',', '.');
+                                }
+                            @endphp
+                        </div>
+                        <div class="revenue-period">Sejak {{ $revenuePeriod['earliest'] }} hingga {{ $revenuePeriod['latest'] }}</div>
+                    </div>
+                </div>
+
+                <!-- Insights Section - Combined for all divisions -->
+                <div class="insight-summary-card">
+                    <div class="insight-header">
+                        <i class="fas fa-lightbulb"></i>
+                        <h4>Ringkasan Performa</h4>
+                    </div>
+                    <div class="insight-body">
+                        <p>{{ $insights['message'] }}</p>
+
+                        <p>Berdasarkan analisis data selama {{ $selectedYear }}, Account Manager <strong>{{ $accountManager->nama }}</strong>
+                        menunjukkan pencapaian yang {{ $insights['avg_achievement'] >= 90 ? 'sangat baik' : ($insights['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
+                        Dengan rata-rata pencapaian <strong>{{ number_format($insights['avg_achievement'], 2) }}%</strong> dan
+                        tren performa yang {{ $insights['trend'] == 'up' ? 'meningkat' : ($insights['trend'] == 'down' ? 'menurun' : 'stabil') }}.</p>
+                    </div>
+                </div>
+
+                <div class="insight-metrics">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Pencapaian Tertinggi</div>
+                            <div class="metric-value">{{ $insights['best_achievement_month'] ? number_format($insights['best_achievement_month']['achievement'], 2) . '%' : 'N/A' }}</div>
+                            <div class="metric-period">
+                                @if($insights['best_achievement_month'])
+                                    @php
+                                        $monthName = $insights['best_achievement_month']['month_name'];
+                                        echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
+                                    @endphp
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Pendapatan Tertinggi</div>
+                            <div class="metric-value">
+                                @if($insights['best_revenue_month'])
+                                    @php
+                                        $revenue = $insights['best_revenue_month']['real_revenue'];
+                                        if ($revenue >= 1000000000) {
+                                            echo 'Rp ' . number_format($revenue / 1000000000, 2, ',', '.') . ' M';
+                                        } elseif ($revenue >= 1000000) {
+                                            echo 'Rp ' . number_format($revenue / 1000000, 2, ',', '.') . ' Jt';
+                                        } else {
+                                            echo 'Rp ' . number_format($revenue, 0, ',', '.');
+                                        }
+                                    @endphp
+                                @else
+                                    N/A
+                                @endif
+                            </div>
+                            <div class="metric-period">
+                                @if($insights['best_revenue_month'])
+                                    @php
+                                        $monthName = $insights['best_revenue_month']['month_name'];
+                                        echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
+                                    @endphp
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Rata-rata Pencapaian</div>
+                            <div class="metric-value">{{ number_format($insights['avg_achievement'], 2) }}%</div>
+                            <div class="metric-period">Sepanjang {{ $selectedYear }}</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            @if($insights['trend'] == 'up')
+                                <i class="fas fa-arrow-up text-success"></i>
+                            @elseif($insights['trend'] == 'down')
+                                <i class="fas fa-arrow-down text-danger"></i>
+                            @else
+                                <i class="fas fa-minus text-muted"></i>
+                            @endif
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Tren Performa</div>
+                            <div class="metric-value">
+                                @if($insights['trend'] == 'up')
+                                    <span class="text-success">Meningkat</span>
+                                @elseif($insights['trend'] == 'down')
+                                    <span class="text-danger">Menurun</span>
+                                @else
+                                    <span class="text-muted">Stabil</span>
+                                @endif
+                            </div>
+                            <div class="metric-period">3 bulan terakhir</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Chart for Combined Data -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Grafik Performa Bulanan {{ $selectedYear }}
+                        </h4>
+
+                        <div class="chart-filters">
+                            <div class="year-selector">
+                                <select name="performance_year" id="performance-year-select" class="selectpicker" data-live-search="true" title="Pilih Tahun">
+                                    @foreach($yearsList as $year)
+                                        <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <select id="chartType" class="selectpicker" title="Tipe Tampilan">
+                                    <option value="combined" selected>Kombinasi</option>
+                                    <option value="revenue">Revenue</option>
+                                    <option value="achievement">Pencapaian</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Individual Division Performance Sections -->
+            @foreach($accountManager->divisis as $divisi)
+                <div id="divisi-{{ $divisi->id }}-performance" class="division-performance" style="display: none;">
+                    <!-- Total Revenue Summary for individual division -->
+                    <div class="total-revenue-summary">
+                        <div class="revenue-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="revenue-content">
+                            <div class="revenue-label">Total Pendapatan {{ $divisi->nama }} Sepanjang Waktu</div>
+                            <div class="revenue-value">
                                 @php
-                                    $revenue = $insights['best_revenue_month']['real_revenue'];
-                                    if ($revenue >= 1000000000) {
-                                        echo 'Rp ' . number_format($revenue / 1000000000, 2, ',', '.') . ' M';
-                                    } elseif ($revenue >= 1000000) {
-                                        echo 'Rp ' . number_format($revenue / 1000000, 2, ',', '.') . ' Jt';
+                                    $totalDivisiRevenue = $accountManager->revenues->where('divisi_id', $divisi->id)->sum('real_revenue');
+                                    if ($totalDivisiRevenue >= 1000000000) {
+                                        echo 'Rp ' . number_format($totalDivisiRevenue / 1000000000, 2, ',', '.') . ' Miliar';
+                                    } elseif ($totalDivisiRevenue >= 1000000) {
+                                        echo 'Rp ' . number_format($totalDivisiRevenue / 1000000, 2, ',', '.') . ' Juta';
                                     } else {
-                                        echo 'Rp ' . number_format($revenue, 0, ',', '.');
+                                        echo 'Rp ' . number_format($totalDivisiRevenue, 0, ',', '.');
                                     }
                                 @endphp
-                            @else
-                                N/A
-                            @endif
+                            </div>
+                            <div class="revenue-period">Sejak {{ $revenuePeriod['earliest'] }} hingga {{ $revenuePeriod['latest'] }}</div>
                         </div>
-                        <div class="metric-period">
-                            @if($insights['best_revenue_month'])
-                                @php
-                                    $monthName = $insights['best_revenue_month']['month_name'];
-                                    echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
-                                @endphp
-                            @endif
+                    </div>
+
+                    <!-- Insights for individual division -->
+                    @if(isset($insightsByDivisi[$divisi->id]))
+                        <div class="insight-summary-card">
+                            <div class="insight-header">
+                                <i class="fas fa-lightbulb"></i>
+                                <h4>Ringkasan Performa {{ $divisi->nama }}</h4>
+                            </div>
+                            <div class="insight-body">
+                                <p>{{ $insightsByDivisi[$divisi->id]['message'] }}</p>
+
+                                <p>Berdasarkan analisis data selama {{ $selectedYear }}, Account Manager <strong>{{ $accountManager->nama }}</strong>
+                                untuk divisi <strong>{{ $divisi->nama }}</strong> menunjukkan pencapaian yang
+                                {{ $insightsByDivisi[$divisi->id]['avg_achievement'] >= 90 ? 'sangat baik' : ($insightsByDivisi[$divisi->id]['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
+                                Dengan rata-rata pencapaian <strong>{{ number_format($insightsByDivisi[$divisi->id]['avg_achievement'], 2) }}%</strong> dan
+                                tren performa yang {{ $insightsByDivisi[$divisi->id]['trend'] == 'up' ? 'meningkat' : ($insightsByDivisi[$divisi->id]['trend'] == 'down' ? 'menurun' : 'stabil') }}.</p>
+                            </div>
+                        </div>
+
+                        <div class="insight-metrics">
+                            <div class="metric-card">
+                                <div class="metric-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="metric-content">
+                                    <div class="metric-label">Pencapaian Tertinggi</div>
+                                    <div class="metric-value">{{ $insightsByDivisi[$divisi->id]['best_achievement_month'] ? number_format($insightsByDivisi[$divisi->id]['best_achievement_month']['achievement'], 2) . '%' : 'N/A' }}</div>
+                                    <div class="metric-period">
+                                        @if($insightsByDivisi[$divisi->id]['best_achievement_month'])
+                                            @php
+                                                $monthName = $insightsByDivisi[$divisi->id]['best_achievement_month']['month_name'];
+                                                echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
+                                            @endphp
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-icon">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </div>
+                                <div class="metric-content">
+                                    <div class="metric-label">Pendapatan Tertinggi</div>
+                                    <div class="metric-value">
+                                        @if($insightsByDivisi[$divisi->id]['best_revenue_month'])
+                                            @php
+                                                $revenue = $insightsByDivisi[$divisi->id]['best_revenue_month']['real_revenue'];
+                                                if ($revenue >= 1000000000) {
+                                                    echo 'Rp ' . number_format($revenue / 1000000000, 2, ',', '.') . ' M';
+                                                } elseif ($revenue >= 1000000) {
+                                                    echo 'Rp ' . number_format($revenue / 1000000, 2, ',', '.') . ' Jt';
+                                                } else {
+                                                    echo 'Rp ' . number_format($revenue, 0, ',', '.');
+                                                }
+                                            @endphp
+                                        @else
+                                            N/A
+                                        @endif
+                                    </div>
+                                    <div class="metric-period">
+                                        @if($insightsByDivisi[$divisi->id]['best_revenue_month'])
+                                            @php
+                                                $monthName = $insightsByDivisi[$divisi->id]['best_revenue_month']['month_name'];
+                                                echo isset($monthNames[$monthName]) ? $monthNames[$monthName] : $monthName;
+                                            @endphp
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-icon">
+                                    <i class="fas fa-bullseye"></i>
+                                </div>
+                                <div class="metric-content">
+                                    <div class="metric-label">Rata-rata Pencapaian</div>
+                                    <div class="metric-value">{{ number_format($insightsByDivisi[$divisi->id]['avg_achievement'], 2) }}%</div>
+                                    <div class="metric-period">Sepanjang {{ $selectedYear }}</div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card">
+                                <div class="metric-icon">
+                                    @if($insightsByDivisi[$divisi->id]['trend'] == 'up')
+                                        <i class="fas fa-arrow-up text-success"></i>
+                                    @elseif($insightsByDivisi[$divisi->id]['trend'] == 'down')
+                                        <i class="fas fa-arrow-down text-danger"></i>
+                                    @else
+                                        <i class="fas fa-minus text-muted"></i>
+                                    @endif
+                                </div>
+                                <div class="metric-content">
+                                    <div class="metric-label">Tren Performa</div>
+                                    <div class="metric-value">
+                                        @if($insightsByDivisi[$divisi->id]['trend'] == 'up')
+                                            <span class="text-success">Meningkat</span>
+                                        @elseif($insightsByDivisi[$divisi->id]['trend'] == 'down')
+                                            <span class="text-danger">Menurun</span>
+                                        @else
+                                            <span class="text-muted">Stabil</span>
+                                        @endif
+                                    </div>
+                                    <div class="metric-period">3 bulan terakhir</div>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="insight-summary-card">
+                            <div class="insight-header">
+                                <i class="fas fa-lightbulb"></i>
+                                <h4>Ringkasan Performa {{ $divisi->nama }}</h4>
+                            </div>
+                            <div class="insight-body">
+                                <p>Belum ada data performa yang tersedia untuk Account Manager ini pada divisi {{ $divisi->nama }}.</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <!-- Performance Chart for Individual Division -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h4 class="chart-title">
+                                <i class="fas fa-chart-bar"></i>
+                                Grafik Performa Bulanan {{ $divisi->nama }} {{ $selectedYear }}
+                            </h4>
+
+                            <div class="chart-filters">
+                                <div class="year-selector">
+                                    <select name="divisi_performance_year_{{ $divisi->id }}"
+                                            id="divisi-performance-year-select-{{ $divisi->id }}"
+                                            class="selectpicker divisi-year-select"
+                                            data-divisi-id="{{ $divisi->id }}"
+                                            data-live-search="true"
+                                            title="Pilih Tahun">
+                                        @foreach($yearsList as $year)
+                                            <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="filter-group me-2">
+                                    <select id="divisi-chartType-{{ $divisi->id }}"
+                                            class="selectpicker divisi-chart-type"
+                                            data-divisi-id="{{ $divisi->id }}"
+                                            title="Tipe Tampilan">
+                                        <option value="combined" selected>Kombinasi</option>
+                                        <option value="revenue">Revenue</option>
+                                        <option value="achievement">Pencapaian</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="performanceChart-{{ $divisi->id }}"></canvas>
                         </div>
                     </div>
                 </div>
-
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-bullseye"></i>
-                    </div>
-                    <div class="metric-content">
-                        <div class="metric-label">Rata-rata Pencapaian</div>
-                        <div class="metric-value">{{ number_format($insights['avg_achievement'], 2) }}%</div>
-                        <div class="metric-period">Sepanjang {{ $selectedYear }}</div>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        @if($insights['trend'] == 'up')
-                            <i class="fas fa-arrow-up text-success"></i>
-                        @elseif($insights['trend'] == 'down')
-                            <i class="fas fa-arrow-down text-danger"></i>
-                        @else
-                            <i class="fas fa-minus text-muted"></i>
-                        @endif
-                    </div>
-                    <div class="metric-content">
-                        <div class="metric-label">Tren Performa</div>
-                        <div class="metric-value">
-                            @if($insights['trend'] == 'up')
-                                <span class="text-success">Meningkat</span>
-                            @elseif($insights['trend'] == 'down')
-                                <span class="text-danger">Menurun</span>
-                            @else
-                                <span class="text-muted">Stabil</span>
-                            @endif
-                        </div>
-                        <div class="metric-period">3 bulan terakhir</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Performance Chart -->
-            <div class="chart-container">
-                <div class="chart-header">
-                    <h4 class="chart-title">
-                        <i class="fas fa-chart-bar"></i>
-                        Grafik Performa Bulanan {{ $selectedYear }}
-                    </h4>
-
-                    <div class="chart-filters">
-                        <div class="year-selector">
-                            <select name="performance_year" id="performance-year-select" class="selectpicker" data-live-search="true" title="Pilih Tahun">
-                                @foreach($yearsList as $year)
-                                    <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="filter-group me-2">
-                            <select id="chartType" class="selectpicker" title="Tipe Tampilan">
-                                <option value="combined" selected>Kombinasi</option>
-                                <option value="revenue">Revenue</option>
-                                <option value="achievement">Pencapaian</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-canvas-container">
-                    <canvas id="performanceChart"></canvas>
-                </div>
-            </div>
+            @endforeach
         </div>
     </div>
 </div>
@@ -606,7 +1033,84 @@ $(document).ready(function() {
     // Year selector change event - Perbaikan agar keduanya bekerja
     $('#year-select, #performance-year-select').change(function() {
         if ($(this).val()) {
-            window.location.href = "{{ route('account_manager.detail', $accountManager->id) }}?year=" + $(this).val();
+            let url = "{{ route('account_manager.detail', $accountManager->id) }}?year=" + $(this).val();
+
+            // Tambahkan parameter divisi jika ada
+            const selectedDivisiId = $('#divisiFilter').val();
+            if (selectedDivisiId && selectedDivisiId !== 'all') {
+                url += "&divisi=" + selectedDivisiId;
+            }
+
+            window.location.href = url;
+        }
+    });
+
+    // Division selector change event
+    $('#divisiFilter, #performanceDivisiFilter').change(function() {
+        if ($(this).val()) {
+            let url = "{{ route('account_manager.detail', $accountManager->id) }}?year={{ $selectedYear }}";
+
+            // Jika memilih divisi tertentu
+            if ($(this).val() !== 'all') {
+                url += "&divisi=" + $(this).val();
+            }
+
+            window.location.href = url;
+        }
+    });
+
+    // Division ranking selector change event
+    $('#division-ranking-select').change(function() {
+        const divisiId = $(this).val();
+
+        // Hide all division ranking cards
+        $('.division-rank-card').hide();
+
+        // Show selected division ranking card
+        $(".division-rank-card[data-divisi-id='" + divisiId + "']").show();
+    });
+
+    // Division tabs click event for customer data
+    $('#customerDivisionTabs .division-tab').click(function() {
+        const divisiId = $(this).data('divisi-id');
+
+        // Remove active class from all tabs and hide all tables
+        $('#customerDivisionTabs .division-tab').removeClass('active');
+        $('.division-customer-table').hide();
+
+        // Add active class to clicked tab and show corresponding table
+        $(this).addClass('active');
+
+        if (divisiId === 'all') {
+            $('#all-divisions-customer-table').show();
+        } else {
+            $('#divisi-' + divisiId + '-customer-table').show();
+        }
+    });
+
+    // Division tabs click event for performance data
+    $('#performanceDivisionTabs .division-tab').click(function() {
+        const divisiId = $(this).data('divisi-id');
+
+        // Remove active class from all tabs and hide all tables
+        $('#performanceDivisionTabs .division-tab').removeClass('active');
+        $('.division-performance').hide();
+
+        // Add active class to clicked tab and show corresponding table
+        $(this).addClass('active');
+
+        if (divisiId === 'all') {
+            $('#all-divisions-performance').show();
+            // Render main performance chart
+            setTimeout(function() {
+                renderPerformanceChart('combined');
+            }, 100);
+        } else {
+            $('#divisi-' + divisiId + '-performance').show();
+            // Render division specific chart
+            setTimeout(function() {
+                renderDivisiPerformanceChart(divisiId, 'combined');
+            }, 100);
         }
     });
 
@@ -629,7 +1133,14 @@ $(document).ready(function() {
         // If switching to performance tab, render chart
         if (tabId === 'performance-analysis') {
             setTimeout(function() {
-                renderPerformanceChart('combined');
+                const activeTab = $('#performanceDivisionTabs .division-tab.active');
+                const divisiId = activeTab.data('divisi-id');
+
+                if (divisiId === 'all' || !divisiId) {
+                    renderPerformanceChart('combined');
+                } else {
+                    renderDivisiPerformanceChart(divisiId, 'combined');
+                }
             }, 100);
         }
     });
@@ -637,43 +1148,66 @@ $(document).ready(function() {
     // Customer Filters
     $('#filterCustomer').on('changed.bs.select', function() {
         const filterValue = $(this).val();
+        const currentDivisiTab = $('#customerDivisionTabs .division-tab.active').data('divisi-id');
+        let tableSelector;
+
+        if (currentDivisiTab === 'all' || !currentDivisiTab) {
+            tableSelector = '#all-divisions-customer-table .data-table';
+        } else {
+            tableSelector = '#divisi-' + currentDivisiTab + '-customer-table .data-table';
+        }
 
         if (filterValue === 'all') {
             // Show all rows
-            $('.data-table tbody tr').show();
+            $(tableSelector + ' tbody tr').show();
         } else if (filterValue === 'highest_achievement') {
             // Sort by achievement
-            const rows = $('.data-table tbody tr').toArray();
+            const rows = $(tableSelector + ' tbody tr').toArray();
             rows.sort(function(a, b) {
                 const aValue = parseFloat($(a).find('.achievement-badge').text().replace(/\./g, '').replace(',', '.').replace('%', ''));
                 const bValue = parseFloat($(b).find('.achievement-badge').text().replace(/\./g, '').replace(',', '.').replace('%', ''));
                 return bValue - aValue;
             });
 
-            $('.data-table tbody').empty().append(rows);
+            $(tableSelector + ' tbody').empty().append(rows);
             // Show top 5 only
-            $('.data-table tbody tr').hide().slice(0, 5).show();
+            $(tableSelector + ' tbody tr').hide().slice(0, 5).show();
         } else if (filterValue === 'highest_revenue') {
             // Sort by revenue
-            const rows = $('.data-table tbody tr').toArray();
+            const rows = $(tableSelector + ' tbody tr').toArray();
             rows.sort(function(a, b) {
                 const aValue = parseInt($(a).find('td:eq(3)').text().replace(/[^\d]/g, ''));
                 const bValue = parseInt($(b).find('td:eq(3)').text().replace(/[^\d]/g, ''));
                 return bValue - aValue;
             });
 
-            $('.data-table tbody').empty().append(rows);
+            $(tableSelector + ' tbody').empty().append(rows);
             // Show top 5 only
-            $('.data-table tbody tr').hide().slice(0, 5).show();
+            $(tableSelector + ' tbody tr').hide().slice(0, 5).show();
         }
     });
 
-    // Chart Type Selector
+    // Chart Type Selector for main chart
     $('#chartType').on('changed.bs.select', function() {
         renderPerformanceChart($(this).val());
     });
 
-    // Performance Chart
+    // Chart Type Selector for division charts
+    $('.divisi-chart-type').on('changed.bs.select', function() {
+        const divisiId = $(this).data('divisi-id');
+        renderDivisiPerformanceChart(divisiId, $(this).val());
+    });
+
+    // Division-specific year selector
+    $('.divisi-year-select').on('changed.bs.select', function() {
+        if ($(this).val()) {
+            const divisiId = $(this).data('divisi-id');
+            let url = "{{ route('account_manager.detail', $accountManager->id) }}?year=" + $(this).val() + "&divisi=" + divisiId;
+            window.location.href = url;
+        }
+    });
+
+    // Performance Chart for all divisions combined
     function renderPerformanceChart(type) {
         const ctx = document.getElementById('performanceChart');
         if (!ctx) {
@@ -898,10 +1432,242 @@ $(document).ready(function() {
         }
     }
 
+    // Performance Chart for specific division
+    function renderDivisiPerformanceChart(divisiId, type) {
+        const ctx = document.getElementById('performanceChart-' + divisiId);
+        if (!ctx) {
+            console.error('Division performance chart canvas not found for divisi ' + divisiId);
+            return;
+        }
+
+        // Check if chart exists and destroy it
+        try {
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+        } catch (e) {
+            console.warn('Error destroying existing chart:', e);
+        }
+
+        // Convert month names to Indonesian
+        const monthNames = {
+            'January': 'Januari',
+            'February': 'Februari',
+            'March': 'Maret',
+            'April': 'April',
+            'May': 'Mei',
+            'June': 'Juni',
+            'July': 'Juli',
+            'August': 'Agustus',
+            'September': 'September',
+            'October': 'Oktober',
+            'November': 'November',
+            'December': 'Desember'
+        };
+
+        // Prepare data
+        const monthlyData = @json($monthlyPerformanceByDivisi);
+
+        if (!monthlyData || !monthlyData[divisiId] || monthlyData[divisiId].length === 0) {
+            $('#performanceChart-' + divisiId).parent().html(
+                '<div class="text-center py-5">' +
+                '<i class="fas fa-chart-bar fs-1 text-muted mb-3"></i>' +
+                '<p class="text-muted">Tidak ada data performa untuk ditampilkan</p>' +
+                '</div>'
+            );
+            return;
+        }
+
+        // Translate month names to Indonesian
+        const labels = monthlyData[divisiId].map(item => {
+            return monthNames[item.month_name] || item.month_name;
+        });
+
+        const revenueData = monthlyData[divisiId].map(item => item.real_revenue);
+        const targetData = monthlyData[divisiId].map(item => item.target_revenue);
+        const achievementData = monthlyData[divisiId].map(item => item.achievement);
+
+        // Create datasets based on view type
+        let datasets = [];
+
+        if (type === 'combined' || type === 'revenue') {
+            datasets.push({
+                label: 'Real Revenue',
+                data: revenueData,
+                backgroundColor: 'rgba(59, 125, 221, 0.6)',
+                borderColor: 'rgba(59, 125, 221, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            });
+
+            datasets.push({
+                label: 'Target Revenue',
+                data: targetData,
+                backgroundColor: 'rgba(28, 41, 85, 0.2)',
+                borderColor: 'rgba(28, 41, 85, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            });
+        }
+
+        if (type === 'combined' || type === 'achievement') {
+            datasets.push({
+                label: 'Pencapaian (%)',
+                data: achievementData,
+                type: 'line',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: '#1C2955',
+                borderWidth: 2,
+                pointBackgroundColor: '#1C2955',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#1C2955',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1'
+            });
+        }
+
+        // Configure scales
+        const scales = {};
+
+        if (type === 'combined' || type === 'revenue') {
+            scales.y = {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Revenue (Rp)',
+                    font: {
+                        weight: 'bold'
+                    }
+                },
+                ticks: {
+                    callback: function(value) {
+                        if (value >= 1000000000) {
+                            return 'Rp ' + (value / 1000000000).toFixed(1) + ' M';
+                        } else if (value >= 1000000) {
+                            return 'Rp ' + (value / 1000000).toFixed(1) + ' Jt';
+                        } else {
+                            return 'Rp ' + value;
+                        }
+                    }
+                }
+            };
+        }
+
+        if (type === 'combined' || type === 'achievement') {
+            scales.y1 = {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Pencapaian (%)',
+                    font: {
+                        weight: 'bold'
+                    }
+                },
+                grid: {
+                    drawOnChartArea: type !== 'combined',
+                },
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            };
+        }
+
+        // Create new chart
+        try {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: scales,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(28, 41, 85, 0.8)',
+                            titleFont: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+
+                                    if (label) {
+                                        label += ': ';
+                                    }
+
+                                    if (context.dataset.yAxisID === 'y1') {
+                                        label += context.parsed.y.toFixed(2) + '%';
+                                    } else {
+                                        const value = context.parsed.y;
+                                        if (value >= 1000000000) {
+                                            label += 'Rp ' + (value / 1000000000).toFixed(2) + ' M';
+                                        } else if (value >= 1000000) {
+                                            label += 'Rp ' + (value / 1000000).toFixed(2) + ' Jt';
+                                        } else {
+                                            label += 'Rp ' + new Intl.NumberFormat('id-ID').format(value);
+                                        }
+                                    }
+
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error('Error creating chart for division ' + divisiId + ':', e);
+            $('#performanceChart-' + divisiId).parent().html(
+                '<div class="alert alert-danger mt-3">' +
+                '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                'Terjadi kesalahan saat membuat grafik: ' + e.message +
+                '</div>'
+            );
+        }
+    }
+
     // Initialize chart if performance tab is active
     if ($('#performance-analysis').hasClass('active')) {
         setTimeout(function() {
-            renderPerformanceChart('combined');
+            const activeTab = $('#performanceDivisionTabs .division-tab.active');
+            const divisiId = activeTab.data('divisi-id');
+
+            if (divisiId === 'all' || !divisiId) {
+                renderPerformanceChart('combined');
+            } else {
+                renderDivisiPerformanceChart(divisiId, 'combined');
+            }
         }, 300);
     }
 

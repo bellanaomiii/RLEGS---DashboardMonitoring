@@ -16,6 +16,9 @@ class AccountManagerDetailController extends Controller
         // Get selected year for filtering (default to current year)
         $selectedYear = $request->input('year', Carbon::now()->year);
 
+        // Get selected divisi for filtering (optional)
+        $selectedDivisiId = $request->input('divisi');
+
         // Get the account manager with relationships
         $accountManager = AccountManager::with(['witel', 'divisis', 'corporateCustomers', 'user', 'revenues'])
             ->findOrFail($id);
@@ -26,16 +29,62 @@ class AccountManagerDetailController extends Controller
         // Get witel ranking data with previous month comparison
         $witelRanking = $this->getWitelRanking($accountManager);
 
-        // Get division ranking data with previous month comparison
-        $divisionRanking = $this->getDivisionRanking($accountManager);
+        // Get ALL division rankings data with previous month comparison
+        $divisionRankings = [];
+        foreach ($accountManager->divisis as $divisi) {
+            $divisionRankings[$divisi->id] = $this->getDivisionRanking($accountManager, $divisi->id);
+            $divisionRankings[$divisi->id]['nama'] = $divisi->nama;
+        }
 
-        // Get customer revenue data for the selected year
+        // For backward compatibility, get the primary division ranking (first one or selected)
+        $primaryDivisiId = $selectedDivisiId ?: ($accountManager->divisis->isNotEmpty() ? $accountManager->divisis->first()->id : null);
+        $divisionRanking = isset($divisionRankings[$primaryDivisiId]) ? $divisionRankings[$primaryDivisiId] : [
+            'position' => 'N/A',
+            'total' => 0,
+            'previous_position' => 'N/A',
+            'position_change' => 0,
+            'nama' => 'N/A'
+        ];
+
+        // Get customer revenue data for the selected year, separated by divisi
+        $customerRevenuesByDivisi = [];
+
+        if ($selectedDivisiId) {
+            // If specific divisi is selected, get only data for that divisi
+            $customerRevenuesByDivisi[$selectedDivisiId] = $this->getCustomerRevenues($accountManager, $selectedYear, $selectedDivisiId);
+        } else {
+            // Otherwise get data for all divisi
+            foreach ($accountManager->divisis as $divisi) {
+                $customerRevenuesByDivisi[$divisi->id] = $this->getCustomerRevenues($accountManager, $selectedYear, $divisi->id);
+            }
+        }
+
+        // For backward compatibility, also send combined data
         $customerRevenues = $this->getCustomerRevenues($accountManager, $selectedYear);
 
-        // Get monthly performance data
+        // Get monthly performance data for all divisi
+        $monthlyPerformanceByDivisi = [];
+
+        if ($selectedDivisiId) {
+            // If specific divisi is selected, get only data for that divisi
+            $monthlyPerformanceByDivisi[$selectedDivisiId] = $this->getMonthlyPerformance($accountManager, $selectedYear, $selectedDivisiId);
+        } else {
+            // Otherwise get data for all divisi
+            foreach ($accountManager->divisis as $divisi) {
+                $monthlyPerformanceByDivisi[$divisi->id] = $this->getMonthlyPerformance($accountManager, $selectedYear, $divisi->id);
+            }
+        }
+
+        // For backward compatibility, also send combined data
         $monthlyPerformance = $this->getMonthlyPerformance($accountManager, $selectedYear);
 
-        // Get performance insights
+        // Get performance insights for each divisi
+        $insightsByDivisi = [];
+        foreach ($monthlyPerformanceByDivisi as $divisiId => $performance) {
+            $insightsByDivisi[$divisiId] = $this->generateInsights($performance);
+        }
+
+        // For backward compatibility, also send combined insights
         $insights = $this->generateInsights($monthlyPerformance);
 
         // Get year list for dropdown
@@ -58,11 +107,16 @@ class AccountManagerDetailController extends Controller
             'globalRanking' => $globalRanking,
             'witelRanking' => $witelRanking,
             'divisionRanking' => $divisionRanking,
+            'divisionRankings' => $divisionRankings,
             'customerRevenues' => $customerRevenues,
+            'customerRevenuesByDivisi' => $customerRevenuesByDivisi,
             'monthlyPerformance' => $monthlyPerformance,
+            'monthlyPerformanceByDivisi' => $monthlyPerformanceByDivisi,
             'insights' => $insights,
+            'insightsByDivisi' => $insightsByDivisi,
             'yearsList' => $yearsList,
             'selectedYear' => $selectedYear,
+            'selectedDivisiId' => $selectedDivisiId,
             'revenuePeriod' => $revenuePeriod
         ]);
     }
@@ -216,10 +270,10 @@ class AccountManagerDetailController extends Controller
         ];
     }
 
-    private function getDivisionRanking($accountManager)
+    private function getDivisionRanking($accountManager, $divisionId = null)
     {
-        // Check if account manager has any divisions
-        if ($accountManager->divisis->isEmpty()) {
+        // If no division ID provided, return NA
+        if (!$divisionId && $accountManager->divisis->isEmpty()) {
             return [
                 'position' => 'N/A',
                 'total' => 0,
@@ -228,25 +282,28 @@ class AccountManagerDetailController extends Controller
             ];
         }
 
-        // Get the first division (assuming account manager has at least one)
-        $divisionId = $accountManager->divisis->first()->id;
+        // If no division ID provided, use the first division
+        if (!$divisionId) {
+            $divisionId = $accountManager->divisis->first()->id;
+        }
 
         // Get current month and previous month
         $currentMonth = Carbon::now()->format('m');
         $previousMonth = Carbon::now()->subMonth()->format('m');
         $currentYear = Carbon::now()->format('Y');
 
-        // Get current month ranking within division
+        // Get current month ranking within division based on revenue with specific divisi_id
         $divisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
-                $query->where('divisi_id', $divisionId);
+                $query->where('divisi.id', $divisionId);
             })
             ->select('account_managers.*')
-            ->selectSub(function ($query) use ($currentMonth, $currentYear) {
+            ->selectSub(function ($query) use ($currentMonth, $currentYear, $divisionId) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')
                     ->from('revenues')
                     ->whereColumn('revenues.account_manager_id', 'account_managers.id')
                     ->whereMonth('revenues.bulan', $currentMonth)
-                    ->whereYear('revenues.bulan', $currentYear);
+                    ->whereYear('revenues.bulan', $currentYear)
+                    ->where('revenues.divisi_id', $divisionId); // Filter by divisi_id
             }, 'current_revenue')
             ->orderByDesc('current_revenue')
             ->get();
@@ -261,15 +318,16 @@ class AccountManagerDetailController extends Controller
 
         // Get previous month ranking within division
         $previousDivisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
-                $query->where('divisi_id', $divisionId);
+                $query->where('divisi.id', $divisionId);
             })
             ->select('account_managers.*')
-            ->selectSub(function ($query) use ($previousMonth, $currentYear) {
+            ->selectSub(function ($query) use ($previousMonth, $currentYear, $divisionId) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')
                     ->from('revenues')
                     ->whereColumn('revenues.account_manager_id', 'account_managers.id')
                     ->whereMonth('revenues.bulan', $previousMonth)
-                    ->whereYear('revenues.bulan', $currentYear);
+                    ->whereYear('revenues.bulan', $currentYear)
+                    ->where('revenues.divisi_id', $divisionId); // Filter by divisi_id
             }, 'previous_revenue')
             ->orderByDesc('previous_revenue')
             ->get();
@@ -294,10 +352,10 @@ class AccountManagerDetailController extends Controller
         ];
     }
 
-    private function getCustomerRevenues($accountManager, $year)
+    private function getCustomerRevenues($accountManager, $year, $divisiId = null)
     {
-        // Get customer revenues for the selected year
-        $customerRevenueData = DB::table('revenues')
+        // Start with base query
+        $query = DB::table('revenues')
             ->join('corporate_customers', 'revenues.corporate_customer_id', '=', 'corporate_customers.id')
             ->select(
                 'corporate_customers.id',
@@ -308,15 +366,22 @@ class AccountManagerDetailController extends Controller
                 DB::raw('CASE WHEN SUM(revenues.target_revenue) > 0 THEN (SUM(revenues.real_revenue) / SUM(revenues.target_revenue) * 100) ELSE 0 END as achievement')
             )
             ->where('revenues.account_manager_id', $accountManager->id)
-            ->whereYear('revenues.bulan', $year)
-            ->groupBy('corporate_customers.id', 'corporate_customers.nama', 'corporate_customers.nipnas')
+            ->whereYear('revenues.bulan', $year);
+
+        // Add divisi filter if specified
+        if ($divisiId) {
+            $query->where('revenues.divisi_id', $divisiId);
+        }
+
+        // Complete the query
+        $customerRevenueData = $query->groupBy('corporate_customers.id', 'corporate_customers.nama', 'corporate_customers.nipnas')
             ->orderByDesc('total_revenue')
             ->get();
 
         return $customerRevenueData;
     }
 
-    private function getMonthlyPerformance($accountManager, $year)
+    private function getMonthlyPerformance($accountManager, $year, $divisiId = null)
     {
         // Initialize array with all months
         $monthlyData = [];
@@ -332,8 +397,8 @@ class AccountManagerDetailController extends Controller
             ];
         }
 
-        // Get monthly revenue data from database
-        $monthlyRevenues = DB::table('revenues')
+        // Start with base query
+        $query = DB::table('revenues')
             ->select(
                 DB::raw('MONTH(bulan) as month'),
                 DB::raw('SUM(real_revenue) as real_revenue'),
@@ -341,8 +406,15 @@ class AccountManagerDetailController extends Controller
                 DB::raw('CASE WHEN SUM(target_revenue) > 0 THEN (SUM(real_revenue) / SUM(target_revenue) * 100) ELSE 0 END as achievement')
             )
             ->where('account_manager_id', $accountManager->id)
-            ->whereYear('bulan', $year)
-            ->groupBy(DB::raw('MONTH(bulan)'))
+            ->whereYear('bulan', $year);
+
+        // Add divisi filter if specified
+        if ($divisiId) {
+            $query->where('divisi_id', $divisiId);
+        }
+
+        // Complete the query
+        $monthlyRevenues = $query->groupBy(DB::raw('MONTH(bulan)'))
             ->get();
 
         // Update monthly data with actual values

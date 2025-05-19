@@ -71,7 +71,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     public function collection(Collection $rows)
     {
         // Track unique entries based on NIK
-        $uniqueRows = [];
+        $accountManagerData = [];
         $existingEntries = [];
 
         // Get all existing account managers by NIK
@@ -84,6 +84,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
 
         Log::info('Identified columns', $columnMap);
 
+        // LANGKAH 1: Mengumpulkan semua data untuk setiap AM berdasarkan NIK
         foreach ($rows as $index => $row) {
             try {
                 // Skip first row if it's a header
@@ -111,16 +112,6 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
                     continue;
                 }
 
-                // Create a unique key for this row
-                $rowKey = $nik;
-
-                // Skip if this exact row is already in our processed list (duplicate in Excel)
-                if (in_array($rowKey, $this->processedRows)) {
-                    $this->duplicateCount++;
-                    Log::info('Duplicate NIK found in CSV file', ['row' => $index + 2, 'nik' => $nik]);
-                    continue;
-                }
-
                 // Find witel_id by name
                 $witelId = $this->findWitelId($witelName);
                 if (!$witelId) {
@@ -142,40 +133,30 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
                     continue;
                 }
 
-                // Check if Account Manager already exists by NIK
-                if (array_key_exists($nik, $existingAccountManagers)) {
-                    // Get existing account manager
-                    $accountManagerId = $existingAccountManagers[$nik];
-                    $accountManager = AccountManager::find($accountManagerId);
-
-                    if ($accountManager) {
-                        // Update existing account manager
-                        $accountManager->update([
-                            'nama' => $nama,
-                            'witel_id' => $witelId,
-                            'regional_id' => $regionalId,
-                        ]);
-
-                        // Attach divisi if not already attached
-                        if (!$accountManager->divisis()->where('divisi.id', $divisiId)->exists()) {
-                            $accountManager->divisis()->attach($divisiId);
-                        }
-
-                        $this->updatedCount++;
-                        Log::info('Account Manager updated', ['row' => $index + 2, 'nik' => $nik, 'id' => $accountManagerId]);
-                    }
-                } else {
-                    // This is a new account manager
-                    $uniqueRows[] = [
+                // Create a unique key for this AM based on NIK
+                if (!isset($accountManagerData[$nik])) {
+                    // Initialize data for this NIK if it doesn't exist yet
+                    $accountManagerData[$nik] = [
                         'nama' => $nama,
-                        'nik' => $nik,
                         'witel_id' => $witelId,
                         'regional_id' => $regionalId,
-                        'divisi_id' => $divisiId
+                        'divisi_ids' => [], // Array untuk menyimpan semua ID divisi
+                        'is_existing' => array_key_exists($nik, $existingAccountManagers),
+                        'account_manager_id' => array_key_exists($nik, $existingAccountManagers) ? $existingAccountManagers[$nik] : null
                     ];
                 }
 
-                $this->processedRows[] = $rowKey;
+                // Tambahkan divisi_id ke array jika belum ada
+                if (!in_array($divisiId, $accountManagerData[$nik]['divisi_ids'])) {
+                    $accountManagerData[$nik]['divisi_ids'][] = $divisiId;
+                } else {
+                    $this->duplicateCount++;
+                    Log::info('Duplicate divisi found for NIK in CSV file', ['row' => $index + 2, 'nik' => $nik, 'divisi' => $divisiName]);
+                }
+
+                // Tandai baris ini sudah diproses
+                $this->processedRows[] = "$nik-$divisiId";
+
             } catch (\Exception $e) {
                 Log::error('Error processing CSV row: ' . $e->getMessage(), [
                     'row' => $index + 2,
@@ -185,22 +166,59 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             }
         }
 
-        // Insert the new account managers
-        foreach ($uniqueRows as $row) {
+        // LANGKAH 2: Proses semua data yang sudah dikumpulkan
+        foreach ($accountManagerData as $nik => $data) {
             try {
-                // Create new account manager
-                $divisiId = $row['divisi_id'];
-                unset($row['divisi_id']); // Remove divisi_id from array
+                if ($data['is_existing']) {
+                    // Update existing account manager
+                    $accountManager = AccountManager::find($data['account_manager_id']);
 
-                $accountManager = AccountManager::create($row);
+                    if ($accountManager) {
+                        // Update data dasar
+                        $accountManager->update([
+                            'nama' => $data['nama'],
+                            'witel_id' => $data['witel_id'],
+                            'regional_id' => $data['regional_id'],
+                        ]);
 
-                // Attach divisi
-                $accountManager->divisis()->attach($divisiId);
+                        // SYNC divisi - akan mengganti semua relasi dengan yang baru
+                        $accountManager->divisis()->sync($data['divisi_ids']);
 
-                $this->importedCount++;
-                Log::info('New Account Manager created', ['nik' => $row['nik'], 'id' => $accountManager->id]);
+                        $this->updatedCount++;
+                        Log::info('Account Manager updated with multiple divisi', [
+                            'nik' => $nik,
+                            'id' => $data['account_manager_id'],
+                            'divisi_count' => count($data['divisi_ids']),
+                            'divisi_ids' => $data['divisi_ids']
+                        ]);
+                    }
+                } else {
+                    // Create new account manager
+                    $newData = [
+                        'nama' => $data['nama'],
+                        'nik' => $nik,
+                        'witel_id' => $data['witel_id'],
+                        'regional_id' => $data['regional_id'],
+                    ];
+
+                    $accountManager = AccountManager::create($newData);
+
+                    // Attach all divisi
+                    $accountManager->divisis()->attach($data['divisi_ids']);
+
+                    $this->importedCount++;
+                    Log::info('New Account Manager created with multiple divisi', [
+                        'nik' => $nik,
+                        'id' => $accountManager->id,
+                        'divisi_count' => count($data['divisi_ids']),
+                        'divisi_ids' => $data['divisi_ids']
+                    ]);
+                }
             } catch (\Exception $e) {
-                Log::error('Error saving Account Manager: ' . $e->getMessage(), $row);
+                Log::error('Error saving Account Manager: ' . $e->getMessage(), [
+                    'nik' => $nik,
+                    'exception' => $e
+                ]);
             }
         }
 

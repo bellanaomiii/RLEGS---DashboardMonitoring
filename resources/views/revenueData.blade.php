@@ -43,8 +43,8 @@
         }
 
         .btn-export {
-            background-color: #0a1f44; 
-            color: white !important; 
+            background-color: #0a1f44;
+            color: white !important;
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             text-decoration: none !important;
@@ -53,14 +53,90 @@
         }
 
         #filterToggle:hover {
-            color: inherit; 
-            background-color: #0a1f44; 
+            color: inherit;
+            background-color: #0a1f44;
         }
 
         #filterToggle:hover .fas {
             color: white;
         }
 
+        /* Modal Loading Overlay */
+        .modal-loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 0.3rem;
+        }
+
+        /* Perbaikan notification - tidak auto-close */
+        .notification-persistent {
+            display: flex;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            max-width: 450px;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            background-color: white;
+            z-index: 9999;
+            transform: translateX(110%);
+            transition: transform 0.3s ease-in-out;
+            align-items: flex-start;
+        }
+
+        .notification-persistent.show {
+            transform: translateX(0);
+        }
+
+        .notification-persistent .content {
+            flex-grow: 1;
+            padding-right: 15px;
+        }
+
+        .notification-persistent .title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .notification-persistent .message {
+            margin-bottom: 0;
+        }
+
+        .notification-persistent .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            padding: 0 5px;
+        }
+
+        .notification-persistent.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .notification-persistent.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .notification-persistent.warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .notification-persistent.info {
+            border-left: 4px solid #17a2b8;
+        }
     </style>
 @endsection
 
@@ -69,7 +145,7 @@
         <!-- Header Dashboard -->
         <div class="header-dashboard">
             <h1 class="header-title">
-                Data Revenue Account Manager 
+                Data Revenue Account Manager
             </h1>
             <p class="header-subtitle">
                 Kelola dan Monitoring Data Pendapatan Account Manager RLEGS
@@ -78,6 +154,16 @@
 
         <!-- Snackbar untuk notifikasi -->
         <div id="snackbar"></div>
+
+        <!-- Notification container yang persistent -->
+        <div id="notification-container" class="notification-persistent">
+            <div class="content">
+                <div class="title" id="notification-title">Notifikasi</div>
+                <p class="message" id="notification-message"></p>
+                <div class="details mt-2" id="notification-details" style="display: none;"></div>
+            </div>
+            <button class="close-btn" id="notification-close">&times;</button>
+        </div>
 
         <!-- Error Message Display -->
         @if (session('error'))
@@ -223,7 +309,8 @@
                         <div class="input-group">
                             <input class="form-control" type="search" id="globalSearch" placeholder="Cari data..."
                                 autocomplete="off" value="{{ request('search') }}">
-                            <button class="btn btn-primary px-3 py-1" type="button" id="searchButton" style="min-width: 5px;">
+                            <button class="btn btn-primary px-3 py-1" type="button" id="searchButton"
+                                style="min-width: 5px;">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
@@ -539,10 +626,10 @@
                                             </td>
                                             <td>{{ \Carbon\Carbon::parse($revenue->bulan . '-01')->format('F Y') }}</td>
                                             <td class="text-center">
-                                                <a href="{{ route('revenue.edit', $revenue->id) }}"
-                                                    class="action-btn edit-btn" title="Edit">
+                                                <button type="button" class="action-btn edit-btn edit-revenue"
+                                                    data-id="{{ $revenue->id }}" title="Edit">
                                                     <i class="fas fa-edit"></i>
-                                                </a>
+                                                </button>
                                                 <form action="{{ route('revenue.destroy', $revenue->id) }}"
                                                     method="POST" style="display:inline;" class="delete-form">
                                                     @csrf
@@ -700,10 +787,10 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                <a href="{{ route('account_manager.edit', $am->id) }}"
-                                                    class="action-btn edit-btn" title="Edit">
+                                                <button type="button" class="action-btn edit-btn edit-account-manager"
+                                                    data-id="{{ $am->id }}" title="Edit">
                                                     <i class="fas fa-edit"></i>
-                                                </a>
+                                                </button>
                                                 <form action="{{ route('account_manager.destroy', $am->id) }}"
                                                     method="POST" style="display:inline;" class="delete-form">
                                                     @csrf
@@ -835,10 +922,10 @@
                                             <td>{{ $cc->nama }}</td>
                                             <td>{{ $cc->nipnas }}</td>
                                             <td class="text-center">
-                                                <a href="{{ route('corporate_customer.edit', $cc->id) }}"
-                                                    class="action-btn edit-btn" title="Edit">
+                                                <button type="button" class="action-btn edit-btn edit-corporate-customer"
+                                                    data-id="{{ $cc->id }}" title="Edit">
                                                     <i class="fas fa-edit"></i>
-                                                </a>
+                                                </button>
                                                 <form action="{{ route('corporate_customer.destroy', $cc->id) }}"
                                                     method="POST" style="display:inline;" class="delete-form">
                                                     @csrf
@@ -1094,6 +1181,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Modal Tambah Corporate Customer -->
         <div class="modal fade" id="addCorporateCustomerModal" tabindex="-1"
             aria-labelledby="addCorporateCustomerModalLabel" aria-hidden="true">
@@ -1116,6 +1204,7 @@
                         </div>
 
                         <!-- Tab Content untuk Form Manual -->
+                        <!-- Kode untuk Form Tambah Corporate Customer Tanpa Batasan NIPNAS -->
                         <div id="formTabCC" class="tab-content active">
                             <form id="ccForm" action="{{ route('corporate_customer.store') }}" method="POST">
                                 @csrf
@@ -1127,7 +1216,8 @@
                                 <div class="form-group">
                                     <label for="nipnas" class="form-label">NIPNAS</label>
                                     <input type="number" name="nipnas" id="nipnas" class="form-control"
-                                        placeholder="Masukkan NIPNAS (maksimal 7 digit)" max="9999999" required>
+                                        placeholder="Masukkan NIPNAS" required>
+                                    <!-- Menghapus atribut max="9999999" -->
                                 </div>
                                 <div class="mt-3">
                                     <button type="submit" class="btn btn-primary">
@@ -1219,6 +1309,249 @@
             </div>
         </div>
 
+        <!-- Modal Edit Account Manager -->
+        <div class="modal fade" id="editAccountManagerModal" tabindex="-1"
+            aria-labelledby="editAccountManagerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editAccountManagerModalLabel"><i class="fas fa-user-edit me-2"></i>
+                            Edit Account Manager</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Loading overlay untuk menampilkan loading saat mengambil data -->
+                        <div class="modal-loading-overlay" id="edit-am-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat data...</p>
+                        </div>
+
+                        <form id="editAmForm" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" id="edit_am_id" name="id">
+
+                            <div class="form-group">
+                                <label for="edit_nama" class="form-label">Nama Account Manager</label>
+                                <input type="text" id="edit_nama" name="nama" class="form-control"
+                                    placeholder="Masukkan Nama Account Manager" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_nik" class="form-label">Nomor Induk Karyawan</label>
+                                <input type="text" id="edit_nik" name="nik" class="form-control"
+                                    placeholder="Masukkan 5 digit Nomor Induk Karyawan" pattern="^\d{5}$" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_witel_id" class="form-label">Witel</label>
+                                <select name="witel_id" id="edit_witel_id" class="form-control" required>
+                                    <option value="">Pilih Witel</option>
+                                    @if (isset($witels) && (is_object($witels) || is_array($witels)))
+                                        @foreach ($witels as $witel)
+                                            @if (is_object($witel) && isset($witel->id) && isset($witel->nama))
+                                                <option value="{{ $witel->id }}">{{ $witel->nama }}</option>
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_regional_id" class="form-label">Regional</label>
+                                <select name="regional_id" id="edit_regional_id" class="form-control" required>
+                                    <option value="">Pilih Regional</option>
+                                    @if (isset($regionals) && (is_object($regionals) || is_array($regionals)))
+                                        @foreach ($regionals as $regional)
+                                            @if (is_object($regional) && isset($regional->id) && isset($regional->nama))
+                                                <option value="{{ $regional->id }}">{{ $regional->nama }}</option>
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Divisi</label>
+                                <div class="divisi-btn-group edit-divisi-btn-group" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+                                    @if (isset($divisi) && (is_object($divisi) || is_array($divisi)))
+                                        @foreach ($divisi as $div)
+                                            @if (is_object($div) && isset($div->id) && isset($div->nama))
+                                                <button type="button" class="divisi-btn"
+                                                    data-divisi-id="{{ $div->id }}"
+                                                    style="padding:8px 15px; border:1px solid #ddd; border-radius:4px; background-color:#f8f9fa; cursor:pointer; font-size:14px;">
+                                                    {{ $div->nama }}
+                                                </button>
+                                            @endif
+                                        @endforeach
+                                    @else
+                                        <!-- Fallback buttons jika data divisi tidak valid -->
+                                        <button type="button" class="divisi-btn" data-divisi-id="1"
+                                            style="padding:8px 15px; border:1px solid #ddd; border-radius:4px; background-color:#f8f9fa; cursor:pointer; font-size:14px;">
+                                            DGS
+                                        </button>
+                                        <button type="button" class="divisi-btn" data-divisi-id="2"
+                                            style="padding:8px 15px; border:1px solid #ddd; border-radius:4px; background-color:#f8f9fa; cursor:pointer; font-size:14px;">
+                                            DPS
+                                        </button>
+                                        <button type="button" class="divisi-btn" data-divisi-id="3"
+                                            style="padding:8px 15px; border:1px solid #ddd; border-radius:4px; background-color:#f8f9fa; cursor:pointer; font-size:14px;">
+                                            DSS
+                                        </button>
+                                    @endif
+                                </div>
+                                <!-- Hidden input untuk menyimpan divisi yang dipilih -->
+                                <input type="hidden" name="divisi_ids" id="edit_divisi_ids" value="">
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Edit Corporate Customer -->
+        <div class="modal fade" id="editCorporateCustomerModal" tabindex="-1"
+            aria-labelledby="editCorporateCustomerModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editCorporateCustomerModalLabel"><i class="fas fa-building me-2"></i>
+                            Edit Corporate Customer</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Loading overlay -->
+                        <div class="modal-loading-overlay" id="edit-cc-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat data...</p>
+                        </div>
+
+                        <form id="editCcForm" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" id="edit_cc_id" name="id">
+
+                            <div class="form-group">
+                                <label for="edit_nama_customer" class="form-label">Nama Corporate Customer</label>
+                                <input type="text" name="nama" id="edit_nama_customer" class="form-control"
+                                    placeholder="Masukkan Nama Corporate Customer" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_nipnas" class="form-label">NIPNAS</label>
+                                <input type="number" name="nipnas" id="edit_nipnas" class="form-control"
+                                    placeholder="Masukkan NIPNAS" required>
+                                <!-- Menghapus atribut max="9999999" -->
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Edit Revenue -->
+        <div class="modal fade" id="editRevenueModal" tabindex="-1" aria-labelledby="editRevenueModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editRevenueModalLabel"><i class="fas fa-chart-line me-2"></i>
+                            Edit Data Revenue</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Loading overlay -->
+                        <div class="modal-loading-overlay" id="edit-revenue-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Memuat data...</p>
+                        </div>
+
+                        <form id="editRevenueForm" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" id="edit_revenue_id" name="id">
+
+                            <div class="form-row">
+                                <div class="form-group form-col-6">
+                                    <!-- Nama Account Manager (Read-only) -->
+                                    <label for="edit_account_manager" class="form-label"><strong>Nama Account
+                                            Manager</strong></label>
+                                    <input type="text" id="edit_account_manager" class="form-control" readonly>
+                                    <input type="hidden" name="account_manager_id" id="edit_account_manager_id">
+                                </div>
+
+                                <div class="form-group form-col-6">
+                                    <!-- Divisi Account Manager (Read-only) -->
+                                    <label for="edit_divisi_nama" class="form-label"><strong>Divisi</strong></label>
+                                    <input type="text" id="edit_divisi_nama" class="form-control" readonly>
+                                    <input type="hidden" name="divisi_id" id="edit_divisi_id">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group form-col-12">
+                                    <!-- Nama Corporate Customer (Read-only) -->
+                                    <label for="edit_corporate_customer" class="form-label"><strong>Corporate
+                                            Customer</strong></label>
+                                    <input type="text" id="edit_corporate_customer" class="form-control" readonly>
+                                    <input type="hidden" name="corporate_customer_id" id="edit_corporate_customer_id">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group form-col-6">
+                                    <!-- Target Revenue -->
+                                    <label for="edit_target_revenue" class="form-label"><strong>Target
+                                            Revenue</strong></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" class="form-control" name="target_revenue"
+                                            id="edit_target_revenue" placeholder="Masukkan target revenue" required>
+                                    </div>
+                                </div>
+                                <div class="form-group form-col-6">
+                                    <!-- Real Revenue -->
+                                    <label for="edit_real_revenue" class="form-label"><strong>Real
+                                            Revenue</strong></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" class="form-control" name="real_revenue"
+                                            id="edit_real_revenue" placeholder="Masukkan real revenue" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group form-col-12">
+                                    <!-- Bulan Capaian - Read-only -->
+                                    <label for="edit_bulan" class="form-label"><strong>Bulan Capaian</strong></label>
+                                    <input type="text" id="edit_bulan_display" class="form-control" readonly>
+                                    <input type="hidden" name="bulan" id="edit_bulan">
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Month Picker Global (Outside Normal Flow) -->
         <div id="global_month_picker" class="month-picker">
             <div class="month-picker-header">
@@ -1244,7 +1577,7 @@
 
     </div>
 
-    <!-- Indikator proses import -->
+    <!-- Indikator proses import - diperbaiki agar tidak auto-close -->
     <div id="importProcessingIndicator" style="display:none;" class="alert alert-info mt-3">
         <div class="d-flex align-items-center">
             <div class="spinner-border spinner-border-sm me-2" role="status">
@@ -1257,120 +1590,87 @@
             </div>
         </div>
     </div>
+
+    <!-- Snackbar dasar -->
     <div id="snackbar"></div>
-    
+
 @endsection
 
 @section('scripts')
-
-    <script>
-        // Fungsi untuk reload data setelah import selesai
-        window.reloadRevenueData = function() {
-            // Reload halaman dengan parameter timestamp untuk mencegah cache
-            window.location.href = "{{ route('revenue.data') }}?t=" + new Date().getTime();
-        };
-    </script>
-
     <!-- Load Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Load dashboard.js dengan versi baru untuk memastikan fresh load -->
     <script src="{{ asset('js/dashboard.js?v=' . time()) }}"></script>
 
-    <!-- Script untuk menangani button group divisi -->
+    <!-- Load JS khusus untuk Revenue -->
+    <script src="{{ asset('js/revenue.js?v=' . time()) }}"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi divisi button group saat halaman dimuat
-            initDivisiButtonGroup();
+            // Fungsi untuk reload data setelah import selesai
+            window.reloadRevenueData = function() {
+                // Reload halaman dengan parameter timestamp untuk mencegah cache
+                window.location.href = "{{ route('revenue.data') }}?t=" + new Date().getTime();
+            };
+        });
+    </script>
 
-            // Setup untuk modal - penting untuk memanggil init saat modal ditampilkan
-            if (typeof $ !== 'undefined' && $('#addAccountManagerModal').length > 0) {
-                $('#addAccountManagerModal').on('shown.bs.modal', function() {
-                    console.log('Modal displayed, initializing divisi buttons');
-                    initDivisiButtonGroup();
-                });
-            }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup khusus untuk styling button divisi di form edit
+            setupEditDivisiButtons();
 
-            // Setup untuk form submit
-            const amForm = document.getElementById('amForm');
-            if (amForm) {
-                amForm.addEventListener('submit', function(e) {
-                    const divisiIdsInput = document.getElementById('divisi_ids');
-                    if (!divisiIdsInput.value) {
-                        e.preventDefault();
-                        alert('Silakan pilih minimal satu divisi!');
-                    }
+            // Tambahan untuk bootstrap 5
+            if (typeof bootstrap !== 'undefined') {
+                document.querySelector('#editAccountManagerModal').addEventListener('shown.bs.modal', function() {
+                    console.log('Bootstrap 5 modal shown event triggered');
+                    setupEditDivisiButtons();
                 });
             }
         });
 
-        // Fungsi untuk menginisialisasi dan mengatur button group divisi
-        function initDivisiButtonGroup() {
-            console.log('Initializing divisi button group');
-            const divisiButtons = document.querySelectorAll('.divisi-btn');
-            const divisiIdsInput = document.getElementById('divisi_ids');
+        /**
+         * Fungsi spesial untuk styling button divisi saat mengisi form edit
+         */
+        function setupEditDivisiButtons() {
+            console.log('Setting up edit divisi buttons');
 
-            console.log('Found divisi buttons:', divisiButtons.length);
+            // Dapatkan semua button divisi di form edit
+            const divisiButtons = document.querySelectorAll('.edit-divisi-btn-group .divisi-btn');
 
-            if (divisiButtons.length === 0) {
-                console.warn('No divisi buttons found!');
+            // Log untuk debugging
+            console.log(`Found ${divisiButtons.length} edit divisi buttons`);
 
-                // Tambahkan fallback untuk divisi jika tidak ada dari server
-                const divisiContainer = document.querySelector('.divisi-btn-group');
-                if (divisiContainer && divisiContainer.children.length === 0) {
-                    console.log('Adding fallback divisi buttons');
-
-                    // Data divisi yang tetap (3 divisi yang ada)
-                    const divisiData = [{
-                            id: 1,
-                            nama: 'DGS'
-                        },
-                        {
-                            id: 2,
-                            nama: 'DPS'
-                        },
-                        {
-                            id: 3,
-                            nama: 'DSS'
-                        }
-                    ];
-
-                    // Tambahkan button untuk setiap divisi
-                    divisiData.forEach(div => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'divisi-btn';
-                        btn.dataset.divisiId = div.id;
-                        btn.textContent = div.nama;
-                        btn.style.padding = '8px 15px';
-                        btn.style.border = '1px solid #ddd';
-                        btn.style.borderRadius = '4px';
-                        btn.style.backgroundColor = '#f8f9fa';
-                        btn.style.cursor = 'pointer';
-                        btn.style.margin = '0 5px 5px 0';
-                        btn.style.display = 'inline-block';
-
-                        divisiContainer.appendChild(btn);
-                    });
-
-                    // Panggil kembali fungsi ini setelah menambahkan button
-                    setTimeout(initDivisiButtonGroup, 100);
-                    return;
-                }
-            }
-
-            // Tambahkan event listener untuk setiap button
+            // Tambahkan styling inline dan event listeners ke setiap button
             divisiButtons.forEach(button => {
-                // Hapus event listener lama untuk mencegah duplikasi
+                // Pastikan button memiliki styling yang benar
+                button.style.padding = '8px 15px';
+                button.style.border = '1px solid #ddd';
+                button.style.borderRadius = '4px';
+                button.style.backgroundColor = '#f8f9fa';
+                button.style.cursor = 'pointer';
+                button.style.fontSize = '14px';
+                button.style.margin = '0 5px 5px 0';
+                button.style.display = 'inline-block';
+
+                // Jika button sudah active (dipilih), tambahkan styling active
+                if (button.classList.contains('active')) {
+                    button.style.backgroundColor = '#0d6efd';
+                    button.style.color = 'white';
+                    button.style.borderColor = '#0d6efd';
+                }
+
+                // Hapus event listener yang mungkin sudah ada (untuk mencegah duplikasi)
                 const newButton = button.cloneNode(true);
                 button.parentNode.replaceChild(newButton, button);
 
-                // Tambahkan event listener pada button yang baru
+                // Tambahkan event listener baru
                 newButton.addEventListener('click', function() {
-                    console.log('Button clicked:', this.dataset.divisiId);
+                    console.log(`Edit divisi button clicked: ${this.dataset.divisiId}`);
                     this.classList.toggle('active');
 
-                    // Ubah gaya visual saat button aktif/tidak aktif
+                    // Update styling berdasarkan status active
                     if (this.classList.contains('active')) {
                         this.style.backgroundColor = '#0d6efd';
                         this.style.color = 'white';
@@ -1381,460 +1681,24 @@
                         this.style.borderColor = '#ddd';
                     }
 
-                    updateDivisiIds();
+                    // Update nilai input hidden
+                    updateEditDivisiIds();
                 });
             });
+        }
 
-            // Update nilai input hidden berdasarkan button yang aktif
-            function updateDivisiIds() {
-                const activeButtons = document.querySelectorAll('.divisi-btn.active');
-                const selectedIds = Array.from(activeButtons).map(btn => btn.dataset.divisiId);
-                divisiIdsInput.value = selectedIds.join(',');
-                console.log('Selected divisi IDs:', divisiIdsInput.value);
-            }
+        /**
+         * Update nilai input hidden pada form edit berdasarkan divisi yang dipilih
+         */
+        function updateEditDivisiIds() {
+            const activeButtons = document.querySelectorAll('.edit-divisi-btn-group .divisi-btn.active');
+            const divisiIdsInput = document.getElementById('edit_divisi_ids');
+
+            if (!divisiIdsInput) return;
+
+            const selectedIds = Array.from(activeButtons).map(btn => btn.dataset.divisiId);
+            divisiIdsInput.value = selectedIds.join(',');
+            console.log('Selected edit divisi IDs:', divisiIdsInput.value);
         }
     </script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fungsi untuk mengambil divisi berdasarkan account manager yang dipilih
-            function loadDivisiOptions(accountManagerId) {
-                fetch(`/api/account-manager/${accountManagerId}/divisi`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const divisiSelect = document.getElementById('divisi_id');
-                        divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-
-                        if (data.divisis && data.divisis.length > 0) {
-                            data.divisis.forEach(divisi => {
-                                const option = document.createElement('option');
-                                option.value = divisi.id;
-                                option.textContent = divisi.nama;
-                                divisiSelect.appendChild(option);
-                            });
-
-                            // Enable select
-                            divisiSelect.disabled = false;
-                        } else {
-                            // Disable select jika tidak ada divisi
-                            divisiSelect.disabled = true;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching divisi data:', error);
-                    });
-            }
-
-            // Event handler untuk input account manager
-            const accountManagerInput = document.getElementById('account_manager');
-            const accountManagerIdInput = document.getElementById('account_manager_id');
-            const divisiSelect = document.getElementById('divisi_id');
-
-            // Sudah ada event handler untuk suggestions
-            // Tambahkan kode untuk load divisi setelah account manager dipilih
-            document.addEventListener('amSelected', function(event) {
-                const accountManagerId = event.detail.id;
-                if (accountManagerId) {
-                    loadDivisiOptions(accountManagerId);
-                } else {
-                    divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-                    divisiSelect.disabled = true;
-                }
-            });
-
-            // Atau gunakan event listener manual jika tidak menggunakan custom event
-            accountManagerInput.addEventListener('change', function() {
-                const accountManagerId = accountManagerIdInput.value;
-                if (accountManagerId) {
-                    loadDivisiOptions(accountManagerId);
-                } else {
-                    divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-                    divisiSelect.disabled = true;
-                }
-            });
-        });
-    </script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Fungsi untuk mengambil divisi berdasarkan account manager yang dipilih
-            function loadDivisiOptions(accountManagerId) {
-                // Matikan select divisi selama loading
-                const divisiSelect = document.getElementById('divisi_id');
-                divisiSelect.disabled = true;
-                divisiSelect.innerHTML = '<option value="">Loading divisi...</option>';
-
-                // Buat request AJAX untuk mendapatkan divisi
-                fetch(`/api/account-manager/${accountManagerId}/divisi`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Reset dropdown
-                        divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-
-                        if (data.success && data.divisis && data.divisis.length > 0) {
-                            // Tambahkan options untuk setiap divisi
-                            data.divisis.forEach(divisi => {
-                                const option = document.createElement('option');
-                                option.value = divisi.id;
-                                option.textContent = divisi.nama;
-                                divisiSelect.appendChild(option);
-                            });
-
-                            // Enable select
-                            divisiSelect.disabled = false;
-
-                            // Log info
-                            console.log(
-                                `Loaded ${data.divisis.length} divisi options for Account Manager ID: ${accountManagerId}`
-                            );
-                        } else {
-                            // Jika tidak ada divisi, tampilkan pesan
-                            const option = document.createElement('option');
-                            option.value = "";
-                            option.textContent = "Tidak ada divisi terkait";
-                            divisiSelect.appendChild(option);
-
-                            // Disable select
-                            divisiSelect.disabled = true;
-
-                            console.warn(`No divisions found for Account Manager ID: ${accountManagerId}`);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching divisi data:', error);
-
-                        // Reset dropdown dengan pesan error
-                        divisiSelect.innerHTML = '<option value="">Error loading divisi</option>';
-                        divisiSelect.disabled = true;
-                    });
-            }
-
-            // Pengaturan event handler untuk input account manager
-            const accountManagerInput = document.getElementById('account_manager');
-            const accountManagerIdInput = document.getElementById('account_manager_id');
-
-            // Fungsi untuk memproses pemilihan account manager
-            function handleAccountManagerSelection() {
-                const accountManagerId = accountManagerIdInput.value;
-
-                if (accountManagerId) {
-                    console.log(`Account Manager selected: ${accountManagerInput.value} (ID: ${accountManagerId})`);
-                    loadDivisiOptions(accountManagerId);
-                } else {
-                    // Reset divisi select jika tidak ada account manager yang dipilih
-                    const divisiSelect = document.getElementById('divisi_id');
-                    divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-                    divisiSelect.disabled = true;
-                }
-            }
-
-            // Event listener untuk perubahan pada input account manager
-            // Gunakan event yang ada jika menggunakan library autocomplete
-            if (typeof $ !== 'undefined') {
-                // Jika menggunakan jQuery/Bootstrap autocomplete
-                $(document).on('accountManagerSelected', function(event, data) {
-                    if (data && data.id) {
-                        accountManagerIdInput.value = data.id;
-                        handleAccountManagerSelection();
-                    }
-                });
-            }
-
-            // Backup untuk metode standar
-            accountManagerInput.addEventListener('change', function() {
-                // Jika nilai sudah diset oleh autocomplete plugin
-                setTimeout(handleAccountManagerSelection,
-                    100); // Small delay untuk memberi waktu autocomplete selesai
-            });
-
-            // Deteksi event kustom jika digunakan
-            document.addEventListener('amSelected', function(event) {
-                if (event.detail && event.detail.id) {
-                    accountManagerIdInput.value = event.detail.id;
-                    handleAccountManagerSelection();
-                }
-            });
-
-            // Tambahan event listener untuk opsi klik pada suggestion
-            document.addEventListener('click', function(event) {
-                if (event.target.closest('.suggestion-item')) {
-                    // Tunggu sebentar agar nilai accountManagerIdInput diperbarui
-                    setTimeout(handleAccountManagerSelection, 100);
-                }
-            });
-        });
-    </script>
-
-    <!-- Script untuk menangani Regional -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi Regional dropdown dalam modal
-            initRegionalDropdown();
-
-            // Fungsi untuk menangani form validation yang mencakup regional
-            validateAccountManagerForm();
-        });
-
-        // Fungsi untuk inisialisasi dropdown Regional
-        function initRegionalDropdown() {
-            const regionalSelect = document.getElementById('regional_id');
-
-            if (!regionalSelect) {
-                console.warn('Regional dropdown tidak ditemukan');
-                return;
-            }
-
-            console.log('Regional dropdown initialized');
-
-            // Tambahkan event listener untuk perubahan Witel jika perlu
-            const witelSelect = document.getElementById('witel_id');
-            if (witelSelect) {
-                witelSelect.addEventListener('change', function() {
-                    // Opsional: Mengupdate regional berdasarkan witel yang dipilih
-                    // Ini bisa diimplementasikan jika diperlukan relasi khusus antara witel dan regional
-                    console.log('Witel changed:', this.value);
-                });
-            }
-        }
-
-        // Fungsi untuk validasi form yang mencakup regional
-        function validateAccountManagerForm() {
-            const amForm = document.getElementById('amForm');
-            if (!amForm) return;
-
-            amForm.addEventListener('submit', function(e) {
-                const regionalSelect = document.getElementById('regional_id');
-
-                // Validasi regional telah dipilih
-                if (regionalSelect && regionalSelect.value === '') {
-                    e.preventDefault();
-                    alert('Silakan pilih Regional!');
-                    return;
-                }
-
-                // Validasi divisi yang sudah ada tetap dijalankan
-                const divisiIdsInput = document.getElementById('divisi_ids');
-                if (divisiIdsInput && !divisiIdsInput.value) {
-                    e.preventDefault();
-                    alert('Silakan pilih minimal satu divisi!');
-                    return;
-                }
-            });
-        }
-    </script>
-
-    <!-- Script untuk mencari dan memfilter data berdasarkan Regional -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi filter regional
-            initRegionalFilter();
-        });
-
-        // Fungsi untuk inisialisasi filter regional pada halaman utama
-        function initRegionalFilter() {
-            const regionalFilter = document.querySelector('select[name="regional"]');
-            if (!regionalFilter) return;
-
-            regionalFilter.addEventListener('change', function() {
-                console.log('Regional filter changed:', this.value);
-                // Optional: Auto-submit form ketika regional dipilih
-                // this.closest('form').submit();
-            });
-        }
-    </script>
-
-    <!-- Script untuk impor CSV dengan kolom Regional -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi form impor CSV/Excel yang mendukung kolom Regional
-            initImportForm();
-        });
-
-        function initImportForm() {
-            const importForm = document.getElementById('amImportForm');
-            if (!importForm) return;
-
-            importForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const fileInput = this.querySelector('input[type="file"]');
-                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                    alert('Silakan pilih file CSV/Excel terlebih dahulu!');
-                    return;
-                }
-
-                // Tampilkan loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalBtnText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Mengunggah...';
-
-                // Submit form via AJAX
-                const formData = new FormData(this);
-
-                fetch(this.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // Kembalikan tombol ke state semula
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-
-                        // Tampilkan notifikasi hasil
-                        if (data.success) {
-                            // Tampilkan pesan sukses
-                            showNotification(data.message, 'success');
-
-                            // Tutup modal setelah berhasil
-                            const modal = bootstrap.Modal.getInstance(document.getElementById(
-                                'addAccountManagerModal'));
-                            if (modal) modal.hide();
-
-                            // Reload halaman setelah impor berhasil
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            // Tampilkan pesan error
-                            showNotification(data.message, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error importing file:', error);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-                        showNotification('Terjadi kesalahan saat mengunggah file', 'error');
-                    });
-            });
-        }
-
-        // Fungsi untuk menampilkan notifikasi
-        function showNotification(message, type = 'info') {
-            // Jika ada snackbar di halaman
-            const snackbar = document.getElementById('snackbar');
-            if (snackbar) {
-                snackbar.className = `show ${type}`;
-                snackbar.textContent = message;
-
-                setTimeout(() => {
-                    snackbar.className = snackbar.className.replace('show', '');
-                }, 3000);
-                return;
-            }
-
-            // Fallback ke alert
-            if (type === 'error') {
-                alert(`Error: ${message}`);
-            } else {
-                alert(message);
-            }
-        }
-    </script>
-
-    <script>
-        // Script untuk import Excel/CSV di Corporate Customer
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inisialisasi form import Corporate Customer
-            initCorporateCustomerImportForm();
-        });
-
-        // Fungsi untuk inisialisasi form import Corporate Customer
-        function initCorporateCustomerImportForm() {
-            const importForm = document.getElementById('ccImportForm');
-
-            if (!importForm) return;
-
-            importForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                const fileInput = this.querySelector('input[type="file"]');
-                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                    alert('Silakan pilih file Excel/CSV terlebih dahulu!');
-                    return;
-                }
-
-                // Tampilkan loading state
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const originalBtnText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Mengunggah...';
-
-                // Submit form via AJAX
-                const formData = new FormData(this);
-
-                fetch(this.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // Kembalikan tombol ke state semula
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-
-                        // Tampilkan notifikasi hasil
-                        if (data.success) {
-                            // Tampilkan pesan sukses
-                            showNotification(data.message, 'success');
-
-                            // Tutup modal setelah berhasil
-                            const modal = bootstrap.Modal.getInstance(document.getElementById(
-                                'addCorporateCustomerModal'));
-                            if (modal) modal.hide();
-
-                            // Reload halaman setelah impor berhasil
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            // Tampilkan pesan error
-                            showNotification(data.message, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error importing file:', error);
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-                        showNotification('Terjadi kesalahan saat mengunggah file', 'error');
-                    });
-            });
-        }
-
-        // Fungsi untuk menampilkan notifikasi
-        function showNotification(message, type = 'info') {
-            // Jika ada snackbar di halaman
-            const snackbar = document.getElementById('snackbar');
-            if (snackbar) {
-                snackbar.className = `show ${type}`;
-                snackbar.textContent = message;
-
-                setTimeout(() => {
-                    snackbar.className = snackbar.className.replace('show', '');
-                }, 3000);
-                return;
-            }
-
-            // Fallback ke alert
-            if (type === 'error') {
-                alert(`Error: ${message}`);
-            } else {
-                alert(message);
-            }
-        }
-    </script>
-    <script src="{{ asset('js/importStatus.js?v=' . time()) }}"></script>
-
 @endsection

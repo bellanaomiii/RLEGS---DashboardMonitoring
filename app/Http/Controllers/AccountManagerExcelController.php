@@ -9,32 +9,61 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Witel;
 use App\Models\Divisi;
 use App\Models\Regional;
+use Illuminate\Support\Facades\Validator;
 
 class AccountManagerExcelController extends Controller
 {
     /**
      * Menangani proses impor data Account Manager dari Excel/CSV
+     * dengan dukungan yang lebih baik untuk multiple divisi
      */
     public function import(Request $request)
     {
         try {
             // Validasi file yang diupload
-            $request->validate([
+            $validator = Validator::make($request->all(), [
                 'file' => 'required|mimes:txt,xlsx,xls,csv|max:10240', // Max 10MB
             ]);
 
+            if ($validator->fails()) {
+                Log::error('Excel/CSV validation error', ['errors' => $validator->errors()->all()]);
+
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validasi file gagal',
+                        'errors' => $validator->errors()->all()
+                    ], 422);
+                }
+
+                return redirect()->route('dashboard')
+                    ->with('error', 'Validasi gagal: ' . implode(', ', $validator->errors()->all()));
+            }
+
             // Debug log untuk tracking
-            Log::info('Starting Excel/CSV import process', [
+            Log::info('Starting Account Manager Excel/CSV import process', [
                 'file_name' => $request->file('file')->getClientOriginalName(),
                 'file_size' => $request->file('file')->getSize(),
                 'file_type' => $request->file('file')->getMimeType()
             ]);
 
-            // Pastikan master data tersedia
-            $this->checkMasterData();
+            // Pastikan master data tersedia sebelum melanjutkan
+            $checkResult = $this->checkMasterData();
+            if ($checkResult !== true) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $checkResult
+                    ], 422);
+                }
 
-            // Impor data dari file Excel/CSV menggunakan Maatwebsite Excel
+                return redirect()->route('dashboard')->with('error', $checkResult);
+            }
+
+            // Impor data dari file Excel/CSV menggunakan class yang sudah diperbarui
             $import = new AccountManagerImport;
+
+            // Jalankan proses import dengan menggunakan Laravel Excel package
             Excel::import($import, $request->file('file'));
 
             // Dapatkan informasi hasil import
@@ -43,6 +72,9 @@ class AccountManagerExcelController extends Controller
             $updatedCount = $results['updated'];
             $duplicateCount = $results['duplicates'];
 
+            Log::info('Import results', $results);
+
+            // Format pesan sukses
             $message = "Data Account Manager berhasil diproses: $importedCount baru ditambahkan, $updatedCount diperbarui.";
             if ($duplicateCount > 0) {
                 $message .= " $duplicateCount data duplikat dilewati.";
@@ -57,7 +89,7 @@ class AccountManagerExcelController extends Controller
                 ]);
             }
 
-            // Mengembalikan response setelah impor selesai
+            // Mengembalikan response standard untuk non-AJAX request
             Log::info('Excel/CSV import completed successfully', $results);
             return redirect()->route('dashboard')->with('success', $message);
 
@@ -80,7 +112,7 @@ class AccountManagerExcelController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validasi gagal',
+                    'message' => 'Validasi konten Excel/CSV gagal',
                     'errors' => $errorMessages
                 ], 422);
             }
@@ -108,21 +140,26 @@ class AccountManagerExcelController extends Controller
     }
 
     /**
-     * Download template Excel/CSV
+     * Download template Excel/CSV untuk Account Manager
      */
     public function downloadTemplate()
     {
         $filePath = public_path('templates/Template_Account_Manager.xlsx');
 
         if (file_exists($filePath)) {
-            return response()->download($filePath);
+            return response()->download(
+                $filePath,
+                'Template_Account_Manager.xlsx',
+                ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+            );
         } else {
-            return redirect()->route('dashboard')->with('error', 'Template tidak ditemukan.');
+            return redirect()->route('dashboard')->with('error', 'Template tidak ditemukan. Silakan hubungi administrator.');
         }
     }
 
     /**
      * Memeriksa keberadaan master data yang diperlukan
+     * @return true|string True jika semua master data tersedia, atau string error jika ada yang kurang
      */
     private function checkMasterData()
     {
@@ -137,15 +174,17 @@ class AccountManagerExcelController extends Controller
         ]);
 
         if ($witelCount == 0) {
-            throw new \Exception('Data Witel tidak tersedia. Harap tambahkan data Witel terlebih dahulu.');
+            return 'Data Witel tidak tersedia. Harap tambahkan data Witel terlebih dahulu.';
         }
 
         if ($divisiCount == 0) {
-            throw new \Exception('Data Divisi tidak tersedia. Harap tambahkan data Divisi terlebih dahulu.');
+            return 'Data Divisi tidak tersedia. Harap tambahkan data Divisi terlebih dahulu.';
         }
 
         if ($regionalCount == 0) {
-            throw new \Exception('Data Regional tidak tersedia. Harap tambahkan data Regional terlebih dahulu.');
+            return 'Data Regional tidak tersedia. Harap tambahkan data Regional terlebih dahulu.';
         }
+
+        return true;
     }
 }

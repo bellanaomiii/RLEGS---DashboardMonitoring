@@ -44,11 +44,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
 
     // Data Revenue - authorization dilakukan di controller
-    Route::get('/revenue_data', [RevenueController::class, 'index'])
+    Route::get('/revenue_data', [RevenueController::class, 'showRevenueData'])  // <-- Penting: Route ini yang diperbaiki
         ->name('revenue.data');
 
     // Route untuk export Revenue
-    Route::get('/revenue/export', [RevenueController::class, 'export'])->name('revenue.export');
+    Route::get('/revenue/export', [RevenueExcelController::class, 'export'])->name('revenue.export');
 });
 
 Route::middleware('auth')->group(function () {
@@ -66,32 +66,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
+    
     // Import route (menggunakan queue)
-    Route::post('/revenue/import', [App\Http\Controllers\RevenueExcelController::class, 'import'])->name('revenue.import');
-    // Check status import
-    Route::get('/revenue/import-status', [App\Http\Controllers\RevenueExcelController::class, 'checkImportStatus'])->name('revenue.import.status');
-    Route::get('/test-import', function () {
-        // Ambil file sample (ganti dengan path file Excel Anda)
-        $filePath = 'sample.xlsx';
-        $fullPath = public_path($filePath);
-
-        if (file_exists($fullPath)) {
-            $import = new \App\Imports\RevenueImport();
-            \Maatwebsite\Excel\Facades\Excel::import($import, $fullPath);
-            $results = $import->getImportResults();
-            return response()->json($results);
-        }
-
-        return "File tidak ditemukan: " . $fullPath;
-    });
-
-    // Revenue Excel routes
     Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
+    
+    // Check status import
+    Route::get('/revenue/import-status', [RevenueExcelController::class, 'checkImportStatus'])->name('revenue.import.status');
+    
+    // Revenue Excel routes
     Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');
 
     // Search routes - available for all authenticated users
     Route::get('/search-am', [RevenueController::class, 'searchAccountManager'])->name('revenue.searchAccountManager');
     Route::get('/search-customer', [RevenueController::class, 'searchCorporateCustomer'])->name('revenue.searchCorporateCustomer');
+    
+    // Global search route
+    Route::get('/global-search', [RevenueController::class, 'search'])->name('revenue.search');
 
     // Account Manager routes - authorization dilakukan di controller
     Route::get('/account-manager', [AccountManagerController::class, 'index'])->name('account_manager.index');
@@ -100,9 +90,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account_manager.edit');
     Route::put('/account-manager/{id}', [AccountManagerController::class, 'update'])->name('account_manager.update');
     Route::delete('/account-manager/{id}', [AccountManagerController::class, 'destroy'])->name('account_manager.destroy');
-    Route::get('/api/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions']);
-    Route::get('/api/account-manager/{id}/divisi', [App\Http\Controllers\RevenueController::class, 'getAccountManagerDivisions'])->name('api.account-manager.divisi');
+    
+    // Divisi untuk Account Manager
+    Route::get('/api/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('api.account-manager.divisi');
+    
+    // API Routes untuk Edit via AJAX
+    Route::get('/api/account-manager/{id}/edit', [AccountManagerController::class, 'getAccountManagerData']);
+    Route::post('/api/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager']);
 
+    Route::get('/api/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'getCorporateCustomerData']);
+    Route::post('/api/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer']);
+
+    Route::get('/api/revenue/{id}/edit', [RevenueController::class, 'getRevenueData']);
+    Route::post('/api/revenue/{id}/update', [RevenueController::class, 'updateRevenue']);
+    
     // Account Manager Excel routes
     Route::post('/account-manager/import', [AccountManagerExcelController::class, 'import'])->name('account_manager.import');
     Route::get('/account-manager/template', [AccountManagerExcelController::class, 'downloadTemplate'])->name('account_manager.template');
@@ -126,14 +127,11 @@ Route::middleware('auth')->group(function () {
     // Witel Performance routes diperbaiki
     Route::post('/witel-perform/update-charts', [WitelPerformController::class, 'updateCharts'])->name('witel.update-charts');
     Route::post('/witel-perform/filter-by-divisi', [WitelPerformController::class, 'filterByDivisi'])->name('witel.filter-by-divisi');
-
-    // Tambahkan routes yang hilang ini
     Route::post('/witel-perform/filter-by-witel', [WitelPerformController::class, 'filterByWitel'])->name('witel.filter-by-witel');
     Route::post('/witel-perform/filter-by-regional', [WitelPerformController::class, 'filterByRegional'])->name('witel.filter-by-regional');
 
-    // Tambahkan route berikut ke routes/web.php
-    Route::get('/leaderboardAM', [App\Http\Controllers\LeaderboardController::class, 'index'])->name('leaderboard');
-    Route::get('/account-manager/{id}', [App\Http\Controllers\AccountManagerDetailController::class, 'show'])->name('account_manager.detail');
+    // Account Manager detail
+    Route::get('/account-manager/{id}', [AccountManagerDetailController::class, 'show'])->name('account_manager.detail');
     Route::get('/witel/{witel_id}/leaderboard', [WitelLeaderboardController::class, 'index'])->name('witel.leaderboard');
     Route::get('/divisi/{divisi_id}/leaderboard', [DivisiLeaderboardController::class, 'index'])->name('divisi.leaderboard');
 
@@ -147,16 +145,6 @@ Route::middleware('auth')->group(function () {
 
     // API endpoint untuk mengambil data Regional (jika diperlukan)
     Route::get('/api/regionals', [RegionalController::class, 'getRegionals'])->name('api.regionals');
-
-    // // Tambahkan rute untuk detail Witel
-    // Route::get('/witel/{id}', [WitelController::class, 'show'])->name('witel.detail');
-
-    // // Tambahkan rute untuk detail Divisi
-    // Route::get('/divisi/{id}', [DivisiController::class, 'show'])->name('divisi.detail');
-
-    // // Rute untuk leaderboard Witel dan Divisi
-    // Route::get('/witel/{id}/leaderboard', [WitelController::class, 'leaderboard'])->name('witel.leaderboard');
-    // Route::get('/divisi/{id}/leaderboard', [DivisiController::class, 'leaderboard'])->name('divisi.leaderboard');
 
     // Performansi Witel route
     Route::get('/MonitoringLOP', function () {

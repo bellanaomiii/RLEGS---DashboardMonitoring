@@ -186,6 +186,7 @@ class CorporateCustomerImport implements ToCollection, WithHeadingRow, WithValid
     {
         return [
             // Semua kolom dibuat nullable agar validasi bisa flexible
+            // Tidak ada validasi max untuk NIPNAS
             '*.STANDARD NAME' => 'nullable',
             '*.NIPNAS' => 'nullable',
             // Untuk lowercase atau variasi nama lain

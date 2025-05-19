@@ -540,4 +540,146 @@ class RevenueController extends Controller
             ]);
         }
     }
+    
+    /**
+     * Mendapatkan data Revenue untuk edit via AJAX
+     */
+    public function getRevenueData($id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengakses data ini.'
+            ], 403);
+        }
+
+        try {
+            // Ambil data revenue dengan relasi yang dibutuhkan
+            $revenue = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])->findOrFail($id);
+            
+            // Format data untuk response
+            $data = [
+                'id' => $revenue->id,
+                'account_manager_id' => $revenue->account_manager_id,
+                'divisi_id' => $revenue->divisi_id,
+                'corporate_customer_id' => $revenue->corporate_customer_id,
+                'target_revenue' => $revenue->target_revenue,
+                'real_revenue' => $revenue->real_revenue,
+                'bulan' => $revenue->bulan,
+                'account_manager' => $revenue->accountManager ? [
+                    'id' => $revenue->accountManager->id,
+                    'nama' => $revenue->accountManager->nama
+                ] : null,
+                'divisi' => $revenue->divisi ? [
+                    'id' => $revenue->divisi->id,
+                    'nama' => $revenue->divisi->nama
+                ] : null,
+                'corporate_customer' => $revenue->corporateCustomer ? [
+                    'id' => $revenue->corporateCustomer->id,
+                    'nama' => $revenue->corporateCustomer->nama
+                ] : null
+            ];
+            
+            Log::info('Revenue data fetched for edit:', [
+                'id' => $id,
+                'account_manager' => $revenue->accountManager->nama ?? 'N/A',
+                'corporate_customer' => $revenue->corporateCustomer->nama ?? 'N/A'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching Revenue data: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data Revenue: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Revenue via AJAX
+     */
+    public function updateRevenue(Request $request, $id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data ini.'
+            ], 403);
+        }
+
+        try {
+            $revenue = Revenue::findOrFail($id);
+
+            // Validasi data input
+            $validator = Validator::make($request->all(), [
+                'account_manager_id' => 'required|exists:account_managers,id',
+                'divisi_id' => 'required|exists:divisi,id',
+                'corporate_customer_id' => 'required|exists:corporate_customers,id',
+                'target_revenue' => 'required|numeric',
+                'real_revenue' => 'required|numeric',
+                'bulan' => 'required|date_format:Y-m',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Revenue update validation failed via AJAX:', $validator->errors()->toArray());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Verifikasi bahwa divisi_id memang terkait dengan account_manager_id
+            $accountManager = AccountManager::findOrFail($request->account_manager_id);
+            $divisiExists = $accountManager->divisis()->where('divisi.id', $request->divisi_id)->exists();
+
+            if (!$divisiExists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Divisi yang dipilih tidak terkait dengan Account Manager.'
+                ], 422);
+            }
+
+            // Format bulan dengan menambahkan tanggal "01" 
+            $bulan = $request->bulan . '-01';
+
+            // Update data revenue
+            $revenue->update([
+                'account_manager_id' => $request->account_manager_id,
+                'divisi_id' => $request->divisi_id,
+                'corporate_customer_id' => $request->corporate_customer_id,
+                'target_revenue' => $request->target_revenue,
+                'real_revenue' => $request->real_revenue,
+                'bulan' => $bulan
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Revenue berhasil diperbarui!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating Revenue via AJAX: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui Revenue: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

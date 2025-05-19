@@ -7,6 +7,8 @@ use App\Models\Witel;
 use App\Models\Divisi;
 use App\Models\AccountManager;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CorporateCustomerController extends Controller
 {
@@ -151,5 +153,108 @@ class CorporateCustomerController extends Controller
                            ->get();
 
         return response()->json($corporateCustomers);
+    }
+    
+    /**
+     * Mendapatkan data Corporate Customer untuk edit via AJAX
+     */
+    public function getCorporateCustomerData($id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengakses data ini.'
+            ], 403);
+        }
+
+        try {
+            // Ambil data corporate customer
+            $corporateCustomer = CorporateCustomer::findOrFail($id);
+            
+            // Format data untuk response
+            $data = [
+                'id' => $corporateCustomer->id,
+                'nama' => $corporateCustomer->nama,
+                'nipnas' => $corporateCustomer->nipnas
+            ];
+            
+            Log::info('Corporate Customer data fetched for edit:', [
+                'id' => $id,
+                'nama' => $corporateCustomer->nama
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching Corporate Customer data: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data Corporate Customer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Corporate Customer via AJAX
+     */
+    public function updateCorporateCustomer(Request $request, $id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data ini.'
+            ], 403);
+        }
+
+        try {
+            $corporateCustomer = CorporateCustomer::findOrFail($id);
+
+            // Validasi data input
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|string|unique:corporate_customers,nama,' . $id,
+                'nipnas' => 'required|numeric|max:9999999'
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Corporate Customer update validation failed via AJAX:', $validator->errors()->toArray());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Update corporate customer
+            $corporateCustomer->update([
+                'nama' => $request->nama,
+                'nipnas' => $request->nipnas
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Corporate Customer berhasil diperbarui!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating Corporate Customer via AJAX: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui Corporate Customer: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

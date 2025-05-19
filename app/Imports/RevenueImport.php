@@ -42,7 +42,6 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
     // Kolom bulanan untuk target revenue
     private $targetRevenueColumns = [
-        
         'target_jan', 'target_feb', 'target_mar', 'target_apr', 'target_mei', 'target_jun',
         'target_jul', 'target_agu', 'target_sep', 'target_okt', 'target_nov', 'target_des'
     ];
@@ -82,7 +81,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
      */
     private function loadMasterData()
     {
-        // Load data Account Manager
+        // Load data Account Manager with eager loading divisis
         $accountManagers = AccountManager::with('divisis')->get();
         foreach ($accountManagers as $am) {
             // Indeks dengan nama (lowercase untuk case-insensitive search)
@@ -221,24 +220,38 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 return;
             }
 
-            // Cari divisi
-            $divisi = null;
+            // PERUBAHAN UTAMA - PENANGANAN MULTIPLE DIVISI
+            // Dapatkan semua divisi yang terkait dengan account manager
+            $divisis = collect();
+            
+            // Jika ada nama divisi spesifik dari file, coba cari divisi tersebut
             if (!empty($divisiName)) {
-                // Coba cari divisi berdasarkan nama
-                $divisi = Divisi::where('nama', 'like', "%{$divisiName}%")->first();
+                $specifiedDivisi = Divisi::where('nama', 'like', "%{$divisiName}%")->first();
+                if ($specifiedDivisi) {
+                    // Pastikan divisi ini terkait dengan account manager
+                    $isDivisiLinked = $accountManager->divisis()->where('divisi.id', $specifiedDivisi->id)->exists();
+                    if ($isDivisiLinked) {
+                        $divisis->push($specifiedDivisi);
+                    } else {
+                        Log::warning("Divisi '{$divisiName}' tidak terkait dengan Account Manager '{$accountManager->nama}'", 
+                            ['row' => $rowIndex + 2]);
+                    }
+                }
+            }
+            
+            // Jika tidak ada divisi spesifik atau tidak valid, gunakan semua divisi dari account manager
+            if ($divisis->isEmpty()) {
+                $divisis = $accountManager->divisis;
+                
+                // Jika masih tidak ada divisi, gunakan divisi default
+                if ($divisis->isEmpty() && $this->divisiDefault) {
+                    $divisis->push($this->divisiDefault);
+                    Log::warning("Menggunakan divisi default untuk Account Manager '{$accountManager->nama}' karena tidak ada divisi terkait", 
+                        ['row' => $rowIndex + 2]);
+                }
             }
 
-            // Jika divisi tidak ditemukan dari file, gunakan divisi pertama dari account manager
-            if (!$divisi) {
-                $divisi = $accountManager->divisis()->first();
-            }
-
-            // Jika masih tidak ada divisi, gunakan divisi default
-            if (!$divisi && $this->divisiDefault) {
-                $divisi = $this->divisiDefault;
-            }
-
-            if (!$divisi) {
+            if ($divisis->isEmpty()) {
                 $this->errorCount++;
                 $errorMsg = "Tidak dapat menemukan divisi untuk account manager: " . $accountManager->nama;
                 $this->errorDetails[] = "Baris " . ($rowIndex + 2) . ": $errorMsg";
@@ -246,20 +259,26 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 return;
             }
 
-            // Dapatkan ID
             $accountManagerId = $accountManager->id;
             $corporateCustomerId = $corporateCustomer->id;
-            $divisiId = $divisi->id;
 
-            // Proses data revenue untuk 12 bulan
-            $this->processMonthlyRevenue(
-                $row,
-                $columnMap,
-                $accountManagerId,
-                $divisiId,
-                $corporateCustomerId,
-                $rowIndex + 2
-            );
+            // LOOP UNTUK SETIAP DIVISI
+            foreach ($divisis as $divisi) {
+                $divisiId = $divisi->id;
+                
+                Log::info("Processing revenue for AM '{$accountManager->nama}' with Divisi '{$divisi->nama}'", 
+                    ['row' => $rowIndex + 2]);
+                
+                // Proses data revenue untuk 12 bulan untuk divisi ini
+                $this->processMonthlyRevenue(
+                    $row,
+                    $columnMap,
+                    $accountManagerId,
+                    $divisiId,
+                    $corporateCustomerId,
+                    $rowIndex + 2
+                );
+            }
 
         } catch (\Exception $e) {
             $this->errorCount++;
@@ -343,7 +362,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                     $this->duplicateCount++;
                 }
 
-                Log::debug("Data revenue saved: AM ID=$accountManagerId, CC ID=$corporateCustomerId, Bulan=$bulan", [
+                Log::debug("Data revenue saved: AM ID=$accountManagerId, Divisi ID=$divisiId, CC ID=$corporateCustomerId, Bulan=$bulan", [
                     'row' => $excelRow,
                     'month' => $month,
                     'is_new' => $revenue->wasRecentlyCreated ?? false
@@ -451,7 +470,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
         // Fallback to database search if not found in preloaded data
         if (!empty($name)) {
-            $am = AccountManager::where('nama', 'like', "%{$name}%")->first();
+            $am = AccountManager::with('divisis')->where('nama', 'like', "%{$name}%")->first();
             if ($am) {
                 // Add to cache for future lookups
                 $this->accountManagers['nama:' . strtolower($am->nama)] = $am;
@@ -461,7 +480,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         }
 
         if (!empty($nik)) {
-            $am = AccountManager::where('nik', $nik)->first();
+            $am = AccountManager::with('divisis')->where('nik', $nik)->first();
             if ($am) {
                 // Add to cache for future lookups
                 $this->accountManagers['nama:' . strtolower($am->nama)] = $am;

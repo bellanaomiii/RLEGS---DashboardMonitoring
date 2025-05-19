@@ -426,4 +426,146 @@ class AccountManagerController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Mendapatkan data Account Manager untuk edit via AJAX
+     */
+    public function getAccountManagerData($id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengakses data ini.'
+            ], 403);
+        }
+
+        try {
+            // Ambil data account manager dengan relasi divisi
+            $accountManager = AccountManager::with(['divisis', 'witel', 'regional'])->findOrFail($id);
+            
+            // Format data untuk response
+            $data = [
+                'id' => $accountManager->id,
+                'nama' => $accountManager->nama,
+                'nik' => $accountManager->nik,
+                'witel_id' => $accountManager->witel_id,
+                'regional_id' => $accountManager->regional_id,
+                'witel' => $accountManager->witel ? [
+                    'id' => $accountManager->witel->id,
+                    'nama' => $accountManager->witel->nama
+                ] : null,
+                'regional' => $accountManager->regional ? [
+                    'id' => $accountManager->regional->id,
+                    'nama' => $accountManager->regional->nama
+                ] : null,
+                'divisis' => $accountManager->divisis->map(function($divisi) {
+                    return [
+                        'id' => $divisi->id,
+                        'nama' => $divisi->nama
+                    ];
+                })
+            ];
+            
+            Log::info('Account Manager data fetched for edit:', [
+                'id' => $id,
+                'divisi_count' => count($data['divisis'])
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching Account Manager data: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data Account Manager: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update Account Manager via AJAX
+     */
+    public function updateAccountManager(Request $request, $id)
+    {
+        // Cek apakah user adalah admin
+        if (Auth::user()->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data ini.'
+            ], 403);
+        }
+
+        try {
+            $accountManager = AccountManager::findOrFail($id);
+
+            // Validasi data input
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|string|unique:account_managers,nama,' . $id,
+                'nik' => 'required|digits:5|unique:account_managers,nik,' . $id,
+                'witel_id' => 'required|exists:witel,id',
+                'regional_id' => 'required|exists:regional,id',
+                'divisi_ids' => 'required', // Untuk multiple divisi
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('AccountManager update validation failed via AJAX:', $validator->errors()->toArray());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Update data dasar account manager
+            $accountManager->update([
+                'nama' => $request->nama,
+                'nik' => $request->nik,
+                'witel_id' => $request->witel_id,
+                'regional_id' => $request->regional_id,
+            ]);
+
+            // Sync divisi
+            if (!empty($request->divisi_ids)) {
+                $divisiIds = explode(',', $request->divisi_ids);
+                // Filter untuk memastikan nilai valid
+                $divisiIds = array_filter($divisiIds, function($value) {
+                    return !empty($value) && is_numeric($value);
+                });
+
+                if (!empty($divisiIds)) {
+                    $accountManager->divisis()->sync($divisiIds);
+                    Log::info('Synced divisi IDs via AJAX:', $divisiIds);
+                }
+            } else {
+                // Jika tidak ada divisi, hapus semua relasi
+                $accountManager->divisis()->detach();
+                Log::info('Detached all divisi relations via AJAX');
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Account Manager berhasil diperbarui!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating AccountManager via AJAX: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui Account Manager: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

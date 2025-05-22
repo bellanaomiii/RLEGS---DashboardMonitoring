@@ -90,12 +90,12 @@
                         <button type="submit" class="px-4 py-2 bg-[#0e223e] text-white rounded-md hover:bg-[#1e3c72] transition-colors">
                             Masuk
                         </button>
-
+{{-- 
                         @if (Route::has('password.request'))
                             <a class="text-sm text-blue-600 hover:underline mt-2" href="{{ route('password.request') }}">
                                 Lupa Kata Sandi?
                             </a>
-                        @endif
+                        @endif --}}
                     </div>
                 </div>
             </form>

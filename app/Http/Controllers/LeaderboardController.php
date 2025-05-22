@@ -57,7 +57,35 @@ class LeaderboardController extends Controller
             $revenueSubquery($query);
         }, 'achievement_percentage');
 
-        // Filter berdasarkan pencarian nama
+        // PERUBAHAN: Mendapatkan semua AM untuk menghitung rank secara global
+        // Ini dilakukan SEBELUM menerapkan filter pencarian, tapi dengan filter periode dan region
+        $globalQuery = clone $baseQuery;
+        
+        // Filter berdasarkan region/witel untuk query global
+        if (!empty($regionFilter)) {
+            $globalQuery->whereHas('witel', function ($query) use ($regionFilter) {
+                $query->whereIn('nama', $regionFilter);
+            });
+        }
+        
+        // Menentukan pengurutan
+        if (in_array('Achievement Tertinggi', $filterBy)) {
+            $globalQuery->orderByDesc('achievement_percentage');
+        } else {
+            // Default ke Revenue Tertinggi
+            $globalQuery->orderByDesc('total_real_revenue');
+        }
+        
+        // Mendapatkan semua AM tanpa filter pencarian untuk peringkat global
+        $allAMs = $globalQuery->get();
+        
+        // Menyimpan peringkat global dalam array untuk referensi cepat
+        $globalRanks = [];
+        foreach ($allAMs as $index => $am) {
+            $globalRanks[$am->id] = $index + 1;
+        }
+
+        // Sekarang terapkan filter pencarian ke query utama
         if (!empty($search)) {
             $baseQuery->where('account_managers.nama', 'like', '%' . $search . '%');
         }
@@ -69,31 +97,20 @@ class LeaderboardController extends Controller
             });
         }
 
-        // Mendapatkan semua AM untuk menghitung rank secara global
-        $allAMs = (clone $baseQuery)->get();
-
         // Sorting berdasarkan filter yang dipilih
         if (in_array('Achievement Tertinggi', $filterBy)) {
             $baseQuery->orderByDesc('achievement_percentage');
-            // Sort all AMs dengan cara yang sama untuk konsistensi rank
-            $allAMs = $allAMs->sortByDesc('achievement_percentage')->values();
         } else {
             // Default ke Revenue Tertinggi
             $baseQuery->orderByDesc('total_real_revenue');
-            // Sort all AMs dengan cara yang sama untuk konsistensi rank
-            $allAMs = $allAMs->sortByDesc('total_real_revenue')->values();
         }
 
-        // Jalankan query final
+        // Jalankan query final dengan semua filter termasuk pencarian
         $accountManagers = $baseQuery->get();
 
-        // Menambahkan rank global ke setiap AM
+        // Menambahkan rank global ke setiap AM dari perhitungan global
         foreach ($accountManagers as $am) {
-            $globalRank = $allAMs->search(function ($item) use ($am) {
-                return $item->id === $am->id;
-            }) + 1; // +1 karena index dimulai dari 0
-
-            $am->global_rank = $globalRank;
+            $am->global_rank = $globalRanks[$am->id] ?? 0;
         }
 
         // Mendapatkan daftar witel untuk dropdown filter

@@ -4,8 +4,131 @@
 
 @section('styles')
 <!-- CSS untuk Bootstrap Select -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/dist/css/bootstrap-select.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
 <style>
+    /* Add these styles to make the date filter look like a button */
+        .date-filter-container {
+            position: relative;
+        }
+
+        .date-filter {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #1e4c9a;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+            outline: none;
+        }
+
+        .date-filter:hover {
+            background-color: #173b7a;
+        }
+
+        .date-filter i {
+            margin-right: 8px;
+        }
+
+        .date-filter i.fa-chevron-down {
+            margin-left: 8px;
+            margin-right: 0;
+        }
+
+        /* Style for period selector */
+        .period-selector {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 10px 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+
+        .period-label {
+            font-weight: 500;
+            margin-right: 15px;
+        }
+
+        .period-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-right: 20px;
+        }
+
+        /* Custom radio button styles */
+        .radio-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding-left: 28px;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .radio-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .radio-checkmark {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 18px;
+            width: 18px;
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .radio-container:hover input ~ .radio-checkmark {
+            border-color: #1e4c9a;
+        }
+
+        .radio-container input:checked ~ .radio-checkmark {
+            background-color: #fff;
+            border-color: #1e4c9a;
+        }
+
+        .radio-checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+        }
+
+        .radio-container input:checked ~ .radio-checkmark:after {
+            display: block;
+            top: 3px;
+            left: 3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1e4c9a;
+        }
+
+        .period-display {
+            margin-left: auto;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .period-display strong {
+            color: #333;
+        }
     /* CSS untuk konten utama */
     .main-content {
         padding: 0 30px;
@@ -414,13 +537,27 @@
         </p>
     </div>
 
+<div class="filter-controls">
+    <!-- Date Filter -->
+    <div class="date-filter-container">
+        <!-- Visible button that triggers date picker -->
+        <button type="button" id="datePickerButton" class="date-filter">
+            <i class="far fa-calendar-alt"></i>
+            <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} - 
+            {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
+            <i class="fas fa-chevron-down ms-auto"></i>
+        </button>
+        <!-- Hidden input for flatpickr -->
+        <input type="text" id="dateRangeSelector" style="visibility: hidden; position: absolute; width: 0; height: 0;" />
+    </div>
+
     <!-- Period Selector with Radio Buttons -->
     <div class="period-selector">
         <div class="period-label">Pilih Periode:</div>
         <div class="period-options">
             <label class="radio-container">
                 Year to Date
-                <input type="radio" name="period" value="all_time" {{ $currentPeriod == 'all_time' ? 'checked' : '' }}>
+                <input type="radio" name="period" value="year_to_date" {{ $currentPeriod == 'year_to_date' ? 'checked' : '' }}>
                 <span class="radio-checkmark"></span>
             </label>
             <label class="radio-container">
@@ -428,11 +565,18 @@
                 <input type="radio" name="period" value="current_month" {{ $currentPeriod == 'current_month' ? 'checked' : '' }}>
                 <span class="radio-checkmark"></span>
             </label>
+            <label class="radio-container">
+                Kustom
+                <input type="radio" name="period" value="custom" {{ $currentPeriod == 'custom' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
+            </label>
         </div>
         <div class="period-display">
-            Tampilan: <strong>{{ $displayPeriod }}</strong>
+            Tampilan: <strong id="displayPeriodText">{{ $displayPeriod }}</strong>
         </div>
     </div>
+</div>
+
 
     <!-- Filter Info Section - Only show if filters are applied -->
     @if(request('search') || request('filter_by') || request('region_filter'))
@@ -473,27 +617,29 @@
     <!-- Search & Filter Area -->
     <div class="search-filter-container">
         <div class="search-box">
-            <form action="{{ route('leaderboard') }}" method="GET" id="searchForm" class="search-input">
-                <input type="search" name="search" placeholder="Cari nama account manager..." value="{{ request('search') }}">
-                <!-- Preserve all current filters when searching -->
-                @if(request('period'))
-                    <input type="hidden" name="period" value="{{ request('period') }}">
-                @endif
-                @if(request('filter_by'))
-                    @foreach(request('filter_by') as $filter)
-                        <input type="hidden" name="filter_by[]" value="{{ $filter }}">
-                    @endforeach
-                @endif
-                @if(request('region_filter'))
-                    @foreach(request('region_filter') as $region)
-                        <input type="hidden" name="region_filter[]" value="{{ $region }}">
-                    @endforeach
-                @endif
-                <button type="submit">
-                    <i class="lni lni-search-alt"></i> Cari
-                </button>
-            </form>
-        </div>
+    <form action="{{ route('leaderboard') }}" method="GET" id="searchForm" class="search-input">
+        <input type="search" name="search" placeholder="Cari nama account manager..." value="{{ request('search') }}">
+        <!-- Preserve all current filters when searching -->
+        @if(request('period'))
+            <input type="hidden" name="period" value="{{ request('period') }}">
+        @endif
+        @if(request('filter_by'))
+            @foreach(request('filter_by') as $filter)
+                <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+            @endforeach
+        @endif
+        @if(request('region_filter'))
+            @foreach(request('region_filter') as $region)
+                <input type="hidden" name="region_filter[]" value="{{ $region }}">
+            @endforeach
+        @endif
+        <!-- Add a parameter to maintain original ranking -->
+        <input type="hidden" name="preserve_ranking" value="true">
+        <button type="submit">
+            <i class="lni lni-search-alt"></i> Cari
+        </button>
+    </form>
+</div>
 
         <div class="filter-area">
             <div class="filter-selects">
@@ -659,6 +805,412 @@ $(document).ready(function() {
         // Submit form
         $form.appendTo('body').submit();
     });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get chart data from controller (if available)
+    const chartData = @json($chartData ?? []);
+    console.log('Chart data loaded:', chartData);
+
+    // Declare global variables for chart instances (if needed)
+    let lineRevenueChartInstance;
+    let donutAchievementChartInstance;
+    let barDivisionChartInstance;
+    let performanceWitelChartInstance;
+
+    // Initialize flatpickr directly on the hidden input
+    const dateRangeInput = document.getElementById('dateRangeSelector');
+    const datePickerButton = document.getElementById('datePickerButton');
+    
+    // Initialize date range picker on the hidden input
+    const fp = flatpickr(dateRangeInput, {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        defaultDate: [
+            "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}",
+            "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
+        ],
+        onChange: function(selectedDates, dateStr) {
+            if (selectedDates.length === 2) {
+                const startDate = formatDate(selectedDates[0]);
+                const endDate = formatDate(selectedDates[1]);
+                document.getElementById('dateRangeText').textContent = startDate + ' - ' + endDate;
+                
+                // Set the radio button to custom
+                document.querySelector('input[name="period"][value="custom"]').checked = true;
+                document.getElementById('displayPeriodText').textContent = 'Kustom';
+                
+                // Update charts with new date range
+                updateCharts(selectedDates[0], selectedDates[1]);
+                
+                // Submit form with new date range
+                submitPeriodForm('custom', dateStr);
+            }
+        }
+    });
+    
+    // Make the button open the flatpickr instance
+    datePickerButton.addEventListener('click', function() {
+        fp.open();
+    });
+
+    // Helper function to format date
+    function formatDate(date) {
+        const day = date.getDate();
+        const month = date.toLocaleString('default', {
+            month: 'short'
+        });
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+    }
+    
+    // Add event listeners to radio buttons
+    document.querySelectorAll('input[name="period"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const periodValue = this.value;
+            let startDate, endDate, displayText;
+            
+            const today = new Date();
+            
+            switch(periodValue) {
+                case 'year_to_date':
+                    // From January 1 of current year to today
+                    startDate = new Date(today.getFullYear(), 0, 1); // January 1st
+                    endDate = today;
+                    displayText = 'Year to Date';
+                    break;
+                    
+                case 'current_month':
+                    // Current month
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of current month
+                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
+                    displayText = 'Bulan Ini';
+                    break;
+                    
+                case 'custom':
+                    // Keep current selection in date picker
+                    return; // Let the datepicker handle this
+            }
+            
+            // Update the date picker
+            if (periodValue !== 'custom') {
+                fp.setDate([startDate, endDate]);
+                
+                // Format dates for display
+                const formattedStartDate = formatDate(startDate);
+                const formattedEndDate = formatDate(endDate);
+                document.getElementById('dateRangeText').textContent = formattedStartDate + ' - ' + formattedEndDate;
+                document.getElementById('displayPeriodText').textContent = displayText;
+                
+                // Format dates for submission (YYYY-MM-DD)
+                const formattedStart = formatDateForSubmission(startDate);
+                const formattedEnd = formatDateForSubmission(endDate);
+                
+                // Update charts and submit form
+                updateCharts(startDate, endDate);
+                submitPeriodForm(periodValue, formattedStart + ' to ' + formattedEnd);
+            }
+        });
+    });
+    
+    // Helper function to format date for form submission
+    function formatDateForSubmission(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Function to submit form with selected period
+    function submitPeriodForm(period, dateRange) {
+        // Create a form to submit
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = window.location.pathname;
+        
+        // Add period parameter
+        const periodInput = document.createElement('input');
+        periodInput.type = 'hidden';
+        periodInput.name = 'period';
+        periodInput.value = period;
+        form.appendChild(periodInput);
+        
+        // If custom period, add date range
+        if (period === 'custom' || period === 'year_to_date') {
+            const dates = dateRange.split(' to ');
+            
+            const startDateInput = document.createElement('input');
+            startDateInput.type = 'hidden';
+            startDateInput.name = 'start_date';
+            startDateInput.value = dates[0];
+            form.appendChild(startDateInput);
+            
+            const endDateInput = document.createElement('input');
+            endDateInput.type = 'hidden';
+            endDateInput.name = 'end_date';
+            endDateInput.value = dates[1];
+            form.appendChild(endDateInput);
+        }
+        
+        // Append form to body and submit
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    // Function to update charts with new date range
+    function updateCharts(startDate, endDate) {
+        // This function should be implemented based on your chart requirements
+        // You could use AJAX to fetch new data or filter existing data based on dates
+        console.log('Updating charts with date range:', startDate, endDate);
+        
+        // Example: If you have a function to reload charts
+        // reloadCharts(startDate, endDate);
+    }
+    
+    // Initialize period selection based on URL parameters or defaults
+    function initializePeriodSelection() {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const period = urlParams.get('period');
+        
+        if (period) {
+            // Select the appropriate radio button
+            const radioButton = document.querySelector(`input[name="period"][value="${period}"]`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
+        }
+    }
+    
+    // Call initialization function
+    initializePeriodSelection();
+});
+</script>
+
+</body>
+</html><!-- Combined Date Filter and Period Selector -->
+<div class="filter-controls">
+    <!-- Date Filter -->
+    <div class="date-filter-container">
+        <!-- Visible button that triggers date picker -->
+        <button type="button" id="datePickerButton" class="date-filter">
+            <i class="far fa-calendar-alt"></i>
+            <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} - 
+            {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
+            <i class="fas fa-chevron-down ms-auto"></i>
+        </button>
+        <!-- Hidden input for flatpickr -->
+        <input type="text" id="dateRangeSelector" style="visibility: hidden; position: absolute; width: 0; height: 0;" />
+    </div>
+
+    <!-- Period Selector with Radio Buttons -->
+    <div class="period-selector">
+        <div class="period-label">Pilih Periode:</div>
+        <div class="period-options">
+            <label class="radio-container">
+                Year to Date
+                <input type="radio" name="period" value="year_to_date" {{ $currentPeriod == 'year_to_date' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
+            </label>
+            <label class="radio-container">
+                Bulan Ini
+                <input type="radio" name="period" value="current_month" {{ $currentPeriod == 'current_month' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
+            </label>
+            <label class="radio-container">
+                Kustom
+                <input type="radio" name="period" value="custom" {{ $currentPeriod == 'custom' ? 'checked' : '' }}>
+                <span class="radio-checkmark"></span>
+            </label>
+        </div>
+        <div class="period-display">
+            Tampilan: <strong id="displayPeriodText">{{ $displayPeriod }}</strong>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get chart data from controller
+    const chartData = @json($chartData ?? []);
+    console.log('Chart data loaded:', chartData);
+
+    // Declare global variables for chart instances
+    let lineRevenueChartInstance;
+    let donutAchievementChartInstance;
+    let barDivisionChartInstance;
+    let performanceWitelChartInstance;
+
+    // Initialize flatpickr directly on the hidden input
+    const dateRangeInput = document.getElementById('dateRangeSelector');
+    const datePickerButton = document.getElementById('datePickerButton');
+    
+    // Initialize date range picker on the hidden input
+    const fp = flatpickr(dateRangeInput, {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        defaultDate: [
+            "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}",
+            "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
+        ],
+        onChange: function(selectedDates, dateStr) {
+            if (selectedDates.length === 2) {
+                const startDate = formatDate(selectedDates[0]);
+                const endDate = formatDate(selectedDates[1]);
+                document.getElementById('dateRangeText').textContent = startDate + ' - ' + endDate;
+                
+                // Set the radio button to custom
+                document.querySelector('input[name="period"][value="custom"]').checked = true;
+                document.getElementById('displayPeriodText').textContent = 'Kustom';
+                
+                // Update charts with new date range
+                updateCharts(selectedDates[0], selectedDates[1]);
+                
+                // Submit form with new date range
+                submitPeriodForm('custom', dateStr);
+            }
+        }
+    });
+    
+    // Make the button open the flatpickr instance
+    datePickerButton.addEventListener('click', function() {
+        fp.open();
+    });
+
+    // Helper function to format date
+    function formatDate(date) {
+        const day = date.getDate();
+        const month = date.toLocaleString('default', {
+            month: 'short'
+        });
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+    }
+    
+    // Add event listeners to radio buttons
+    document.querySelectorAll('input[name="period"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            const periodValue = this.value;
+            let startDate, endDate, displayText;
+            
+            const today = new Date();
+            
+            switch(periodValue) {
+                case 'year_to_date':
+                    // From January 1 of current year to today
+                    startDate = new Date(today.getFullYear(), 0, 1); // January 1st
+                    endDate = today;
+                    displayText = 'Year to Date';
+                    break;
+                    
+                case 'current_month':
+                    // Current month
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of current month
+                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
+                    displayText = 'Bulan Ini';
+                    break;
+                    
+                case 'custom':
+                    // Keep current selection in date picker
+                    return; // Let the datepicker handle this
+            }
+            
+            // Update the date picker
+            if (periodValue !== 'custom') {
+                fp.setDate([startDate, endDate]);
+                
+                // Format dates for display
+                const formattedStartDate = formatDate(startDate);
+                const formattedEndDate = formatDate(endDate);
+                document.getElementById('dateRangeText').textContent = formattedStartDate + ' - ' + formattedEndDate;
+                document.getElementById('displayPeriodText').textContent = displayText;
+                
+                // Format dates for submission (YYYY-MM-DD)
+                const formattedStart = formatDateForSubmission(startDate);
+                const formattedEnd = formatDateForSubmission(endDate);
+                
+                // Update charts and submit form
+                updateCharts(startDate, endDate);
+                submitPeriodForm(periodValue, formattedStart + ' to ' + formattedEnd);
+            }
+        });
+    });
+    
+    // Helper function to format date for form submission
+    function formatDateForSubmission(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Function to submit form with selected period
+    function submitPeriodForm(period, dateRange) {
+        // Create a form to submit
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = window.location.pathname;
+        
+        // Add period parameter
+        const periodInput = document.createElement('input');
+        periodInput.type = 'hidden';
+        periodInput.name = 'period';
+        periodInput.value = period;
+        form.appendChild(periodInput);
+        
+        // If custom period, add date range
+        if (period === 'custom' || period === 'year_to_date') {
+            const dates = dateRange.split(' to ');
+            
+            const startDateInput = document.createElement('input');
+            startDateInput.type = 'hidden';
+            startDateInput.name = 'start_date';
+            startDateInput.value = dates[0];
+            form.appendChild(startDateInput);
+            
+            const endDateInput = document.createElement('input');
+            endDateInput.type = 'hidden';
+            endDateInput.name = 'end_date';
+            endDateInput.value = dates[1];
+            form.appendChild(endDateInput);
+        }
+        
+        // Append form to body and submit
+        document.body.appendChild(form);
+        form.submit();
+    }
+    
+    // Function to update charts with new date range
+    function updateCharts(startDate, endDate) {
+        // This function should be implemented based on your chart requirements
+        // You could use AJAX to fetch new data or filter existing data based on dates
+        console.log('Updating charts with date range:', startDate, endDate);
+        
+        // Example: If you have a function to reload charts
+        // reloadCharts(startDate, endDate);
+    }
+    
+    // Initialize period selection based on URL parameters or defaults
+    function initializePeriodSelection() {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const period = urlParams.get('period');
+        
+        if (period) {
+            // Select the appropriate radio button
+            const radioButton = document.querySelector(`input[name="period"][value="${period}"]`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
+        }
+    }
+    
+    // Call initialization function
+    initializePeriodSelection();
 });
 </script>
 @endsection

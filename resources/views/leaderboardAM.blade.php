@@ -8,127 +8,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <style>
-    /* Add these styles to make the date filter look like a button */
-        .date-filter-container {
-            position: relative;
-        }
-
-        .date-filter {
-            display: flex;
-            align-items: center;
-            padding: 10px 15px;
-            background-color: #1e4c9a;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: background-color 0.2s;
-            border: none;
-            width: 100%;
-            text-align: left;
-            outline: none;
-        }
-
-        .date-filter:hover {
-            background-color: #173b7a;
-        }
-
-        .date-filter i {
-            margin-right: 8px;
-        }
-
-        .date-filter i.fa-chevron-down {
-            margin-left: 8px;
-            margin-right: 0;
-        }
-
-        /* Style for period selector */
-        .period-selector {
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            padding: 10px 15px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-        }
-
-        .period-label {
-            font-weight: 500;
-            margin-right: 15px;
-        }
-
-        .period-options {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-right: 20px;
-        }
-
-        /* Custom radio button styles */
-        .radio-container {
-            display: flex;
-            align-items: center;
-            position: relative;
-            padding-left: 28px;
-            cursor: pointer;
-            font-size: 14px;
-            user-select: none;
-        }
-
-        .radio-container input {
-            position: absolute;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .radio-checkmark {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 18px;
-            width: 18px;
-            background-color: #fff;
-            border: 2px solid #ddd;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-
-        .radio-container:hover input ~ .radio-checkmark {
-            border-color: #1e4c9a;
-        }
-
-        .radio-container input:checked ~ .radio-checkmark {
-            background-color: #fff;
-            border-color: #1e4c9a;
-        }
-
-        .radio-checkmark:after {
-            content: "";
-            position: absolute;
-            display: none;
-        }
-
-        .radio-container input:checked ~ .radio-checkmark:after {
-            display: block;
-            top: 3px;
-            left: 3px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #1e4c9a;
-        }
-
-        .period-display {
-            margin-left: auto;
-            font-size: 13px;
-            color: #666;
-        }
-
-        .period-display strong {
-            color: #333;
-        }
     /* CSS untuk konten utama */
     .main-content {
         padding: 0 30px;
@@ -141,10 +20,11 @@
         background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298);
         color: white;
         padding: 30px;
-        border-radius: 10px;
+        border-radius: 12px;
         margin-top: 20px;
         margin-bottom: 20px;
         width: 100%;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
 
     .header-title {
@@ -157,112 +37,154 @@
 
     .header-subtitle {
         font-size: 1rem;
+        opacity: 0.9;
     }
 
-    /* Period selector with radio buttons */
-    .period-selector {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-        background-color: #f8f9fa;
-        padding: 15px 20px;
-        border-radius: 8px;
-    }
-
-    .period-label {
-        font-weight: 500;
-        margin-right: 15px;
-        white-space: nowrap;
-    }
-
-    .period-options {
-        display: flex;
-        gap: 20px;
-    }
-
-    .radio-container {
-        display: flex;
-        align-items: center;
-        white-space: nowrap;
-        position: relative;
-        padding-left: 28px;
-        cursor: pointer;
-        font-weight: 500;
-    }
-
-    .radio-container input[type="radio"] {
-        position: absolute;
-        opacity: 0;
-        cursor: pointer;
-        height: 0;
-        width: 0;
-    }
-
-    .radio-checkmark {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 20px;
-        width: 20px;
-        background-color: #eee;
-        border-radius: 50%;
-        border: 1px solid #ddd;
-    }
-
-    .radio-container:hover input ~ .radio-checkmark {
-        background-color: #ccc;
-    }
-
-    .radio-container input:checked ~ .radio-checkmark {
-        background-color: #1C2955;
-    }
-
-    .radio-checkmark:after {
-        content: "";
-        position: absolute;
-        display: none;
-    }
-
-    .radio-container input:checked ~ .radio-checkmark:after {
-        display: block;
-    }
-
-    .radio-container .radio-checkmark:after {
-        top: 6px;
-        left: 6px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
+    /* Modern Date & Period Filter */
+    .date-period-container {
         background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        position: relative; /* Important for flatpickr positioning */
+    }
+
+    .date-filter-container {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    /* Flatpickr calendar positioning */
+    .flatpickr-calendar {
+        margin-top: 5px !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        border-radius: 12px !important;
+        border: none !important;
+    }
+
+    /* Ensure calendar appears above other elements */
+    .flatpickr-calendar.open {
+        z-index: 99999 !important;
+    }
+
+    .date-filter {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #1e4c9a, #2a5298);
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(30, 76, 154, 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        width: 100%;
+        text-align: left;
+        outline: none;
+    }
+
+    .date-filter:hover {
+        background: linear-gradient(135deg, #173b7a, #1e4c9a);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 76, 154, 0.4);
+    }
+
+    .date-filter i {
+        margin-right: 10px;
+    }
+
+    .date-filter i.fa-chevron-down {
+        margin-left: auto;
+        margin-right: 0;
+        transition: transform 0.3s ease;
+    }
+
+    /* Modern Period Tabs */
+    .period-tabs {
+        display: flex;
+        background: #e2e8f0;
+        border-radius: 12px;
+        padding: 6px;
+        gap: 4px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .period-tab {
+        flex: 1;
+        padding: 12px 16px;
+        text-align: center;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: transparent;
+        border: none;
+        color: #64748b;
+        text-shadow: none;
+    }
+
+    .period-tab.active {
+        background: linear-gradient(135deg, #1e4c9a, #2a5298) !important;
+        color: #ffffff !important;
+        box-shadow: 0 3px 8px rgba(30, 76, 154, 0.3);
+        transform: translateY(-1px);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .period-tab.active i {
+        color: #ffffff !important;
+    }
+
+    .period-tab:hover:not(.active) {
+        background: rgba(255,255,255,0.8);
+        color: #1e4c9a;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+
+    .period-tab:active {
+        transform: translateY(0);
     }
 
     .period-display {
-        margin-left: auto;
-        font-weight: 500;
-        white-space: nowrap;
-        color: #1C2955;
+        text-align: center;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .period-display strong {
+        color: #1e4c9a;
+        font-weight: 600;
     }
 
     /* Filter info section */
     .filter-info {
-        background-color: #f0f7ff;
+        background: linear-gradient(135deg, #f0f7ff, #e0f2fe);
         border: 1px solid #c9e0ff;
-        border-radius: 8px;
-        padding: 15px 20px;
+        border-radius: 12px;
+        padding: 16px 20px;
         margin-bottom: 20px;
         display: flex;
         align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .filter-info-icon {
-        color: #1C2955;
+        color: #1e4c9a;
         font-size: 20px;
-        margin-right: 10px;
+        margin-right: 12px;
     }
 
     .filter-info-text {
         flex-grow: 1;
         font-size: 14px;
+        color: #334155;
     }
 
     .filter-info-reset {
@@ -270,38 +192,46 @@
     }
 
     .reset-btn {
-        background-color: transparent;
-        color: #1C2955;
-        border: 1px solid #1C2955;
-        border-radius: 5px;
-        padding: 5px 10px;
+        background: white;
+        color: #1e4c9a;
+        border: 2px solid #1e4c9a;
+        border-radius: 8px;
+        padding: 8px 16px;
         font-size: 13px;
-        font-weight: 500;
-        transition: all 0.3s;
+        font-weight: 600;
+        transition: all 0.3s ease;
         display: flex;
         align-items: center;
+        text-decoration: none;
     }
 
     .reset-btn:hover {
-        background-color: #1C2955;
+        background: #1e4c9a;
         color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(30, 76, 154, 0.3);
     }
 
     .reset-btn i {
-        margin-right: 5px;
+        margin-right: 6px;
     }
 
     /* Search and filter area */
     .search-filter-container {
         display: flex;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         width: 100%;
         gap: 20px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
     }
 
     .search-box {
-        flex: 0 0 30%;
+        flex: 0 0 25%;
     }
 
     .search-input {
@@ -311,90 +241,125 @@
 
     .search-input input {
         border-radius: 8px 0 0 8px;
-        border: 1px solid #ced4da;
-        padding: 10px 15px;
+        border: 2px solid #e2e8f0;
+        padding: 12px 16px;
         font-size: 14px;
         flex-grow: 1;
+        transition: border-color 0.3s ease;
+    }
+
+    .search-input input:focus {
+        outline: none;
+        border-color: #1e4c9a;
     }
 
     .search-input button {
         border-radius: 0 8px 8px 0;
-        background-color: #1C2955;
+        background: linear-gradient(135deg, #1e4c9a, #2a5298);
         color: white;
         border: none;
-        padding: 10px 20px;
-        font-weight: 500;
+        padding: 12px 20px;
+        font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
+        transition: all 0.3s ease;
     }
 
     .search-input button:hover {
-        background-color: #0e223e;
+        background: linear-gradient(135deg, #173b7a, #1e4c9a);
+        transform: translateY(-1px);
     }
 
     .filter-area {
-        flex: 0 0 65%;
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: flex-end;
     }
 
-    .filter-label {
-        font-weight: 500;
-        margin-right: 15px;
-        white-space: nowrap;
-    }
-
     .filter-selects {
         display: flex;
-        gap: 15px;
+        gap: 12px;
         width: 100%;
         justify-content: flex-end;
     }
 
     .filter-group {
-        width: 300px;
+        min-width: 180px;
     }
 
-    /* AM Cards */
+    /* Enhanced AM Cards */
     .am-card {
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 16px;
         overflow: hidden;
-        border: 1px solid #cacaca;
-        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        transition: all 0.4s ease;
         cursor: pointer;
+        position: relative;
+    }
+
+    .am-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #1e4c9a, #2a5298, #3b7ddd);
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
 
     .am-card:hover {
-        background-color: #f0f7ff;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        background: linear-gradient(135deg, #fafbff, #f0f7ff);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(30, 76, 154, 0.15);
         border-color: #3b7ddd;
     }
 
+    .am-card:hover::before {
+        opacity: 1;
+    }
+
     .am-card-body {
-        padding: 20px;
+        padding: 24px;
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 24px;
     }
 
     .am-rank {
-        font-size: 1.5rem;
-        font-weight: bold;
-        min-width: 40px;
+        font-size: 1.8rem;
+        font-weight: 800;
+        min-width: 50px;
         text-align: center;
+        padding: 8px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        transition: all 0.3s ease;
+    }
+
+    .am-card:hover .am-rank {
+        background: rgba(30, 76, 154, 0.1);
+        color: #1e4c9a;
     }
 
     .am-profile-pic {
-        width: 60px;
-        height: 60px;
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
         object-fit: cover;
+        border: 3px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .am-card:hover .am-profile-pic {
+        border-color: #3b7ddd;
+        transform: scale(1.05);
     }
 
     .am-info {
@@ -402,65 +367,123 @@
     }
 
     .am-name {
-        font-size: 1.2rem;
-        font-weight: bold;
-        margin-bottom: 5px;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #1e293b;
+        transition: color 0.3s ease;
+    }
+
+    .am-card:hover .am-name {
+        color: #1e4c9a;
     }
 
     .am-detail {
         font-size: 0.9rem;
-        color: #6c757d;
-        margin-bottom: 3px;
+        color: #64748b;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .am-detail i {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .am-category-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+    }
+
+    .am-category-badge.enterprise {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+    }
+
+    .am-category-badge.government {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+    }
+
+    .am-category-badge.multi {
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+        color: #166534;
     }
 
     .am-stats {
         display: flex;
         align-items: center;
         justify-content: flex-end;
-        gap: 20px;
-        min-width: 380px;
+        gap: 28px;
+        min-width: 400px;
     }
 
-    .revenue-stat {
+    .revenue-stat, .achievement-stat {
         text-align: right;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #f8fafc;
+        transition: all 0.3s ease;
     }
 
-    .achievement-stat {
-        text-align: right;
-        min-width: 110px;
+    .am-card:hover .revenue-stat,
+    .am-card:hover .achievement-stat {
+        background: rgba(59, 125, 221, 0.08);
     }
 
     .revenue-label, .achievement-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        margin-bottom: 3px;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 4px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .revenue-value, .achievement-value {
-        font-size: 1.2rem;
-        font-weight: bold;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
     }
 
     .achievement-icon {
         display: flex;
         align-items: center;
         justify-content: flex-end;
+        gap: 6px;
     }
 
     .achievement-icon i {
-        margin-right: 5px;
+        font-size: 16px;
     }
 
-
-    /* Warna */
-    .text-gold { color: #FFD700; }
-    .text-silver { color: #C0C0C0; }
-    .text-bronze { color: #CD7F32; }
+    /* Warna ranking */
+    .text-gold {
+        color: #FFD700;
+        background: linear-gradient(135deg, #fff7ed, #fed7aa) !important;
+    }
+    .text-silver {
+        color: #C0C0C0;
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0) !important;
+    }
+    .text-bronze {
+        color: #CD7F32;
+        background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    }
 
     /* Bootstrap select styling */
     .bootstrap-select > .dropdown-toggle {
-        height: 40px;
-        background-color: #1C2955;
+        height: 42px;
+        background: linear-gradient(135deg, #1e4c9a, #2a5298);
         color: white !important;
         border: none;
         width: 100%;
@@ -468,22 +491,17 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .bootstrap-select > .dropdown-toggle:hover {
+        background: linear-gradient(135deg, #173b7a, #1e4c9a);
+        transform: translateY(-1px);
     }
 
     .bootstrap-select > .dropdown-toggle.bs-placeholder {
-        color: white !important; /* Lebih terang agar terlihat */
-    }
-
-    .filter-option {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-    }
-
-    .filter-option-inner {
-        width: 100%;
-        text-align: center;
+        color: rgba(255,255,255,0.9) !important;
     }
 
     .filter-option-inner-inner {
@@ -497,11 +515,10 @@
         min-width: 100%;
         margin-top: 5px;
         border: none;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        border-radius: 8px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-radius: 12px;
     }
 
-    /* Force dropdowns to appear below instead of above */
     .bootstrap-select .dropdown-menu.show {
         top: 100% !important;
         transform: none !important;
@@ -511,16 +528,94 @@
         display: none !important;
     }
 
-    /* Search button styling */
-    .btn-search {
-        background-color: #1C2955;
-        color: white;
-        border: none;
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
 
-    .btn-search:hover {
-        background-color: #151f3d;
-        color: white;
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .empty-state p {
+        color: #94a3b8;
+        font-size: 0.9rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .filter-selects {
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            min-width: 160px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+            padding: 0 15px;
+        }
+
+        .search-filter-container {
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .search-box {
+            flex: none;
+            width: 100%;
+        }
+
+        .filter-area {
+            width: 100%;
+        }
+
+        .filter-selects {
+            width: 100%;
+            justify-content: stretch;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .am-card-body {
+            flex-direction: column;
+            text-align: center;
+            gap: 16px;
+        }
+
+        .am-stats {
+            width: 100%;
+            justify-content: space-around;
+            min-width: 0;
+        }
+
+        .period-tabs {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .period-tab {
+            padding: 12px;
+        }
     }
 </style>
 @endsection
@@ -530,59 +625,50 @@
     <!-- Header Leaderboard -->
     <div class="header-leaderboard">
         <h1 class="header-title">
-            Leaderboard Performa Account Manager 
+            <i class="fas fa-trophy me-3"></i>
+            Leaderboard Performa Account Manager
         </h1>
         <p class="header-subtitle">
             Dashboard Performa Pendapatan dan Pencapaian Account Manager RLEGS
         </p>
     </div>
 
-<div class="filter-controls">
-    <!-- Date Filter -->
-    <div class="date-filter-container">
-        <!-- Visible button that triggers date picker -->
-        <button type="button" id="datePickerButton" class="date-filter">
-            <i class="far fa-calendar-alt"></i>
-            <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} - 
-            {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
-            <i class="fas fa-chevron-down ms-auto"></i>
-        </button>
-        <!-- Hidden input for flatpickr -->
-        <input type="text" id="dateRangeSelector" style="visibility: hidden; position: absolute; width: 0; height: 0;" />
-    </div>
-
-    <!-- Period Selector with Radio Buttons -->
-    <div class="period-selector">
-        <div class="period-label">Pilih Periode:</div>
-        <div class="period-options">
-            <label class="radio-container">
-                Year to Date
-                <input type="radio" name="period" value="year_to_date" {{ $currentPeriod == 'year_to_date' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
-            <label class="radio-container">
-                Bulan Ini
-                <input type="radio" name="period" value="current_month" {{ $currentPeriod == 'current_month' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
-            <label class="radio-container">
-                Kustom
-                <input type="radio" name="period" value="custom" {{ $currentPeriod == 'custom' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
+    <!-- Modern Date & Period Filter -->
+    <div class="date-period-container">
+        <!-- Date Filter -->
+        <div class="date-filter-container">
+            <button type="button" id="datePickerButton" class="date-filter">
+                <i class="far fa-calendar-alt"></i>
+                <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} -
+                {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <input type="text" id="dateRangeSelector" style="display: none;" />
         </div>
+
+        <!-- Modern Period Tabs -->
+        <div class="period-tabs">
+            <button class="period-tab {{ $currentPeriod == 'year_to_date' ? 'active' : '' }}" data-period="year_to_date">
+                <i class="fas fa-calendar-year me-2"></i>Year to Date
+            </button>
+            <button class="period-tab {{ $currentPeriod == 'current_month' ? 'active' : '' }}" data-period="current_month">
+                <i class="fas fa-calendar-day me-2"></i>Bulan Ini
+            </button>
+            <button class="period-tab {{ $currentPeriod == 'custom' ? 'active' : '' }}" data-period="custom">
+                <i class="fas fa-calendar-alt me-2"></i>Kustom
+            </button>
+        </div>
+
         <div class="period-display">
             Tampilan: <strong id="displayPeriodText">{{ $displayPeriod }}</strong>
         </div>
     </div>
-</div>
 
-
-    <!-- Filter Info Section - Only show if filters are applied -->
-    @if(request('search') || request('filter_by') || request('region_filter'))
+    <!-- Filter Info Section -->
+    @if(request('search') || request('filter_by') || request('region_filter') || request('divisi_filter') || request('category_filter'))
     <div class="filter-info">
         <div class="filter-info-icon">
-            <i class="lni lni-funnel"></i>
+            <i class="fas fa-filter"></i>
         </div>
         <div class="filter-info-text">
             <strong>Menampilkan hasil peringkat</strong>
@@ -605,10 +691,29 @@
                     <span class="text-primary fw-bold">{{ $region }}</span>{{ !$loop->last ? ', ' : '' }}
                 @endforeach
             @endif
+
+            @if(request('divisi_filter'))
+                @if(request('search') || request('filter_by') || request('region_filter')) | @endif
+                Divisi:
+                @foreach(request('divisi_filter') as $divisiId)
+                    @php
+                        $divisi = $divisis->find($divisiId);
+                    @endphp
+                    <span class="text-primary fw-bold">{{ $divisi ? $divisi->nama : $divisiId }}</span>{{ !$loop->last ? ', ' : '' }}
+                @endforeach
+            @endif
+
+            @if(request('category_filter'))
+                @if(request('search') || request('filter_by') || request('region_filter') || request('divisi_filter')) | @endif
+                Kategori:
+                @foreach(request('category_filter') as $category)
+                    <span class="text-primary fw-bold">{{ ucfirst($category) }}</span>{{ !$loop->last ? ', ' : '' }}
+                @endforeach
+            @endif
         </div>
         <div class="filter-info-reset">
             <a href="{{ route('leaderboard', ['period' => request('period')]) }}" class="reset-btn">
-                <i class="lni lni-reload"></i> Reset Filter
+                <i class="fas fa-undo"></i> Reset Filter
             </a>
         </div>
     </div>
@@ -617,35 +722,44 @@
     <!-- Search & Filter Area -->
     <div class="search-filter-container">
         <div class="search-box">
-    <form action="{{ route('leaderboard') }}" method="GET" id="searchForm" class="search-input">
-        <input type="search" name="search" placeholder="Cari nama account manager..." value="{{ request('search') }}">
-        <!-- Preserve all current filters when searching -->
-        @if(request('period'))
-            <input type="hidden" name="period" value="{{ request('period') }}">
-        @endif
-        @if(request('filter_by'))
-            @foreach(request('filter_by') as $filter)
-                <input type="hidden" name="filter_by[]" value="{{ $filter }}">
-            @endforeach
-        @endif
-        @if(request('region_filter'))
-            @foreach(request('region_filter') as $region)
-                <input type="hidden" name="region_filter[]" value="{{ $region }}">
-            @endforeach
-        @endif
-        <!-- Add a parameter to maintain original ranking -->
-        <input type="hidden" name="preserve_ranking" value="true">
-        <button type="submit">
-            <i class="lni lni-search-alt"></i> Cari
-        </button>
-    </form>
-</div>
+            <form action="{{ route('leaderboard') }}" method="GET" id="searchForm" class="search-input">
+                <input type="search" name="search" placeholder="Cari nama account manager..." value="{{ request('search') }}">
+                <!-- Preserve all current filters -->
+                @if(request('period'))
+                    <input type="hidden" name="period" value="{{ request('period') }}">
+                @endif
+                @if(request('filter_by'))
+                    @foreach(request('filter_by') as $filter)
+                        <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+                    @endforeach
+                @endif
+                @if(request('region_filter'))
+                    @foreach(request('region_filter') as $region)
+                        <input type="hidden" name="region_filter[]" value="{{ $region }}">
+                    @endforeach
+                @endif
+                @if(request('divisi_filter'))
+                    @foreach(request('divisi_filter') as $divisi)
+                        <input type="hidden" name="divisi_filter[]" value="{{ $divisi }}">
+                    @endforeach
+                @endif
+                @if(request('category_filter'))
+                    @foreach(request('category_filter') as $category)
+                        <input type="hidden" name="category_filter[]" value="{{ $category }}">
+                    @endforeach
+                @endif
+                <button type="submit">
+                    <i class="fas fa-search"></i> Cari
+                </button>
+            </form>
+        </div>
 
         <div class="filter-area">
             <div class="filter-selects">
+                <!-- Kriteria Filter -->
                 <div class="filter-group">
-                    <form id="filterForm" action="{{ route('leaderboard') }}" method="GET">
-                        <select class="selectpicker" id="filterSelect" name="filter_by[]" multiple data-live-search="true" data-dropup-auto="false" title="Pilih Kriteria" data-width="100%">
+                    <form id="filterForm1" action="{{ route('leaderboard') }}" method="GET">
+                        <select class="selectpicker" id="filterSelect1" name="filter_by[]" multiple data-live-search="true" title="Pilih Kriteria" data-width="100%">
                             <option value="Revenue Realisasi Tertinggi" {{ in_array('Revenue Realisasi Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
                                 Pendapatan Tertinggi
                             </option>
@@ -653,64 +767,163 @@
                                 Pencapaian Tertinggi
                             </option>
                         </select>
-                        <!-- Preserve search term when filtering -->
+                        <!-- Preserve other filters -->
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
-                        <!-- Preserve period when filtering -->
                         @if(request('period'))
                             <input type="hidden" name="period" value="{{ request('period') }}">
                         @endif
-                        <!-- Preserve region filter when filtering by criteria -->
                         @if(request('region_filter'))
                             @foreach(request('region_filter') as $region)
                                 <input type="hidden" name="region_filter[]" value="{{ $region }}">
                             @endforeach
                         @endif
-                        <button type="submit" class="d-none" id="submitFilter">Submit</button>
+                        @if(request('divisi_filter'))
+                            @foreach(request('divisi_filter') as $divisi)
+                                <input type="hidden" name="divisi_filter[]" value="{{ $divisi }}">
+                            @endforeach
+                        @endif
+                        @if(request('category_filter'))
+                            @foreach(request('category_filter') as $category)
+                                <input type="hidden" name="category_filter[]" value="{{ $category }}">
+                            @endforeach
+                        @endif
+                        <button type="submit" class="d-none" id="submitFilter1">Submit</button>
                     </form>
                 </div>
 
+                <!-- Witel Filter -->
                 <div class="filter-group">
                     <form id="filterForm2" action="{{ route('leaderboard') }}" method="GET">
-                        <select class="selectpicker" id="filterSelect2" name="region_filter[]" multiple data-live-search="true" data-dropup-auto="false" title="Pilih Witel" data-width="100%">
+                        <select class="selectpicker" id="filterSelect2" name="region_filter[]" multiple data-live-search="true" title="Pilih Witel" data-width="100%">
                             @foreach($witels as $witel)
                                 <option value="{{ $witel->nama }}" {{ in_array($witel->nama, request('region_filter', [])) ? 'selected' : '' }}>
                                     {{ $witel->nama }}
                                 </option>
                             @endforeach
                         </select>
-                        <!-- Preserve search term when filtering -->
+                        <!-- Preserve other filters -->
                         @if(request('search'))
                             <input type="hidden" name="search" value="{{ request('search') }}">
                         @endif
-                        <!-- Preserve period when filtering -->
                         @if(request('period'))
                             <input type="hidden" name="period" value="{{ request('period') }}">
                         @endif
-                        <!-- Preserve criteria filter when filtering by region -->
                         @if(request('filter_by'))
                             @foreach(request('filter_by') as $filter)
                                 <input type="hidden" name="filter_by[]" value="{{ $filter }}">
                             @endforeach
                         @endif
+                        @if(request('divisi_filter'))
+                            @foreach(request('divisi_filter') as $divisi)
+                                <input type="hidden" name="divisi_filter[]" value="{{ $divisi }}">
+                            @endforeach
+                        @endif
+                        @if(request('category_filter'))
+                            @foreach(request('category_filter') as $category)
+                                <input type="hidden" name="category_filter[]" value="{{ $category }}">
+                            @endforeach
+                        @endif
                         <button type="submit" class="d-none" id="submitFilter2">Submit</button>
+                    </form>
+                </div>
+
+                <!-- NEW: Divisi Filter -->
+                <div class="filter-group">
+                    <form id="filterForm3" action="{{ route('leaderboard') }}" method="GET">
+                        <select class="selectpicker" id="filterSelect3" name="divisi_filter[]" multiple data-live-search="true" title="Pilih Divisi" data-width="100%">
+                            @foreach($divisis as $divisi)
+                                <option value="{{ $divisi->id }}" {{ in_array($divisi->id, request('divisi_filter', [])) ? 'selected' : '' }}>
+                                    {{ $divisi->nama }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <!-- Preserve other filters -->
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        @if(request('period'))
+                            <input type="hidden" name="period" value="{{ request('period') }}">
+                        @endif
+                        @if(request('filter_by'))
+                            @foreach(request('filter_by') as $filter)
+                                <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+                            @endforeach
+                        @endif
+                        @if(request('region_filter'))
+                            @foreach(request('region_filter') as $region)
+                                <input type="hidden" name="region_filter[]" value="{{ $region }}">
+                            @endforeach
+                        @endif
+                        @if(request('category_filter'))
+                            @foreach(request('category_filter') as $category)
+                                <input type="hidden" name="category_filter[]" value="{{ $category }}">
+                            @endforeach
+                        @endif
+                        <button type="submit" class="d-none" id="submitFilter3">Submit</button>
+                    </form>
+                </div>
+
+                <!-- NEW: Category Filter -->
+                <div class="filter-group">
+                    <form id="filterForm4" action="{{ route('leaderboard') }}" method="GET">
+                        <select class="selectpicker" id="filterSelect4" name="category_filter[]" multiple data-live-search="true" title="Pilih Kategori" data-width="100%">
+                            <option value="enterprise" {{ in_array('enterprise', request('category_filter', [])) ? 'selected' : '' }}>
+                                Enterprise
+                            </option>
+                            <option value="government" {{ in_array('government', request('category_filter', [])) ? 'selected' : '' }}>
+                                Government
+                            </option>
+                            <option value="multi" {{ in_array('multi', request('category_filter', [])) ? 'selected' : '' }}>
+                                Multi Divisi
+                            </option>
+                        </select>
+                        <!-- Preserve other filters -->
+                        @if(request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                        @endif
+                        @if(request('period'))
+                            <input type="hidden" name="period" value="{{ request('period') }}">
+                        @endif
+                        @if(request('filter_by'))
+                            @foreach(request('filter_by') as $filter)
+                                <input type="hidden" name="filter_by[]" value="{{ $filter }}">
+                            @endforeach
+                        @endif
+                        @if(request('region_filter'))
+                            @foreach(request('region_filter') as $region)
+                                <input type="hidden" name="region_filter[]" value="{{ $region }}">
+                            @endforeach
+                        @endif
+                        @if(request('divisi_filter'))
+                            @foreach(request('divisi_filter') as $divisi)
+                                <input type="hidden" name="divisi_filter[]" value="{{ $divisi }}">
+                            @endforeach
+                        @endif
+                        <button type="submit" class="d-none" id="submitFilter4">Submit</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Leaderboard AM Cards -->
+    <!-- Enhanced Leaderboard AM Cards -->
     @forelse($accountManagers as $index => $am)
         <div class="am-card" onclick="window.location.href='{{ route('account_manager.detail', $am->id) }}'">
             <div class="am-card-body">
                 @if($am->global_rank == 1)
-                    <div class="am-rank text-gold">1</div>
+                    <div class="am-rank text-gold">
+                        <i class="fas fa-crown"></i> 1
+                    </div>
                 @elseif($am->global_rank == 2)
-                    <div class="am-rank text-silver">2</div>
+                    <div class="am-rank text-silver">
+                        <i class="fas fa-medal"></i> 2
+                    </div>
                 @elseif($am->global_rank == 3)
-                    <div class="am-rank text-bronze">3</div>
+                    <div class="am-rank text-bronze">
+                        <i class="fas fa-award"></i> 3
+                    </div>
                 @else
                     <div class="am-rank">{{ $am->global_rank }}</div>
                 @endif
@@ -719,8 +932,31 @@
 
                 <div class="am-info">
                     <div class="am-name">{{ $am->nama }}</div>
-                    <div class="am-detail">AM Witel {{ $am->witel->nama ?? 'N/A' }}</div>
-                    <div class="am-detail">{{ $am->divisi->nama ?? 'N/A' }}</div>
+                    <div class="am-detail">
+                        <i class="fas fa-map-marker-alt"></i>
+                        AM Witel {{ $am->witel->nama ?? 'N/A' }}
+                    </div>
+                    <div class="am-detail">
+                        <i class="fas fa-layer-group"></i>
+                        @if($am->divisis->count() > 0)
+                            {{ $am->divisis->pluck('nama')->join(', ') }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
+                    @if(isset($am->category_info))
+                        @php
+                            $badgeClass = 'enterprise';
+                            if($am->category_info['category'] === 'GOVERNMENT') {
+                                $badgeClass = 'government';
+                            } elseif($am->category_info['category'] === 'MULTI') {
+                                $badgeClass = 'multi';
+                            }
+                        @endphp
+                        <div class="am-category-badge {{ $badgeClass }}">
+                            {{ $am->category_info['label'] }}
+                        </div>
+                    @endif
                 </div>
 
                 <div class="am-stats">
@@ -733,7 +969,7 @@
                         <div class="achievement-label">Pencapaian</div>
                         <div class="achievement-value {{ $am->achievement_percentage < 100 ? 'text-danger' : 'text-success' }}">
                             <div class="achievement-icon">
-                                <i class="lni {{ $am->achievement_percentage < 100 ? 'lni-arrow-down' : 'lni-arrow-up' }}"></i>
+                                <i class="fas {{ $am->achievement_percentage < 100 ? 'fa-arrow-down' : 'fa-arrow-up' }}"></i>
                                 <span>{{ number_format($am->achievement_percentage, 2, ',', '.') }}%</span>
                             </div>
                         </div>
@@ -742,10 +978,10 @@
             </div>
         </div>
     @empty
-        <div class="am-card">
-            <div class="am-card-body text-center">
-                <p>Tidak ada data Account Manager yang tersedia.</p>
-            </div>
+        <div class="empty-state">
+            <i class="fas fa-users-slash"></i>
+            <h3>Tidak Ada Data</h3>
+            <p>Tidak ada Account Manager yang sesuai dengan kriteria pencarian Anda.</p>
         </div>
     @endforelse
 </div>
@@ -754,6 +990,7 @@
 @section('scripts')
 <!-- Script untuk Bootstrap Select -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.14.0-beta3/js/bootstrap-select.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
 $(document).ready(function() {
@@ -761,7 +998,7 @@ $(document).ready(function() {
     $('.selectpicker').selectpicker({
         liveSearch: true,
         liveSearchPlaceholder: 'Cari opsi...',
-        size: 5,
+        size: 6,
         actionsBox: false,
         dropupAuto: false,
         mobile: false,
@@ -770,64 +1007,150 @@ $(document).ready(function() {
         styleBase: 'form-control text-center'
     });
 
-    // Tambahan styling untuk filter placeholders
-    $('.filter-option-inner-inner').css({
-        'text-align': 'center',
-        'font-weight': 'bold'
-    });
+    // Initialize period tabs based on URL parameter or default
+    function initializePeriodTabs() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentPeriod = urlParams.get('period') || '{{ $currentPeriod ?? "all_time" }}';
 
-    // Atur fungsi submit saat filter dipilih
-    $('#filterSelect').on('changed.bs.select', function (e) {
-        setTimeout(function() {
-            $('#submitFilter').click();
-        }, 300);
+        // Remove active class from all tabs
+        $('.period-tab').removeClass('active');
+
+        // Add active class to current period
+        $(`.period-tab[data-period="${currentPeriod}"]`).addClass('active');
+
+        // If no period is set or period is all_time, default to year_to_date
+        if (!currentPeriod || currentPeriod === 'all_time') {
+            $('.period-tab[data-period="year_to_date"]').addClass('active');
+        }
+
+        console.log('Current period:', currentPeriod); // Debug log
+    }
+
+    // Call initialization
+    initializePeriodTabs();
+
+    // Filter form submissions
+    $('#filterSelect1').on('changed.bs.select', function (e) {
+        setTimeout(() => $('#submitFilter1').click(), 300);
     });
 
     $('#filterSelect2').on('changed.bs.select', function (e) {
-        setTimeout(function() {
-            $('#submitFilter2').click();
-        }, 300);
+        setTimeout(() => $('#submitFilter2').click(), 300);
     });
 
-    // Period selector functionality
-    $('input[name="period"]').change(function() {
-        var period = $(this).val();
-
-        // Clone form pencarian dan tambahkan parameter periode
-        var $form = $('#searchForm').clone();
-
-        // Hapus input hidden period yang mungkin sudah ada
-        $form.find('input[name="period"]').remove();
-
-        // Tambahkan input period baru
-        $form.append('<input type="hidden" name="period" value="' + period + '">');
-
-        // Submit form
-        $form.appendTo('body').submit();
+    $('#filterSelect3').on('changed.bs.select', function (e) {
+        setTimeout(() => $('#submitFilter3').click(), 300);
     });
-});
-</script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Get chart data from controller (if available)
-    const chartData = @json($chartData ?? []);
-    console.log('Chart data loaded:', chartData);
+    $('#filterSelect4').on('changed.bs.select', function (e) {
+        setTimeout(() => $('#submitFilter4').click(), 300);
+    });
 
-    // Declare global variables for chart instances (if needed)
-    let lineRevenueChartInstance;
-    let donutAchievementChartInstance;
-    let barDivisionChartInstance;
-    let performanceWitelChartInstance;
+    // Modern Period Tabs with better visual feedback
+    $('.period-tab').click(function() {
+        const period = $(this).data('period');
 
-    // Initialize flatpickr directly on the hidden input
+        console.log('Period tab clicked:', period); // Debug log
+
+        // Update active state immediately for better UX
+        $('.period-tab').removeClass('active');
+        $(this).addClass('active');
+
+        // Update display text
+        let displayText = '';
+        switch(period) {
+            case 'year_to_date':
+                displayText = 'Year to Date';
+                break;
+            case 'current_month':
+                displayText = 'Bulan Ini';
+                break;
+            case 'custom':
+                displayText = 'Kustom';
+                break;
+        }
+        $('#displayPeriodText').text(displayText);
+
+        // Submit with period
+        submitPeriodForm(period);
+    });
+
+    function submitPeriodForm(period) {
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = window.location.pathname;
+
+        // Add period parameter
+        const periodInput = document.createElement('input');
+        periodInput.type = 'hidden';
+        periodInput.name = 'period';
+        periodInput.value = period;
+        form.appendChild(periodInput);
+
+        // Preserve other filters
+        @if(request('search'))
+            const searchInput = document.createElement('input');
+            searchInput.type = 'hidden';
+            searchInput.name = 'search';
+            searchInput.value = '{{ request('search') }}';
+            form.appendChild(searchInput);
+        @endif
+
+        @if(request('filter_by'))
+            @foreach(request('filter_by') as $filter)
+                const filterInput{{ $loop->index }} = document.createElement('input');
+                filterInput{{ $loop->index }}.type = 'hidden';
+                filterInput{{ $loop->index }}.name = 'filter_by[]';
+                filterInput{{ $loop->index }}.value = '{{ $filter }}';
+                form.appendChild(filterInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('region_filter'))
+            @foreach(request('region_filter') as $region)
+                const regionInput{{ $loop->index }} = document.createElement('input');
+                regionInput{{ $loop->index }}.type = 'hidden';
+                regionInput{{ $loop->index }}.name = 'region_filter[]';
+                regionInput{{ $loop->index }}.value = '{{ $region }}';
+                form.appendChild(regionInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('divisi_filter'))
+            @foreach(request('divisi_filter') as $divisi)
+                const divisiInput{{ $loop->index }} = document.createElement('input');
+                divisiInput{{ $loop->index }}.type = 'hidden';
+                divisiInput{{ $loop->index }}.name = 'divisi_filter[]';
+                divisiInput{{ $loop->index }}.value = '{{ $divisi }}';
+                form.appendChild(divisiInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('category_filter'))
+            @foreach(request('category_filter') as $category)
+                const categoryInput{{ $loop->index }} = document.createElement('input');
+                categoryInput{{ $loop->index }}.type = 'hidden';
+                categoryInput{{ $loop->index }}.name = 'category_filter[]';
+                categoryInput{{ $loop->index }}.value = '{{ $category }}';
+                form.appendChild(categoryInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Date Picker Functionality
     const dateRangeInput = document.getElementById('dateRangeSelector');
     const datePickerButton = document.getElementById('datePickerButton');
-    
-    // Initialize date range picker on the hidden input
+
     const fp = flatpickr(dateRangeInput, {
         mode: "range",
         dateFormat: "Y-m-d",
+        appendTo: document.querySelector('.date-period-container'), // Append to container
+        positionElement: datePickerButton, // Position relative to button
+        position: "below", // Always show below
+        static: false, // Allow repositioning
         defaultDate: [
             "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}",
             "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
@@ -837,380 +1160,121 @@ document.addEventListener('DOMContentLoaded', function() {
                 const startDate = formatDate(selectedDates[0]);
                 const endDate = formatDate(selectedDates[1]);
                 document.getElementById('dateRangeText').textContent = startDate + ' - ' + endDate;
-                
-                // Set the radio button to custom
-                document.querySelector('input[name="period"][value="custom"]').checked = true;
+
+                // Set custom period as active
+                $('.period-tab').removeClass('active');
+                $('.period-tab[data-period="custom"]').addClass('active');
                 document.getElementById('displayPeriodText').textContent = 'Kustom';
-                
-                // Update charts with new date range
-                updateCharts(selectedDates[0], selectedDates[1]);
-                
-                // Submit form with new date range
-                submitPeriodForm('custom', dateStr);
+
+                // Submit form with custom dates
+                submitCustomDateForm(selectedDates[0], selectedDates[1]);
             }
+        },
+        onOpen: function() {
+            // Ensure proper positioning when opened
+            setTimeout(() => {
+                const calendar = document.querySelector('.flatpickr-calendar');
+                if (calendar) {
+                    const buttonRect = datePickerButton.getBoundingClientRect();
+                    const containerRect = document.querySelector('.date-period-container').getBoundingClientRect();
+
+                    // Position relative to button
+                    calendar.style.position = 'absolute';
+                    calendar.style.top = (buttonRect.bottom - containerRect.top + 5) + 'px';
+                    calendar.style.left = (buttonRect.left - containerRect.left) + 'px';
+                    calendar.style.zIndex = '9999';
+                }
+            }, 10);
         }
     });
-    
-    // Make the button open the flatpickr instance
+
     datePickerButton.addEventListener('click', function() {
         fp.open();
     });
 
-    // Helper function to format date
     function formatDate(date) {
         const day = date.getDate();
-        const month = date.toLocaleString('default', {
-            month: 'short'
-        });
+        const month = date.toLocaleString('default', { month: 'short' });
         const year = date.getFullYear();
         return `${day} ${month} ${year}`;
     }
-    
-    // Add event listeners to radio buttons
-    document.querySelectorAll('input[name="period"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const periodValue = this.value;
-            let startDate, endDate, displayText;
-            
-            const today = new Date();
-            
-            switch(periodValue) {
-                case 'year_to_date':
-                    // From January 1 of current year to today
-                    startDate = new Date(today.getFullYear(), 0, 1); // January 1st
-                    endDate = today;
-                    displayText = 'Year to Date';
-                    break;
-                    
-                case 'current_month':
-                    // Current month
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of current month
-                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
-                    displayText = 'Bulan Ini';
-                    break;
-                    
-                case 'custom':
-                    // Keep current selection in date picker
-                    return; // Let the datepicker handle this
-            }
-            
-            // Update the date picker
-            if (periodValue !== 'custom') {
-                fp.setDate([startDate, endDate]);
-                
-                // Format dates for display
-                const formattedStartDate = formatDate(startDate);
-                const formattedEndDate = formatDate(endDate);
-                document.getElementById('dateRangeText').textContent = formattedStartDate + ' - ' + formattedEndDate;
-                document.getElementById('displayPeriodText').textContent = displayText;
-                
-                // Format dates for submission (YYYY-MM-DD)
-                const formattedStart = formatDateForSubmission(startDate);
-                const formattedEnd = formatDateForSubmission(endDate);
-                
-                // Update charts and submit form
-                updateCharts(startDate, endDate);
-                submitPeriodForm(periodValue, formattedStart + ' to ' + formattedEnd);
-            }
-        });
-    });
-    
-    // Helper function to format date for form submission
-    function formatDateForSubmission(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-    
-    // Function to submit form with selected period
-    function submitPeriodForm(period, dateRange) {
-        // Create a form to submit
+
+    function submitCustomDateForm(startDate, endDate) {
         const form = document.createElement('form');
         form.method = 'GET';
         form.action = window.location.pathname;
-        
-        // Add period parameter
+
+        // Add period and dates
         const periodInput = document.createElement('input');
         periodInput.type = 'hidden';
         periodInput.name = 'period';
-        periodInput.value = period;
+        periodInput.value = 'custom';
         form.appendChild(periodInput);
-        
-        // If custom period, add date range
-        if (period === 'custom' || period === 'year_to_date') {
-            const dates = dateRange.split(' to ');
-            
-            const startDateInput = document.createElement('input');
-            startDateInput.type = 'hidden';
-            startDateInput.name = 'start_date';
-            startDateInput.value = dates[0];
-            form.appendChild(startDateInput);
-            
-            const endDateInput = document.createElement('input');
-            endDateInput.type = 'hidden';
-            endDateInput.name = 'end_date';
-            endDateInput.value = dates[1];
-            form.appendChild(endDateInput);
-        }
-        
-        // Append form to body and submit
+
+        const startDateInput = document.createElement('input');
+        startDateInput.type = 'hidden';
+        startDateInput.name = 'start_date';
+        startDateInput.value = startDate.toISOString().split('T')[0];
+        form.appendChild(startDateInput);
+
+        const endDateInput = document.createElement('input');
+        endDateInput.type = 'hidden';
+        endDateInput.name = 'end_date';
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        form.appendChild(endDateInput);
+
+        // Preserve other filters
+        @if(request('search'))
+            const searchInput = document.createElement('input');
+            searchInput.type = 'hidden';
+            searchInput.name = 'search';
+            searchInput.value = '{{ request('search') }}';
+            form.appendChild(searchInput);
+        @endif
+
+        @if(request('filter_by'))
+            @foreach(request('filter_by') as $filter)
+                const filterInput{{ $loop->index }} = document.createElement('input');
+                filterInput{{ $loop->index }}.type = 'hidden';
+                filterInput{{ $loop->index }}.name = 'filter_by[]';
+                filterInput{{ $loop->index }}.value = '{{ $filter }}';
+                form.appendChild(filterInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('region_filter'))
+            @foreach(request('region_filter') as $region)
+                const regionInput{{ $loop->index }} = document.createElement('input');
+                regionInput{{ $loop->index }}.type = 'hidden';
+                regionInput{{ $loop->index }}.name = 'region_filter[]';
+                regionInput{{ $loop->index }}.value = '{{ $region }}';
+                form.appendChild(regionInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('divisi_filter'))
+            @foreach(request('divisi_filter') as $divisi)
+                const divisiInput{{ $loop->index }} = document.createElement('input');
+                divisiInput{{ $loop->index }}.type = 'hidden';
+                divisiInput{{ $loop->index }}.name = 'divisi_filter[]';
+                divisiInput{{ $loop->index }}.value = '{{ $divisi }}';
+                form.appendChild(divisiInput{{ $loop->index }});
+            @endforeach
+        @endif
+
+        @if(request('category_filter'))
+            @foreach(request('category_filter') as $category)
+                const categoryInput{{ $loop->index }} = document.createElement('input');
+                categoryInput{{ $loop->index }}.type = 'hidden';
+                categoryInput{{ $loop->index }}.name = 'category_filter[]';
+                categoryInput{{ $loop->index }}.value = '{{ $category }}';
+                form.appendChild(categoryInput{{ $loop->index }});
+            @endforeach
+        @endif
+
         document.body.appendChild(form);
         form.submit();
     }
-    
-    // Function to update charts with new date range
-    function updateCharts(startDate, endDate) {
-        // This function should be implemented based on your chart requirements
-        // You could use AJAX to fetch new data or filter existing data based on dates
-        console.log('Updating charts with date range:', startDate, endDate);
-        
-        // Example: If you have a function to reload charts
-        // reloadCharts(startDate, endDate);
-    }
-    
-    // Initialize period selection based on URL parameters or defaults
-    function initializePeriodSelection() {
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const period = urlParams.get('period');
-        
-        if (period) {
-            // Select the appropriate radio button
-            const radioButton = document.querySelector(`input[name="period"][value="${period}"]`);
-            if (radioButton) {
-                radioButton.checked = true;
-            }
-        }
-    }
-    
-    // Call initialization function
-    initializePeriodSelection();
-});
-</script>
-
-</body>
-</html><!-- Combined Date Filter and Period Selector -->
-<div class="filter-controls">
-    <!-- Date Filter -->
-    <div class="date-filter-container">
-        <!-- Visible button that triggers date picker -->
-        <button type="button" id="datePickerButton" class="date-filter">
-            <i class="far fa-calendar-alt"></i>
-            <span id="dateRangeText">{{ date('d M Y', strtotime($startDate ?? Carbon\Carbon::now()->startOfMonth()->format('Y-m-d'))) }} - 
-            {{ date('d M Y', strtotime($endDate ?? Carbon\Carbon::now()->endOfMonth()->format('Y-m-d'))) }}</span>
-            <i class="fas fa-chevron-down ms-auto"></i>
-        </button>
-        <!-- Hidden input for flatpickr -->
-        <input type="text" id="dateRangeSelector" style="visibility: hidden; position: absolute; width: 0; height: 0;" />
-    </div>
-
-    <!-- Period Selector with Radio Buttons -->
-    <div class="period-selector">
-        <div class="period-label">Pilih Periode:</div>
-        <div class="period-options">
-            <label class="radio-container">
-                Year to Date
-                <input type="radio" name="period" value="year_to_date" {{ $currentPeriod == 'year_to_date' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
-            <label class="radio-container">
-                Bulan Ini
-                <input type="radio" name="period" value="current_month" {{ $currentPeriod == 'current_month' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
-            <label class="radio-container">
-                Kustom
-                <input type="radio" name="period" value="custom" {{ $currentPeriod == 'custom' ? 'checked' : '' }}>
-                <span class="radio-checkmark"></span>
-            </label>
-        </div>
-        <div class="period-display">
-            Tampilan: <strong id="displayPeriodText">{{ $displayPeriod }}</strong>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Get chart data from controller
-    const chartData = @json($chartData ?? []);
-    console.log('Chart data loaded:', chartData);
-
-    // Declare global variables for chart instances
-    let lineRevenueChartInstance;
-    let donutAchievementChartInstance;
-    let barDivisionChartInstance;
-    let performanceWitelChartInstance;
-
-    // Initialize flatpickr directly on the hidden input
-    const dateRangeInput = document.getElementById('dateRangeSelector');
-    const datePickerButton = document.getElementById('datePickerButton');
-    
-    // Initialize date range picker on the hidden input
-    const fp = flatpickr(dateRangeInput, {
-        mode: "range",
-        dateFormat: "Y-m-d",
-        defaultDate: [
-            "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}",
-            "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}"
-        ],
-        onChange: function(selectedDates, dateStr) {
-            if (selectedDates.length === 2) {
-                const startDate = formatDate(selectedDates[0]);
-                const endDate = formatDate(selectedDates[1]);
-                document.getElementById('dateRangeText').textContent = startDate + ' - ' + endDate;
-                
-                // Set the radio button to custom
-                document.querySelector('input[name="period"][value="custom"]').checked = true;
-                document.getElementById('displayPeriodText').textContent = 'Kustom';
-                
-                // Update charts with new date range
-                updateCharts(selectedDates[0], selectedDates[1]);
-                
-                // Submit form with new date range
-                submitPeriodForm('custom', dateStr);
-            }
-        }
-    });
-    
-    // Make the button open the flatpickr instance
-    datePickerButton.addEventListener('click', function() {
-        fp.open();
-    });
-
-    // Helper function to format date
-    function formatDate(date) {
-        const day = date.getDate();
-        const month = date.toLocaleString('default', {
-            month: 'short'
-        });
-        const year = date.getFullYear();
-        return `${day} ${month} ${year}`;
-    }
-    
-    // Add event listeners to radio buttons
-    document.querySelectorAll('input[name="period"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-            const periodValue = this.value;
-            let startDate, endDate, displayText;
-            
-            const today = new Date();
-            
-            switch(periodValue) {
-                case 'year_to_date':
-                    // From January 1 of current year to today
-                    startDate = new Date(today.getFullYear(), 0, 1); // January 1st
-                    endDate = today;
-                    displayText = 'Year to Date';
-                    break;
-                    
-                case 'current_month':
-                    // Current month
-                    startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of current month
-                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // Last day of current month
-                    displayText = 'Bulan Ini';
-                    break;
-                    
-                case 'custom':
-                    // Keep current selection in date picker
-                    return; // Let the datepicker handle this
-            }
-            
-            // Update the date picker
-            if (periodValue !== 'custom') {
-                fp.setDate([startDate, endDate]);
-                
-                // Format dates for display
-                const formattedStartDate = formatDate(startDate);
-                const formattedEndDate = formatDate(endDate);
-                document.getElementById('dateRangeText').textContent = formattedStartDate + ' - ' + formattedEndDate;
-                document.getElementById('displayPeriodText').textContent = displayText;
-                
-                // Format dates for submission (YYYY-MM-DD)
-                const formattedStart = formatDateForSubmission(startDate);
-                const formattedEnd = formatDateForSubmission(endDate);
-                
-                // Update charts and submit form
-                updateCharts(startDate, endDate);
-                submitPeriodForm(periodValue, formattedStart + ' to ' + formattedEnd);
-            }
-        });
-    });
-    
-    // Helper function to format date for form submission
-    function formatDateForSubmission(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-    
-    // Function to submit form with selected period
-    function submitPeriodForm(period, dateRange) {
-        // Create a form to submit
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = window.location.pathname;
-        
-        // Add period parameter
-        const periodInput = document.createElement('input');
-        periodInput.type = 'hidden';
-        periodInput.name = 'period';
-        periodInput.value = period;
-        form.appendChild(periodInput);
-        
-        // If custom period, add date range
-        if (period === 'custom' || period === 'year_to_date') {
-            const dates = dateRange.split(' to ');
-            
-            const startDateInput = document.createElement('input');
-            startDateInput.type = 'hidden';
-            startDateInput.name = 'start_date';
-            startDateInput.value = dates[0];
-            form.appendChild(startDateInput);
-            
-            const endDateInput = document.createElement('input');
-            endDateInput.type = 'hidden';
-            endDateInput.name = 'end_date';
-            endDateInput.value = dates[1];
-            form.appendChild(endDateInput);
-        }
-        
-        // Append form to body and submit
-        document.body.appendChild(form);
-        form.submit();
-    }
-    
-    // Function to update charts with new date range
-    function updateCharts(startDate, endDate) {
-        // This function should be implemented based on your chart requirements
-        // You could use AJAX to fetch new data or filter existing data based on dates
-        console.log('Updating charts with date range:', startDate, endDate);
-        
-        // Example: If you have a function to reload charts
-        // reloadCharts(startDate, endDate);
-    }
-    
-    // Initialize period selection based on URL parameters or defaults
-    function initializePeriodSelection() {
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const period = urlParams.get('period');
-        
-        if (period) {
-            // Select the appropriate radio button
-            const radioButton = document.querySelector(`input[name="period"][value="${period}"]`);
-            if (radioButton) {
-                radioButton.checked = true;
-            }
-        }
-    }
-    
-    // Call initialization function
-    initializePeriodSelection();
 });
 </script>
 @endsection

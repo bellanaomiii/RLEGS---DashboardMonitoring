@@ -118,24 +118,126 @@
         margin-left: 10px;
     }
 
-    /* Display divisi list di profil */
+    /* Display divisi list di profil - Perbaikan alignment horizontal */
+    .meta-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 8px;
+    }
+
+    .meta-item i {
+        flex-shrink: 0;
+    }
+
+    .meta-item > span {
+        flex-shrink: 0;
+    }
+
     .divisi-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 5px;
-        margin-top: 5px;
+        gap: 6px;
+        align-items: center;
+        margin: 0;
+        padding: 0;
     }
 
     .divisi-pill {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        background-color: #e5e7eb;
-        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        font-size: 11px;
         font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
     }
 
-    /* Perbaikan tampilan card ranking */
+    .divisi-pill:hover {
+        background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    }
+
+    /* Special styling for different divisions */
+    .divisi-pill.dps {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+
+    .divisi-pill.dss {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #166534;
+    }
+
+    .divisi-pill.dgs {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+    }
+
+    /* Improved profile meta layout - horizontal layout */
+    .profile-meta {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-top: 15px;
+        align-items: center;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .meta-item i {
+        flex-shrink: 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .meta-item > span {
+        flex-shrink: 0;
+        font-size: 14px;
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .meta-item.divisi-item {
+        align-items: center;
+    }
+
+    .divisi-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+    }
+
+    .divisi-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        font-size: 10px;
+        font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+
+    /* Perbaikan tampilan card ranking - 3 cards equal width */
     .rankings-container .row {
         margin-right: -10px;
         margin-left: -10px;
@@ -151,16 +253,215 @@
         margin-bottom: 0;
     }
 
-    /* Perbaikan filter spacing */
+    /* Filter container untuk category filter */
+    .category-filter-container {
+        background-color: #f8fafc;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .category-filters {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .filter-label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+
+    .filter-controls {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Perbaikan filter spacing di customer data */
     .filters-container {
         display: flex;
         align-items: center;
-        gap: 12px; /* Tambahkan gap untuk dropdown filters */
+        gap: 15px; /* Tambahkan gap yang lebih besar */
+        flex-wrap: wrap;
     }
 
-    /* Perbaikan selector divisi di profile */
-    .division-ranking-selector {
-        margin-left: 15px;
+    .filter-group {
+        margin-right: 0; /* Hapus margin manual */
+    }
+
+    /* Perbaikan chart filters positioning */
+    .chart-filters {
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center the filters */
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .rankings-container .col-md-4 {
+            margin-bottom: 15px;
+        }
+
+        .category-filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-controls {
+            justify-content: center;
+        }
+
+        .chart-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .chart-filters {
+            justify-content: center;
+        }
+    }
+
+    /* Modern select styling improvements */
+    .bootstrap-select .dropdown-toggle {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        transition: all 0.2s ease;
+    }
+
+    .bootstrap-select .dropdown-toggle:focus {
+        border-color: #1C2955;
+        box-shadow: 0 0 0 3px rgba(28, 41, 85, 0.1);
+    }
+
+    /* Enhanced category badge styling */
+    .category-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+    }
+
+    .category-badge.enterprise {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .category-badge.government {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    .category-badge.multi {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+
+    .category-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Division selector section */
+    .division-selector-section {
+        background-color: #f8fafc;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .division-selector-label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Perbaikan lebar ranking cards - pastikan 100% width */
+    .rankings-container {
+        width: 100%;
+        margin: 0;
+    }
+
+    .rankings-container .row {
+        margin-right: 0;
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .rankings-container .col-md-4 {
+        padding-right: 8px;
+        padding-left: 8px;
+        width: 33.333333%; /* Ensure exact 1/3 width */
+        max-width: 33.333333%;
+        flex: 0 0 33.333333%;
+    }
+
+    /* Mobile responsive untuk ranking cards */
+    @media (max-width: 768px) {
+        .rankings-container .col-md-4 {
+            width: 100%;
+            max-width: 100%;
+            flex: 0 0 100%;
+            margin-bottom: 15px;
+            padding-right: 0;
+            padding-left: 0;
+        }
+
+        /* Mobile responsive untuk profile meta */
+        .profile-meta {
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .meta-item {
+            flex-wrap: wrap;
+        }
+
+        .meta-item.divisi-item {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .divisi-list {
+            margin-top: 4px;
+        }
+
+        .divisi-pill {
+            font-size: 11px;
+            padding: 3px 10px;
+        }
     }
 </style>
 @endsection
@@ -177,17 +478,25 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2 class="profile-name mb-0">{{ $accountManager->nama }}</h2>
 
-                @if(count($divisionRankings) > 0)
-                <div class="division-ranking-selector">
-                    <select id="division-ranking-select" class="selectpicker" title="Pilih Divisi" data-style="btn-sm btn-outline-secondary">
-                        @foreach($divisionRankings as $divisiId => $ranking)
-                            <option value="{{ $divisiId }}" {{ $selectedDivisiId == $divisiId ? 'selected' : '' }}>
-                                {{ $ranking['nama'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
+                <!-- Enhanced Category Badge -->
+                @php
+                    $badgeClass = 'enterprise';
+                    if($amCategory['category'] === 'GOVERNMENT') {
+                        $badgeClass = 'government';
+                    } elseif($amCategory['category'] === 'MULTI') {
+                        $badgeClass = 'multi';
+                    }
+                @endphp
+                <span class="category-badge {{ $badgeClass }}">
+                    @if($amCategory['category'] === 'ENTERPRISE')
+                        <i class="fas fa-building me-2"></i>
+                    @elseif($amCategory['category'] === 'GOVERNMENT')
+                        <i class="fas fa-university me-2"></i>
+                    @else
+                        <i class="fas fa-layer-group me-2"></i>
+                    @endif
+                    {{ $amCategory['label'] }}
+                </span>
             </div>
             <div class="profile-meta">
                 <div class="meta-item">
@@ -198,14 +507,30 @@
                     <i class="lni lni-map-marker"></i>
                     <span>WITEL: {{ $accountManager->witel->nama ?? 'N/A' }}</span>
                 </div>
-                <div class="meta-item">
+                <div class="meta-item divisi-item">
                     <i class="lni lni-network"></i>
-                    <span>DIVISI: </span>
+                    <span>DIVISI:</span>
                     <div class="divisi-list">
                         @forelse($accountManager->divisis as $divisi)
-                            <span class="divisi-pill">{{ $divisi->nama }}</span>
+                            @php
+                                $divisiClass = '';
+                                switch(strtoupper($divisi->nama)) {
+                                    case 'DPS':
+                                        $divisiClass = 'dps';
+                                        break;
+                                    case 'DSS':
+                                        $divisiClass = 'dss';
+                                        break;
+                                    case 'DGS':
+                                        $divisiClass = 'dgs';
+                                        break;
+                                    default:
+                                        $divisiClass = '';
+                                }
+                            @endphp
+                            <span class="divisi-pill {{ $divisiClass }}">{{ $divisi->nama }}</span>
                         @empty
-                            <span>N/A</span>
+                            <span class="text-muted">N/A</span>
                         @endforelse
                     </div>
                 </div>
@@ -213,230 +538,278 @@
         </div>
     </div>
 
-<!-- Rankings -->
-<div class="rankings-container">
-    <!-- Calculate ranking changes -->
-    @php
-        $globalRankIcon = "1-10.svg";
-        if ($globalRanking['position'] > 10 && $globalRanking['position'] <= 50) {
-            $globalRankIcon = "10-50.svg";
-        } elseif ($globalRanking['position'] > 50) {
-            $globalRankIcon = "up100.svg";
-        }
-
-        $witelRankIcon = "1-10.svg";
-        if (is_numeric($witelRanking['position'])) {
-            if ($witelRanking['position'] > 10 && $witelRanking['position'] <= 50) {
-                $witelRankIcon = "10-50.svg";
-            } elseif ($witelRanking['position'] > 50) {
-                $witelRankIcon = "up100.svg";
-            }
-        }
-
-        // Calculate ranking changes
-        $globalChange = isset($globalRanking['position_change']) ? $globalRanking['position_change'] : 0;
-        if ($globalChange > 0) {
-            $globalChangeClass = 'text-success';
-            $globalChangeBadgeClass = 'up';
-            $globalChangeIcon = 'lni-arrow-up';
-            $globalChangeText = 'naik ' . $globalChange;
-            $globalBadgeText = 'Naik ' . $globalChange;
-        } elseif ($globalChange < 0) {
-            $globalChangeClass = 'text-danger';
-            $globalChangeBadgeClass = 'down';
-            $globalChangeIcon = 'lni-arrow-down';
-            $globalChangeText = 'turun ' . abs($globalChange);
-            $globalBadgeText = 'Turun ' . abs($globalChange);
-        } else {
-            $globalChangeClass = 'text-muted';
-            $globalChangeBadgeClass = 'neutral';
-            $globalChangeIcon = 'lni-minus';
-            $globalChangeText = 'tetap';
-            $globalBadgeText = 'Tetap';
-        }
-
-        $witelChange = isset($witelRanking['position_change']) ? $witelRanking['position_change'] : 0;
-        if ($witelChange > 0) {
-            $witelChangeClass = 'text-success';
-            $witelChangeBadgeClass = 'up';
-            $witelChangeIcon = 'lni-arrow-up';
-            $witelChangeText = 'naik ' . $witelChange;
-            $witelBadgeText = 'Naik ' . $witelChange;
-        } elseif ($witelChange < 0) {
-            $witelChangeClass = 'text-danger';
-            $witelChangeBadgeClass = 'down';
-            $witelChangeIcon = 'lni-arrow-down';
-            $witelChangeText = 'turun ' . abs($witelChange);
-            $witelBadgeText = 'Turun ' . abs($witelChange);
-        } else {
-            $witelChangeClass = 'text-muted';
-            $witelChangeBadgeClass = 'neutral';
-            $witelChangeIcon = 'lni-minus';
-            $witelChangeText = 'tetap';
-            $witelBadgeText = 'Tetap';
-        }
-
-        $currentMonth = date('F');
-        $previousMonth = date('F', strtotime('-1 month'));
-
-        // Translate month names
-        $monthNames = [
-            'January' => 'Januari',
-            'February' => 'Februari',
-            'March' => 'Maret',
-            'April' => 'April',
-            'May' => 'Mei',
-            'June' => 'Juni',
-            'July' => 'Juli',
-            'August' => 'Agustus',
-            'September' => 'September',
-            'October' => 'Oktober',
-            'November' => 'November',
-            'December' => 'Desember'
-        ];
-
-        $currentMonthID = $monthNames[$currentMonth] ?? $currentMonth;
-        $previousMonthID = $monthNames[$previousMonth] ?? $previousMonth;
-    @endphp
-
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <a href="{{ route('leaderboard') }}" class="ranking-card global">
-                <div class="ranking-icon">
-                    <img src="{{ asset('img/' . $globalRankIcon) }}" alt="Peringkat" width="40" height="40">
-                </div>
-                <div class="ranking-info">
-                    <div class="ranking-title">Peringkat Global</div>
-                    <div class="ranking-value">
-                        {{ $globalRanking['position'] }} dari {{ $globalRanking['total'] }}
-                        @if ($globalChange != 0)
-                            <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
-                                <i class="lni {{ $globalChangeIcon }}"></i>
-                            </span>
-                        @endif
-                    </div>
-                    <span class="rank-change-detail {{ $globalChangeBadgeClass }}">{{ $globalChangeText }} dari {{ $previousMonthID }}</span>
-                </div>
-                @if($globalChange != 0)
-                    <div class="rank-badge {{ $globalChangeBadgeClass }}">
-                        <i class="lni {{ $globalChangeIcon }}"></i>
-                        {{ $globalBadgeText }}
-                    </div>
-                @endif
-            </a>
+    <!-- Division Selector Section (moved from profile) -->
+    @if(count($divisionRankings) > 0)
+    <div class="division-selector-section">
+        <div class="division-selector-label">
+            <i class="fas fa-layer-group"></i>
+            Pilih Divisi untuk Peringkat:
         </div>
+        <div class="division-selector">
+            <select id="division-ranking-select" class="selectpicker" title="Pilih Divisi" data-style="btn-outline-primary">
+                @foreach($divisionRankings as $divisiId => $ranking)
+                    <option value="{{ $divisiId }}" {{ $selectedDivisiId == $divisiId ? 'selected' : '' }}>
+                        {{ $ranking['nama'] }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    @endif
 
-        <div class="col-md-4 mb-3">
-            <div class="ranking-card witel">
-                <div class="ranking-icon">
-                    <img src="{{ asset('img/' . $witelRankIcon) }}" alt="Peringkat" width="40" height="40">
-                </div>
-                <div class="ranking-info">
-                    <div class="ranking-title">Peringkat Witel</div>
-                    <div class="ranking-value">
-                        {{ $witelRanking['position'] }} dari {{ $witelRanking['total'] }}
-                        @if ($witelChange != 0 && is_numeric($witelRanking['position']))
-                            <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
-                                <i class="lni {{ $witelChangeIcon }}"></i>
-                            </span>
-                        @endif
-                    </div>
-                    @if(is_numeric($witelRanking['position']))
-                        <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
-                    @else
-                        <span class="rank-change-detail text-muted">belum ada data</span>
-                    @endif
-                </div>
-                @if($witelChange != 0 && is_numeric($witelRanking['position']))
-                    <div class="rank-badge {{ $witelChangeBadgeClass }}">
-                        <i class="lni {{ $witelChangeIcon }}"></i>
-                        {{ $witelBadgeText }}
-                    </div>
-                @endif
+    <!-- Category Filter (Only for Multi Division AM) -->
+    @if($needsCategoryFilter)
+    <div class="category-filter-container">
+        <div class="category-filters">
+            <div class="filter-label">
+                <i class="fas fa-filter me-2"></i>
+                Tampilkan Peringkat Sebagai:
             </div>
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <!-- Division Rankings -->
-            <div class="division-rankings-container">
-                @if(count($divisionRankings) > 0)
-                    @foreach($divisionRankings as $divisiId => $ranking)
-                        @php
-                            $divisiRankIcon = "1-10.svg";
-                            if (is_numeric($ranking['position'])) {
-                                if ($ranking['position'] > 10 && $ranking['position'] <= 50) {
-                                    $divisiRankIcon = "10-50.svg";
-                                } elseif ($ranking['position'] > 50) {
-                                    $divisiRankIcon = "up100.svg";
-                                }
-                            }
-
-                            $divisionChange = isset($ranking['position_change']) ? $ranking['position_change'] : 0;
-                            if ($divisionChange > 0) {
-                                $divisionChangeClass = 'text-success';
-                                $divisionChangeBadgeClass = 'up';
-                                $divisionChangeIcon = 'lni-arrow-up';
-                                $divisionChangeText = 'naik ' . $divisionChange;
-                                $divisionBadgeText = 'Naik ' . $divisionChange;
-                            } elseif ($divisionChange < 0) {
-                                $divisionChangeClass = 'text-danger';
-                                $divisionChangeBadgeClass = 'down';
-                                $divisionChangeIcon = 'lni-arrow-down';
-                                $divisionChangeText = 'turun ' . abs($divisionChange);
-                                $divisionBadgeText = 'Turun ' . abs($divisionChange);
-                            } else {
-                                $divisionChangeClass = 'text-muted';
-                                $divisionChangeBadgeClass = 'neutral';
-                                $divisionChangeIcon = 'lni-minus';
-                                $divisionChangeText = 'tetap';
-                                $divisionBadgeText = 'Tetap';
-                            }
-                        @endphp
-
-                        <div class="ranking-card division division-rank-card" data-divisi-id="{{ $divisiId }}" style="{{ $selectedDivisiId == $divisiId || (empty($selectedDivisiId) && $divisiId == array_key_first($divisionRankings)) ? '' : 'display: none;' }}">
-                            <div class="ranking-icon">
-                                <img src="{{ asset('img/' . $divisiRankIcon) }}" alt="Peringkat" width="40" height="40">
-                            </div>
-                            <div class="ranking-info">
-                                <div class="ranking-title">Peringkat Divisi <span class="divisi-badge">{{ $ranking['nama'] }}</span></div>
-                                <div class="ranking-value">
-                                    {{ $ranking['position'] }} dari {{ $ranking['total'] }}
-                                    @if ($divisionChange != 0 && is_numeric($ranking['position']))
-                                        <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
-                                            <i class="lni {{ $divisionChangeIcon }}"></i>
-                                        </span>
-                                    @endif
-                                </div>
-                                @if(is_numeric($ranking['position']))
-                                    <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
-                                @else
-                                    <span class="rank-change-detail text-muted">belum ada data</span>
-                                @endif
-                            </div>
-                            @if($divisionChange != 0 && is_numeric($ranking['position']))
-                                <div class="rank-badge {{ $divisionChangeBadgeClass }}">
-                                    <i class="lni {{ $divisionChangeIcon }}"></i>
-                                    {{ $divisionBadgeText }}
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                @else
-                    <div class="ranking-card division">
-                        <div class="ranking-icon">
-                            <img src="{{ asset('img/up100.svg') }}" alt="Peringkat" width="40" height="40">
-                        </div>
-                        <div class="ranking-info">
-                            <div class="ranking-title">Peringkat Divisi</div>
-                            <div class="ranking-value">N/A</div>
-                            <span class="rank-change-detail text-muted">belum ada data</span>
-                        </div>
-                    </div>
-                @endif
+            <div class="filter-controls">
+                <select id="category-filter-select" class="selectpicker" data-style="btn-outline-primary">
+                    <option value="enterprise" {{ $selectedCategoryFilter == 'enterprise' ? 'selected' : '' }}>
+                        <i class="fas fa-building me-2"></i>Enterprise
+                    </option>
+                    <option value="government" {{ $selectedCategoryFilter == 'government' ? 'selected' : '' }}>
+                        <i class="fas fa-university me-2"></i>Government
+                    </option>
+                </select>
+                <small class="text-muted">Filter ini mempengaruhi peringkat witel Anda</small>
             </div>
         </div>
     </div>
-</div>
+    @endif
+
+    <!-- Rankings - 3 Cards -->
+    <div class="rankings-container">
+        @php
+            $globalRankIcon = "1-10.svg";
+            if ($globalRanking['position'] > 10 && $globalRanking['position'] <= 50) {
+                $globalRankIcon = "10-50.svg";
+            } elseif ($globalRanking['position'] > 50) {
+                $globalRankIcon = "up100.svg";
+            }
+
+            $witelRankIcon = "1-10.svg";
+            if (is_numeric($witelRanking['position'])) {
+                if ($witelRanking['position'] > 10 && $witelRanking['position'] <= 50) {
+                    $witelRankIcon = "10-50.svg";
+                } elseif ($witelRanking['position'] > 50) {
+                    $witelRankIcon = "up100.svg";
+                }
+            }
+
+            // Calculate ranking changes
+            $globalChange = isset($globalRanking['position_change']) ? $globalRanking['position_change'] : 0;
+            if ($globalChange > 0) {
+                $globalChangeClass = 'text-success';
+                $globalChangeBadgeClass = 'up';
+                $globalChangeIcon = 'lni-arrow-up';
+                $globalChangeText = 'naik ' . $globalChange;
+                $globalBadgeText = 'Naik ' . $globalChange;
+            } elseif ($globalChange < 0) {
+                $globalChangeClass = 'text-danger';
+                $globalChangeBadgeClass = 'down';
+                $globalChangeIcon = 'lni-arrow-down';
+                $globalChangeText = 'turun ' . abs($globalChange);
+                $globalBadgeText = 'Turun ' . abs($globalChange);
+            } else {
+                $globalChangeClass = 'text-muted';
+                $globalChangeBadgeClass = 'neutral';
+                $globalChangeIcon = 'lni-minus';
+                $globalChangeText = 'tetap';
+                $globalBadgeText = 'Tetap';
+            }
+
+            $witelChange = isset($witelRanking['position_change']) ? $witelRanking['position_change'] : 0;
+            if ($witelChange > 0) {
+                $witelChangeClass = 'text-success';
+                $witelChangeBadgeClass = 'up';
+                $witelChangeIcon = 'lni-arrow-up';
+                $witelChangeText = 'naik ' . $witelChange;
+                $witelBadgeText = 'Naik ' . $witelChange;
+            } elseif ($witelChange < 0) {
+                $witelChangeClass = 'text-danger';
+                $witelChangeBadgeClass = 'down';
+                $witelChangeIcon = 'lni-arrow-down';
+                $witelChangeText = 'turun ' . abs($witelChange);
+                $witelBadgeText = 'Turun ' . abs($witelChange);
+            } else {
+                $witelChangeClass = 'text-muted';
+                $witelChangeBadgeClass = 'neutral';
+                $witelChangeIcon = 'lni-minus';
+                $witelChangeText = 'tetap';
+                $witelBadgeText = 'Tetap';
+            }
+
+            $currentMonth = date('F');
+            $previousMonth = date('F', strtotime('-1 month'));
+
+            // Translate month names
+            $monthNames = [
+                'January' => 'Januari',
+                'February' => 'Februari',
+                'March' => 'Maret',
+                'April' => 'April',
+                'May' => 'Mei',
+                'June' => 'Juni',
+                'July' => 'Juli',
+                'August' => 'Agustus',
+                'September' => 'September',
+                'October' => 'Oktober',
+                'November' => 'November',
+                'December' => 'Desember'
+            ];
+
+            $currentMonthID = $monthNames[$currentMonth] ?? $currentMonth;
+            $previousMonthID = $monthNames[$previousMonth] ?? $previousMonth;
+        @endphp
+
+        <div class="row">
+            <!-- Card 1: Global Ranking -->
+            <div class="col-md-4 mb-3">
+                <a href="{{ route('leaderboard') }}" class="ranking-card global">
+                    <div class="ranking-icon">
+                        <img src="{{ asset('img/' . $globalRankIcon) }}" alt="Peringkat" width="40" height="40">
+                    </div>
+                    <div class="ranking-info">
+                        <div class="ranking-title">Peringkat Global</div>
+                        <div class="ranking-value">
+                            {{ $globalRanking['position'] }} dari {{ $globalRanking['total'] }}
+                            @if ($globalChange != 0)
+                                <span class="{{ $globalChangeClass }} ml-2" style="font-size: 14px;">
+                                    <i class="lni {{ $globalChangeIcon }}"></i>
+                                </span>
+                            @endif
+                        </div>
+                        <span class="rank-change-detail {{ $globalChangeBadgeClass }}">{{ $globalChangeText }} dari {{ $previousMonthID }}</span>
+                    </div>
+                    @if($globalChange != 0)
+                        <div class="rank-badge {{ $globalChangeBadgeClass }}">
+                            <i class="lni {{ $globalChangeIcon }}"></i>
+                            {{ $globalBadgeText }}
+                        </div>
+                    @endif
+                </a>
+            </div>
+
+            <!-- Card 2: Witel Ranking -->
+            <div class="col-md-4 mb-3">
+                <div class="ranking-card witel">
+                    <div class="ranking-icon">
+                        <img src="{{ asset('img/' . $witelRankIcon) }}" alt="Peringkat" width="40" height="40">
+                    </div>
+                    <div class="ranking-info">
+                        <div class="ranking-title">
+                            Peringkat Witel
+                            @if($needsCategoryFilter)
+                                <span class="divisi-badge">{{ $witelRanking['category_label'] ?? ucfirst($selectedCategoryFilter) }}</span>
+                            @endif
+                        </div>
+                        <div class="ranking-value">
+                            {{ $witelRanking['position'] }} dari {{ $witelRanking['total'] }}
+                            @if ($witelChange != 0 && is_numeric($witelRanking['position']))
+                                <span class="{{ $witelChangeClass }} ml-2" style="font-size: 14px;">
+                                    <i class="lni {{ $witelChangeIcon }}"></i>
+                                </span>
+                            @endif
+                        </div>
+                        @if(is_numeric($witelRanking['position']))
+                            <span class="rank-change-detail {{ $witelChangeBadgeClass }}">{{ $witelChangeText }} dari {{ $previousMonthID }}</span>
+                        @else
+                            <span class="rank-change-detail text-muted">belum ada data</span>
+                        @endif
+                    </div>
+                    @if($witelChange != 0 && is_numeric($witelRanking['position']))
+                        <div class="rank-badge {{ $witelChangeBadgeClass }}">
+                            <i class="lni {{ $witelChangeIcon }}"></i>
+                            {{ $witelBadgeText }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Card 3: Division Ranking -->
+            <div class="col-md-4 mb-3">
+                <div class="division-rankings-container">
+                    @if(count($divisionRankings) > 0)
+                        @foreach($divisionRankings as $divisiId => $ranking)
+                            @php
+                                $divisiRankIcon = "1-10.svg";
+                                if (is_numeric($ranking['position'])) {
+                                    if ($ranking['position'] > 10 && $ranking['position'] <= 50) {
+                                        $divisiRankIcon = "10-50.svg";
+                                    } elseif ($ranking['position'] > 50) {
+                                        $divisiRankIcon = "up100.svg";
+                                    }
+                                }
+
+                                $divisionChange = isset($ranking['position_change']) ? $ranking['position_change'] : 0;
+                                if ($divisionChange > 0) {
+                                    $divisionChangeClass = 'text-success';
+                                    $divisionChangeBadgeClass = 'up';
+                                    $divisionChangeIcon = 'lni-arrow-up';
+                                    $divisionChangeText = 'naik ' . $divisionChange;
+                                    $divisionBadgeText = 'Naik ' . $divisionChange;
+                                } elseif ($divisionChange < 0) {
+                                    $divisionChangeClass = 'text-danger';
+                                    $divisionChangeBadgeClass = 'down';
+                                    $divisionChangeIcon = 'lni-arrow-down';
+                                    $divisionChangeText = 'turun ' . abs($divisionChange);
+                                    $divisionBadgeText = 'Turun ' . abs($divisionChange);
+                                } else {
+                                    $divisionChangeClass = 'text-muted';
+                                    $divisionChangeBadgeClass = 'neutral';
+                                    $divisionChangeIcon = 'lni-minus';
+                                    $divisionChangeText = 'tetap';
+                                    $divisionBadgeText = 'Tetap';
+                                }
+                            @endphp
+
+                            <div class="ranking-card division division-rank-card" data-divisi-id="{{ $divisiId }}" style="{{ $selectedDivisiId == $divisiId || (empty($selectedDivisiId) && $divisiId == array_key_first($divisionRankings)) ? '' : 'display: none;' }}">
+                                <div class="ranking-icon">
+                                    <img src="{{ asset('img/' . $divisiRankIcon) }}" alt="Peringkat" width="40" height="40">
+                                </div>
+                                <div class="ranking-info">
+                                    <div class="ranking-title">Peringkat Divisi <span class="divisi-badge">{{ $ranking['nama'] }}</span></div>
+                                    <div class="ranking-value">
+                                        {{ $ranking['position'] }} dari {{ $ranking['total'] }}
+                                        @if ($divisionChange != 0 && is_numeric($ranking['position']))
+                                            <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">
+                                                <i class="lni {{ $divisionChangeIcon }}"></i>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    @if(is_numeric($ranking['position']))
+                                        <span class="rank-change-detail {{ $divisionChangeBadgeClass }}">{{ $divisionChangeText }} dari {{ $previousMonthID }}</span>
+                                    @else
+                                        <span class="rank-change-detail text-muted">belum ada data</span>
+                                    @endif
+                                </div>
+                                @if($divisionChange != 0 && is_numeric($ranking['position']))
+                                    <div class="rank-badge {{ $divisionChangeBadgeClass }}">
+                                        <i class="lni {{ $divisionChangeIcon }}"></i>
+                                        {{ $divisionBadgeText }}
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="ranking-card division">
+                            <div class="ranking-icon">
+                                <img src="{{ asset('img/up100.svg') }}" alt="Peringkat" width="40" height="40">
+                            </div>
+                            <div class="ranking-info">
+                                <div class="ranking-title">Peringkat Divisi</div>
+                                <div class="ranking-value">N/A</div>
+                                <span class="rank-change-detail text-muted">belum ada data</span>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Content Tabs -->
     <div class="content-wrapper">
@@ -480,7 +853,7 @@
                         </select>
                     </div>
 
-                    <div class="year-selector">
+                    <div class="filter-group">
                         <select name="year" id="year-select" class="selectpicker" data-live-search="true" title="Pilih Tahun">
                             @foreach($yearsList as $year)
                                 <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
@@ -799,7 +1172,7 @@
                         </h4>
 
                         <div class="chart-filters">
-                            <div class="year-selector">
+                            <div class="filter-group">
                                 <select name="performance_year" id="performance-year-select" class="selectpicker" data-live-search="true" title="Pilih Tahun">
                                     @foreach($yearsList as $year)
                                         <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
@@ -975,7 +1348,7 @@
                             </h4>
 
                             <div class="chart-filters">
-                                <div class="year-selector">
+                                <div class="filter-group">
                                     <select name="divisi_performance_year_{{ $divisi->id }}"
                                             id="divisi-performance-year-select-{{ $divisi->id }}"
                                             class="selectpicker divisi-year-select"
@@ -988,7 +1361,7 @@
                                     </select>
                                 </div>
 
-                                <div class="filter-group me-2">
+                                <div class="filter-group">
                                     <select id="divisi-chartType-{{ $divisi->id }}"
                                             class="selectpicker divisi-chart-type"
                                             data-divisi-id="{{ $divisi->id }}"
@@ -1009,8 +1382,6 @@
         </div>
     </div>
 </div>
-@endsection
-
 
 @section('scripts')
 <!-- Bootstrap Select -->
@@ -1030,6 +1401,24 @@ $(document).ready(function() {
         mobile: false
     });
 
+    // Category filter change event (NEW)
+    $('#category-filter-select').change(function() {
+        if ($(this).val()) {
+            let url = "{{ route('account_manager.detail', $accountManager->id) }}?year={{ $selectedYear }}";
+
+            // Add category filter parameter
+            url += "&category_filter=" + $(this).val();
+
+            // Add divisi parameter if exists
+            const selectedDivisiId = $('#divisiFilter').val();
+            if (selectedDivisiId && selectedDivisiId !== 'all') {
+                url += "&divisi=" + selectedDivisiId;
+            }
+
+            window.location.href = url;
+        }
+    });
+
     // Year selector change event - Perbaikan agar keduanya bekerja
     $('#year-select, #performance-year-select').change(function() {
         if ($(this).val()) {
@@ -1040,6 +1429,11 @@ $(document).ready(function() {
             if (selectedDivisiId && selectedDivisiId !== 'all') {
                 url += "&divisi=" + selectedDivisiId;
             }
+
+            // Add category filter parameter if exists
+            @if($needsCategoryFilter)
+            url += "&category_filter={{ $selectedCategoryFilter }}";
+            @endif
 
             window.location.href = url;
         }
@@ -1054,6 +1448,11 @@ $(document).ready(function() {
             if ($(this).val() !== 'all') {
                 url += "&divisi=" + $(this).val();
             }
+
+            // Add category filter parameter if exists
+            @if($needsCategoryFilter)
+            url += "&category_filter={{ $selectedCategoryFilter }}";
+            @endif
 
             window.location.href = url;
         }
@@ -1203,6 +1602,12 @@ $(document).ready(function() {
         if ($(this).val()) {
             const divisiId = $(this).data('divisi-id');
             let url = "{{ route('account_manager.detail', $accountManager->id) }}?year=" + $(this).val() + "&divisi=" + divisiId;
+
+            // Add category filter parameter if exists
+            @if($needsCategoryFilter)
+            url += "&category_filter={{ $selectedCategoryFilter }}";
+            @endif
+
             window.location.href = url;
         }
     });
@@ -1693,4 +2098,5 @@ $(document).ready(function() {
     );
 });
 </script>
+@endsection
 @endsection

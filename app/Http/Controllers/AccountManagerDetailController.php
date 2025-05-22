@@ -19,17 +19,24 @@ class AccountManagerDetailController extends Controller
         // Get selected divisi for filtering (optional)
         $selectedDivisiId = $request->input('divisi');
 
+        // Get selected category filter (untuk AM multi divisi DGS+DSS)
+        $selectedCategoryFilter = $request->input('category_filter', 'enterprise'); // default enterprise
+
         // Get the account manager with relationships
         $accountManager = AccountManager::with(['witel', 'divisis', 'corporateCustomers', 'user', 'revenues'])
             ->findOrFail($id);
 
+        // Determine AM category and available filters
+        $amCategory = $this->determineAmCategory($accountManager);
+        $needsCategoryFilter = $amCategory['needs_filter'];
+
         // Get global ranking data with previous month comparison
         $globalRanking = $this->getGlobalRanking($accountManager);
 
-        // Get witel ranking data with previous month comparison
-        $witelRanking = $this->getWitelRanking($accountManager);
+        // Get witel ranking data (conditional based on category)
+        $witelRanking = $this->getWitelRanking($accountManager, $selectedCategoryFilter);
 
-        // Get ALL division rankings data with previous month comparison
+        // Get ALL division rankings data with previous month comparison (scope: witel)
         $divisionRankings = [];
         foreach ($accountManager->divisis as $divisi) {
             $divisionRankings[$divisi->id] = $this->getDivisionRanking($accountManager, $divisi->id);
@@ -117,8 +124,72 @@ class AccountManagerDetailController extends Controller
             'yearsList' => $yearsList,
             'selectedYear' => $selectedYear,
             'selectedDivisiId' => $selectedDivisiId,
+            'selectedCategoryFilter' => $selectedCategoryFilter,
+            'amCategory' => $amCategory,
+            'needsCategoryFilter' => $needsCategoryFilter,
             'revenuePeriod' => $revenuePeriod
         ]);
+    }
+
+    /**
+     * Determine AM category based on their divisions
+     */
+    private function determineAmCategory($accountManager)
+    {
+        $divisionNames = $accountManager->divisis->pluck('nama')->toArray();
+
+        // Check what divisions the AM belongs to
+        $hasDPS = in_array('DPS', $divisionNames);
+        $hasDSS = in_array('DSS', $divisionNames);
+        $hasDGS = in_array('DGS', $divisionNames);
+
+        // Determine category
+        if ($hasDGS && ($hasDSS || $hasDPS) && !($hasDPS && $hasDSS)) {
+            // DGS + DSS OR DGS + DPS (but not all three) = MULTI DIVISI (needs filter)
+            return [
+                'category' => 'MULTI',
+                'is_enterprise' => true,
+                'is_government' => true,
+                'needs_filter' => true,
+                'label' => 'Multi Divisi (Government & Enterprise)'
+            ];
+        } elseif ($hasDGS && !$hasDSS && !$hasDPS) {
+            // DGS only = GOVERNMENT
+            return [
+                'category' => 'GOVERNMENT',
+                'is_enterprise' => false,
+                'is_government' => true,
+                'needs_filter' => false,
+                'label' => 'Government'
+            ];
+        } elseif (($hasDPS || $hasDSS) && !$hasDGS) {
+            // DPS only OR DSS only OR DPS+DSS (without DGS) = ENTERPRISE
+            return [
+                'category' => 'ENTERPRISE',
+                'is_enterprise' => true,
+                'is_government' => false,
+                'needs_filter' => false,
+                'label' => 'Enterprise'
+            ];
+        } elseif ($hasDGS && $hasDPS && $hasDSS) {
+            // All three divisions = SUPER MULTI (also needs filter)
+            return [
+                'category' => 'MULTI',
+                'is_enterprise' => true,
+                'is_government' => true,
+                'needs_filter' => true,
+                'label' => 'Multi Divisi (All Categories)'
+            ];
+        } else {
+            // Default fallback
+            return [
+                'category' => 'UNKNOWN',
+                'is_enterprise' => false,
+                'is_government' => false,
+                'needs_filter' => false,
+                'label' => 'Unknown'
+            ];
+        }
     }
 
     /**
@@ -188,7 +259,6 @@ class AccountManagerDetailController extends Controller
         $previousPosition = $previousPosition !== false ? $previousPosition + 1 : count($previousAMs);
 
         // Calculate change in position
-        // FIXED: For ranking, if previousPosition > currentPosition, it's an improvement (up)
         $positionChange = $previousPosition - $currentPosition;
 
         return [
@@ -199,7 +269,7 @@ class AccountManagerDetailController extends Controller
         ];
     }
 
-    private function getWitelRanking($accountManager)
+    private function getWitelRanking($accountManager, $categoryFilter = 'enterprise')
     {
         // Only proceed if witel_id is set
         if (!$accountManager->witel_id) {
@@ -211,14 +281,44 @@ class AccountManagerDetailController extends Controller
             ];
         }
 
+        $amCategory = $this->determineAmCategory($accountManager);
+
         // Get current month and previous month
         $currentMonth = Carbon::now()->format('m');
         $previousMonth = Carbon::now()->subMonth()->format('m');
         $currentYear = Carbon::now()->format('Y');
 
+        // Build query based on AM category and filter
+        $query = AccountManager::where('witel_id', $accountManager->witel_id);
+
+        if ($amCategory['category'] === 'MULTI' && $categoryFilter === 'government') {
+            // For multi AM viewing as government, compare with other government AMs
+            $query->whereHas('divisis', function($q) {
+                $q->where('nama', 'DGS');
+            })->whereDoesntHave('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'MULTI' && $categoryFilter === 'enterprise') {
+            // For multi AM viewing as enterprise, compare with other enterprise AMs
+            $query->whereHas('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'GOVERNMENT') {
+            // Government AM compares with other government AMs
+            $query->whereHas('divisis', function($q) {
+                $q->where('nama', 'DGS');
+            })->whereDoesntHave('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'ENTERPRISE') {
+            // Enterprise AM compares with other enterprise AMs
+            $query->whereHas('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        }
+
         // Get current month ranking within witel
-        $witelAMs = AccountManager::where('witel_id', $accountManager->witel_id)
-            ->select('account_managers.*')
+        $witelAMs = $query->select('account_managers.*')
             ->selectSub(function ($query) use ($currentMonth, $currentYear) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')
                     ->from('revenues')
@@ -237,9 +337,32 @@ class AccountManagerDetailController extends Controller
         // Add +1 because index starts at 0, but handle case where AM is not found
         $currentPosition = $currentPosition !== false ? $currentPosition + 1 : count($witelAMs);
 
-        // Get previous month ranking within witel
-        $previousWitelAMs = AccountManager::where('witel_id', $accountManager->witel_id)
-            ->select('account_managers.*')
+        // Get previous month ranking within witel (same filter logic)
+        $queryPrevious = AccountManager::where('witel_id', $accountManager->witel_id);
+
+        if ($amCategory['category'] === 'MULTI' && $categoryFilter === 'government') {
+            $queryPrevious->whereHas('divisis', function($q) {
+                $q->where('nama', 'DGS');
+            })->whereDoesntHave('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'MULTI' && $categoryFilter === 'enterprise') {
+            $queryPrevious->whereHas('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'GOVERNMENT') {
+            $queryPrevious->whereHas('divisis', function($q) {
+                $q->where('nama', 'DGS');
+            })->whereDoesntHave('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        } elseif ($amCategory['category'] === 'ENTERPRISE') {
+            $queryPrevious->whereHas('divisis', function($q) {
+                $q->whereIn('nama', ['DPS', 'DSS']);
+            });
+        }
+
+        $previousWitelAMs = $queryPrevious->select('account_managers.*')
             ->selectSub(function ($query) use ($previousMonth, $currentYear) {
                 $query->selectRaw('COALESCE(SUM(revenues.real_revenue), 0)')
                     ->from('revenues')
@@ -259,14 +382,14 @@ class AccountManagerDetailController extends Controller
         $previousPosition = $previousPosition !== false ? $previousPosition + 1 : count($previousWitelAMs);
 
         // Calculate change in position
-        // FIXED: For ranking, if previousPosition > currentPosition, it's an improvement (up)
         $positionChange = $previousPosition - $currentPosition;
 
         return [
             'position' => $currentPosition,
             'total' => $witelAMs->count(),
             'previous_position' => $previousPosition,
-            'position_change' => $positionChange
+            'position_change' => $positionChange,
+            'category_label' => $categoryFilter === 'government' ? 'Government' : 'Enterprise'
         ];
     }
 
@@ -292,8 +415,9 @@ class AccountManagerDetailController extends Controller
         $previousMonth = Carbon::now()->subMonth()->format('m');
         $currentYear = Carbon::now()->format('Y');
 
-        // Get current month ranking within division based on revenue with specific divisi_id
-        $divisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
+        // Get current month ranking within division AND witel (not global division)
+        $divisionAMs = AccountManager::where('witel_id', $accountManager->witel_id) // Add witel scope
+            ->whereHas('divisis', function($query) use ($divisionId) {
                 $query->where('divisi.id', $divisionId);
             })
             ->select('account_managers.*')
@@ -316,8 +440,9 @@ class AccountManagerDetailController extends Controller
         // Add +1 because index starts at 0, but handle case where AM is not found
         $currentPosition = $currentPosition !== false ? $currentPosition + 1 : count($divisionAMs);
 
-        // Get previous month ranking within division
-        $previousDivisionAMs = AccountManager::whereHas('divisis', function($query) use ($divisionId) {
+        // Get previous month ranking within division AND witel
+        $previousDivisionAMs = AccountManager::where('witel_id', $accountManager->witel_id) // Add witel scope
+            ->whereHas('divisis', function($query) use ($divisionId) {
                 $query->where('divisi.id', $divisionId);
             })
             ->select('account_managers.*')
@@ -341,7 +466,6 @@ class AccountManagerDetailController extends Controller
         $previousPosition = $previousPosition !== false ? $previousPosition + 1 : count($previousDivisionAMs);
 
         // Calculate change in position
-        // FIXED: For ranking, if previousPosition > currentPosition, it's an improvement (up)
         $positionChange = $previousPosition - $currentPosition;
 
         return [

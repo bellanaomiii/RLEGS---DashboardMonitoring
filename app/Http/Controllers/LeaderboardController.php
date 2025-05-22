@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\AccountManager;
 use App\Models\Revenue;
 use App\Models\Witel;
+use App\Models\Divisi;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -17,14 +18,16 @@ class LeaderboardController extends Controller
         $search = $request->input('search');
         $filterBy = $request->input('filter_by', []);
         $regionFilter = $request->input('region_filter', []);
+        $divisiFilter = $request->input('divisi_filter', []); // NEW: Divisi filter
+        $categoryFilter = $request->input('category_filter', []); // NEW: Category filter (enterprise/government)
         $period = $request->input('period', 'all_time'); // Default to 'all_time'
 
         // Query dasar
-        $baseQuery = AccountManager::with(['witel', 'divisi'])
+        $baseQuery = AccountManager::with(['witel', 'divisis'])
             ->select('account_managers.*');
 
         // Subquery untuk menghitung total pendapatan dan target
-        $revenueSubquery = function ($query) use ($period) {
+        $revenueSubquery = function ($query) use ($period, $divisiFilter) {
             $query->from('revenues')
                 ->whereColumn('revenues.account_manager_id', 'account_managers.id');
 
@@ -32,6 +35,11 @@ class LeaderboardController extends Controller
             if ($period === 'current_month') {
                 $currentMonth = Carbon::now()->format('Y-m');
                 $query->whereRaw("DATE_FORMAT(revenues.bulan, '%Y-%m') = ?", [$currentMonth]);
+            }
+
+            // Filter berdasarkan divisi jika dipilih
+            if (!empty($divisiFilter)) {
+                $query->whereIn('revenues.divisi_id', $divisiFilter);
             }
         };
 
@@ -57,17 +65,29 @@ class LeaderboardController extends Controller
             $revenueSubquery($query);
         }, 'achievement_percentage');
 
+        // Apply divisi filter to main query
+        if (!empty($divisiFilter)) {
+            $baseQuery->whereHas('divisis', function ($query) use ($divisiFilter) {
+                $query->whereIn('divisi.id', $divisiFilter);
+            });
+        }
+
+        // Apply category filter (enterprise/government)
+        if (!empty($categoryFilter)) {
+            $this->applyCategoryFilter($baseQuery, $categoryFilter);
+        }
+
         // PERUBAHAN: Mendapatkan semua AM untuk menghitung rank secara global
-        // Ini dilakukan SEBELUM menerapkan filter pencarian, tapi dengan filter periode dan region
+        // Ini dilakukan SEBELUM menerapkan filter pencarian, tapi dengan filter periode, region, divisi, dan kategori
         $globalQuery = clone $baseQuery;
-        
+
         // Filter berdasarkan region/witel untuk query global
         if (!empty($regionFilter)) {
             $globalQuery->whereHas('witel', function ($query) use ($regionFilter) {
                 $query->whereIn('nama', $regionFilter);
             });
         }
-        
+
         // Menentukan pengurutan
         if (in_array('Achievement Tertinggi', $filterBy)) {
             $globalQuery->orderByDesc('achievement_percentage');
@@ -75,10 +95,10 @@ class LeaderboardController extends Controller
             // Default ke Revenue Tertinggi
             $globalQuery->orderByDesc('total_real_revenue');
         }
-        
+
         // Mendapatkan semua AM tanpa filter pencarian untuk peringkat global
         $allAMs = $globalQuery->get();
-        
+
         // Menyimpan peringkat global dalam array untuk referensi cepat
         $globalRanks = [];
         foreach ($allAMs as $index => $am) {
@@ -108,13 +128,17 @@ class LeaderboardController extends Controller
         // Jalankan query final dengan semua filter termasuk pencarian
         $accountManagers = $baseQuery->get();
 
-        // Menambahkan rank global ke setiap AM dari perhitungan global
+        // Menambahkan rank global dan kategori ke setiap AM dari perhitungan global
         foreach ($accountManagers as $am) {
             $am->global_rank = $globalRanks[$am->id] ?? 0;
+            $am->category_info = $this->determineAmCategory($am);
         }
 
         // Mendapatkan daftar witel untuk dropdown filter
         $witels = Witel::all();
+
+        // Mendapatkan daftar divisi untuk dropdown filter
+        $divisis = Divisi::all();
 
         // Menentukan display period untuk tampilan
         $displayPeriod = 'Peringkat Sepanjang Waktu';
@@ -125,8 +149,111 @@ class LeaderboardController extends Controller
         return view('leaderboardAM', [
             'accountManagers' => $accountManagers,
             'witels' => $witels,
+            'divisis' => $divisis, // NEW: Send divisis to view
             'displayPeriod' => $displayPeriod,
-            'currentPeriod' => $period
+            'currentPeriod' => $period,
+            'selectedDivisiFilter' => $divisiFilter, // NEW: Send selected filters
+            'selectedCategoryFilter' => $categoryFilter // NEW: Send selected category filter
         ]);
+    }
+
+    /**
+     * Determine AM category based on their divisions (same logic as detail controller)
+     */
+    private function determineAmCategory($accountManager)
+    {
+        $divisionNames = $accountManager->divisis->pluck('nama')->toArray();
+
+        // Check what divisions the AM belongs to
+        $hasDPS = in_array('DPS', $divisionNames);
+        $hasDSS = in_array('DSS', $divisionNames);
+        $hasDGS = in_array('DGS', $divisionNames);
+
+        // Determine category
+        if ($hasDGS && ($hasDSS || $hasDPS) && !($hasDPS && $hasDSS)) {
+            // DGS + DSS OR DGS + DPS (but not all three) = MULTI DIVISI
+            return [
+                'category' => 'MULTI',
+                'is_enterprise' => true,
+                'is_government' => true,
+                'label' => 'Multi Divisi'
+            ];
+        } elseif ($hasDGS && !$hasDSS && !$hasDPS) {
+            // DGS only = GOVERNMENT
+            return [
+                'category' => 'GOVERNMENT',
+                'is_enterprise' => false,
+                'is_government' => true,
+                'label' => 'Government'
+            ];
+        } elseif (($hasDPS || $hasDSS) && !$hasDGS) {
+            // DPS only OR DSS only OR DPS+DSS (without DGS) = ENTERPRISE
+            return [
+                'category' => 'ENTERPRISE',
+                'is_enterprise' => true,
+                'is_government' => false,
+                'label' => 'Enterprise'
+            ];
+        } elseif ($hasDGS && $hasDPS && $hasDSS) {
+            // All three divisions = SUPER MULTI
+            return [
+                'category' => 'MULTI',
+                'is_enterprise' => true,
+                'is_government' => true,
+                'label' => 'Multi Divisi (All)'
+            ];
+        } else {
+            // Default fallback
+            return [
+                'category' => 'UNKNOWN',
+                'is_enterprise' => false,
+                'is_government' => false,
+                'label' => 'Unknown'
+            ];
+        }
+    }
+
+    /**
+     * Apply category filter to query
+     */
+    private function applyCategoryFilter($query, $categoryFilter)
+    {
+        if (empty($categoryFilter)) {
+            return;
+        }
+
+        $query->where(function ($q) use ($categoryFilter) {
+            foreach ($categoryFilter as $category) {
+                if ($category === 'enterprise') {
+                    // Enterprise: AM yang memiliki DPS atau DSS
+                    $q->orWhereHas('divisis', function ($divisiQuery) {
+                        $divisiQuery->whereIn('nama', ['DPS', 'DSS']);
+                    });
+                } elseif ($category === 'government') {
+                    // Government: AM yang hanya memiliki DGS (tidak memiliki DPS atau DSS)
+                    $q->orWhere(function ($govQuery) {
+                        $govQuery->whereHas('divisis', function ($divisiQuery) {
+                            $divisiQuery->where('nama', 'DGS');
+                        })->whereDoesntHave('divisis', function ($divisiQuery) {
+                            $divisiQuery->whereIn('nama', ['DPS', 'DSS']);
+                        });
+                    });
+                } elseif ($category === 'multi') {
+                    // Multi: AM yang memiliki DGS + (DSS atau DPS)
+                    $q->orWhere(function ($multiQuery) {
+                        $multiQuery->whereHas('divisis', function ($divisiQuery) {
+                            $divisiQuery->where('nama', 'DGS');
+                        })->where(function($subQuery) {
+                            // Dan memiliki DSS atau DPS
+                            $subQuery->whereHas('divisis', function ($divisiQuery) {
+                                $divisiQuery->where('nama', 'DSS');
+                            })->orWhereHas('divisis', function ($divisiQuery) {
+                                $divisiQuery->where('nama', 'DPS');
+                            });
+                        });
+                    });
+                }
+            }
+        });
     }
 }

@@ -553,6 +553,49 @@
         color: #94a3b8;
         font-size: 0.9rem;
     }
+            .per-page-selection {
+            display: flex;
+            justify-content: right;
+            align-items: center;
+            margin-top: 10px;
+            margin-left: 950px;
+            margin-right: 35px;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .per-page-select {
+            padding: 6px 8px; 
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 50px; 
+            max-width: 60px; 
+            width: auto; 
+            text-align: center; 
+        }
+        .per-page-select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .pagination-info {
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
 
     /* Responsive */
     @media (max-width: 1200px) {
@@ -716,6 +759,7 @@
     </div>
     @endif
 
+    
     <!-- Search & Filter Area -->
     <div class="search-filter-container">
         <div class="search-box">
@@ -905,6 +949,7 @@
         </div>
     </div>
 
+    
     <!-- Enhanced Leaderboard AM Cards -->
     @forelse($accountManagers as $index => $am)
         <div class="am-card" onclick="window.location.href='{{ route('account_manager.detail', $am->id) }}'">
@@ -982,12 +1027,32 @@
         </div>
     @endforelse
 </div>
+
+    <!-- Per Page Selection -->
+        <div class="per-page-selection">
+            <select id="perPage" class="per-page-select" onchange="changePerPage(this.value)">
+                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                <option value="75" {{ request('per_page', 10) == 75 ? 'selected' : '' }}>75</option>
+                <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+            </select>
+        </div>
 @endsection
 
 @section('scripts')
 <!-- Script untuk Bootstrap Select -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.14.0-beta3/js/bootstrap-select.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script>
+        function changePerPage(perPage) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('per_page', perPage);
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
+        }
+    </script>
 
 <script>
 $(document).ready(function() {

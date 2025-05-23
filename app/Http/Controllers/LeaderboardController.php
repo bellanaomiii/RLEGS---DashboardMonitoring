@@ -18,9 +18,10 @@ class LeaderboardController extends Controller
         $search = $request->input('search');
         $filterBy = $request->input('filter_by', []);
         $regionFilter = $request->input('region_filter', []);
-        $divisiFilter = $request->input('divisi_filter', []); // NEW: Divisi filter
-        $categoryFilter = $request->input('category_filter', []); // NEW: Category filter (enterprise/government)
-        $period = $request->input('period', 'all_time'); // Default to 'all_time'
+        $divisiFilter = $request->input('divisi_filter', []);
+        $categoryFilter = $request->input('category_filter', []);
+        $period = $request->input('period', 'all_time');
+        $perPage = (int) $request->input('per_page', 10); // TAMBAHAN: per_page parameter
 
         // Query dasar
         $baseQuery = AccountManager::with(['witel', 'divisis'])
@@ -125,11 +126,11 @@ class LeaderboardController extends Controller
             $baseQuery->orderByDesc('total_real_revenue');
         }
 
-        // Jalankan query final dengan semua filter termasuk pencarian
-        $accountManagers = $baseQuery->get();
+        // PERUBAHAN: Jalankan query final dengan pagination
+        $accountManagers = $baseQuery->paginate($perPage)->appends(request()->query());
 
         // Menambahkan rank global dan kategori ke setiap AM dari perhitungan global
-        foreach ($accountManagers as $am) {
+        foreach ($accountManagers->items() as $am) { // PERUBAHAN: ->items() untuk paginated data
             $am->global_rank = $globalRanks[$am->id] ?? 0;
             $am->category_info = $this->determineAmCategory($am);
         }
@@ -149,11 +150,12 @@ class LeaderboardController extends Controller
         return view('leaderboardAM', [
             'accountManagers' => $accountManagers,
             'witels' => $witels,
-            'divisis' => $divisis, // NEW: Send divisis to view
+            'divisis' => $divisis,
             'displayPeriod' => $displayPeriod,
             'currentPeriod' => $period,
-            'selectedDivisiFilter' => $divisiFilter, // NEW: Send selected filters
-            'selectedCategoryFilter' => $categoryFilter // NEW: Send selected category filter
+            'selectedDivisiFilter' => $divisiFilter,
+            'selectedCategoryFilter' => $categoryFilter,
+            'currentPerPage' => $perPage // TAMBAHAN: current per page value
         ]);
     }
 

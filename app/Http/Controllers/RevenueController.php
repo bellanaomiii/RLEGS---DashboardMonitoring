@@ -22,14 +22,6 @@ class RevenueController extends Controller
     // Menampilkan halaman dashboard dengan data Revenue, Witel, Regional, dan Divisi
     public function index(Request $request)
     {
-            // Validasi dan ambil parameter per_page
-    $perPage = $request->get('per_page', 10);
-    
-    // Pastikan per_page adalah angka yang valid
-    if (!in_array($perPage, [10, 25, 50, 75, 100])) {
-        $perPage = 10;
-    }
-
         // Cek apakah user adalah admin
         if (Auth::user()->role !== 'admin') {
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
@@ -111,9 +103,9 @@ class RevenueController extends Controller
         $corporateCustomersQuery->orderBy('nama', 'asc');
 
         // Mengambil data dengan pagination
-        $revenues = $revenuesQuery->paginate($perPage)->appends($request->query());
-        $accountManagers = $accountManagersQuery->paginate($perPage)->appends($request->query());
-        $corporateCustomers = $corporateCustomersQuery->paginate($perPage)->appends($request->query());
+        $revenues = $revenuesQuery->paginate(10);
+        $accountManagers = $accountManagersQuery->paginate(10);
+        $corporateCustomers = $corporateCustomersQuery->paginate(10);
 
         // Data untuk filter
         $witels = Witel::all();
@@ -523,7 +515,7 @@ class RevenueController extends Controller
             $divisi = Divisi::select('id', 'nama')->get();
             $witels = Witel::select('id', 'nama')->get();
             $regionals = Regional::select('id', 'nama')->get(); // Tambahkan regionals
-            $accountManagers = AccountManager::with(['witel', 'divisi', 'regional'])->paginate($perPage); 
+            $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
             $corporateCustomers = collect([]);
             $revenues = collect([]);
             $yearRange = range(date('Y') - 5, date('Y') + 5);
@@ -548,7 +540,7 @@ class RevenueController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Mendapatkan data Revenue untuk edit via AJAX
      */
@@ -565,7 +557,7 @@ class RevenueController extends Controller
         try {
             // Ambil data revenue dengan relasi yang dibutuhkan
             $revenue = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])->findOrFail($id);
-            
+
             // Format data untuk response
             $data = [
                 'id' => $revenue->id,
@@ -588,7 +580,7 @@ class RevenueController extends Controller
                     'nama' => $revenue->corporateCustomer->nama
                 ] : null
             ];
-            
+
             Log::info('Revenue data fetched for edit:', [
                 'id' => $id,
                 'account_manager' => $revenue->accountManager->nama ?? 'N/A',
@@ -605,7 +597,7 @@ class RevenueController extends Controller
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil data Revenue: ' . $e->getMessage()
@@ -641,7 +633,7 @@ class RevenueController extends Controller
 
             if ($validator->fails()) {
                 Log::warning('Revenue update validation failed via AJAX:', $validator->errors()->toArray());
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Validasi gagal',
@@ -660,7 +652,7 @@ class RevenueController extends Controller
                 ], 422);
             }
 
-            // Format bulan dengan menambahkan tanggal "01" 
+            // Format bulan dengan menambahkan tanggal "01"
             $bulan = $request->bulan . '-01';
 
             // Update data revenue

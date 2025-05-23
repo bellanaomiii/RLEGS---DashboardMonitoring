@@ -65,8 +65,8 @@ class WitelPerformController extends Controller
             // Get revenue summary data
             $summaryData = $this->getRevenueSummary($startDate, $endDate, $selectedWitel, $selectedRegional);
 
-            // Prepare chart data for ApexCharts
-            $chartData = $this->prepareChartData($selectedWitel, $selectedRegional, $startDate, $endDate);
+            // UPDATED: Prepare Chart.js compatible data instead of ApexCharts
+            $chartData = $this->prepareChartJsData($selectedWitel, $selectedRegional, $startDate, $endDate);
 
             // Set regions for view (backward compatibility)
             $regions = $witels;
@@ -95,6 +95,190 @@ class WitelPerformController extends Controller
         }
     }
 
+    // NEW: Prepare Chart.js compatible data
+    private function prepareChartJsData($witel, $regional, $startDate, $endDate)
+    {
+        try {
+            // Get account manager IDs based on filters
+            $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional);
+
+            // 1. Get Period Performance Data (untuk chart pertama)
+            $periodPerformanceData = $this->getPeriodPerformanceData($accountManagerIds, $startDate, $endDate);
+
+            // 2. Get Stacked Division Data (untuk chart kedua)
+            $stackedDivisionData = $this->getStackedDivisionData($accountManagerIds, $startDate, $endDate, $regional);
+
+            // Format period label untuk display
+            $periodLabel = $this->formatPeriodLabel($startDate, $endDate);
+
+            // Check if we have any data
+            $hasData = !empty($periodPerformanceData) || !empty($stackedDivisionData['labels']);
+
+            return [
+                'isEmpty' => !$hasData,
+                'periodLabel' => $periodLabel,
+                'periodPerformance' => $periodPerformanceData,
+                'stackedDivision' => $stackedDivisionData
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in prepareChartJsData: ' . $e->getMessage());
+
+            return [
+                'isEmpty' => true,
+                'error' => true,
+                'message' => $e->getMessage(),
+                'periodLabel' => $this->formatPeriodLabel($startDate, $endDate),
+                'periodPerformance' => [
+                    'target_revenue' => 0,
+                    'real_revenue' => 0,
+                    'achievement' => 0
+                ],
+                'stackedDivision' => [
+                    'labels' => [],
+                    'datasets' => []
+                ]
+            ];
+        }
+    }
+
+    // NEW: Get Period Performance Data
+    private function getPeriodPerformanceData($accountManagerIds, $startDate, $endDate)
+    {
+        if (empty($accountManagerIds)) {
+            return [
+                'target_revenue' => 0,
+                'real_revenue' => 0,
+                'achievement' => 0
+            ];
+        }
+
+        // Get aggregated data untuk periode yang dipilih
+        $result = Revenue::whereIn('account_manager_id', $accountManagerIds)
+            ->whereBetween('bulan', [$startDate, $endDate])
+            ->select(
+                DB::raw('COALESCE(SUM(target_revenue), 0) as total_target'),
+                DB::raw('COALESCE(SUM(real_revenue), 0) as total_real')
+            )
+            ->first();
+
+        $totalTarget = $result ? $result->total_target : 0;
+        $totalReal = $result ? $result->total_real : 0;
+        $achievement = $totalTarget > 0 ? ($totalReal / $totalTarget) * 100 : 0;
+
+        return [
+            'target_revenue' => $totalTarget,
+            'real_revenue' => $totalReal,
+            'achievement' => round($achievement, 2)
+        ];
+    }
+
+    // NEW: Get Stacked Division Data per Witel
+    private function getStackedDivisionData($accountManagerIds, $startDate, $endDate, $selectedRegional = 'all')
+    {
+        try {
+            $divisionLabels = ['DPS', 'DSS', 'DGS']; // Exclude RLEGS dari stack
+
+            // Get witels based on regional filter
+            if ($selectedRegional === 'all') {
+                $witels = Witel::all();
+            } else {
+                // Filter by regional jika dipilih
+                $regionalId = Regional::where('nama', $selectedRegional)->first()?->id;
+                if ($regionalId) {
+                    $witels = Witel::whereHas('accountManagers', function($query) use ($regionalId) {
+                        $query->where('regional_id', $regionalId);
+                    })->get();
+                } else {
+                    $witels = Witel::all();
+                }
+            }
+
+            if ($witels->isEmpty()) {
+                return [
+                    'labels' => [],
+                    'datasets' => []
+                ];
+            }
+
+            // Initialize data structure
+            $witelLabels = [];
+            $divisionData = [
+                'DPS' => [],
+                'DSS' => [],
+                'DGS' => []
+            ];
+
+            foreach ($witels as $witel) {
+                $witelLabels[] = $witel->nama;
+
+                // Get account managers untuk witel ini
+                $witelAccountManagers = AccountManager::where('witel_id', $witel->id)
+                    ->whereIn('id', $accountManagerIds)
+                    ->pluck('id')
+                    ->toArray();
+
+                foreach ($divisionLabels as $division) {
+                    // Get account managers yang handle divisi ini
+                    $divisionAccountManagers = $this->getAccountManagersByDivision($division, $witelAccountManagers);
+
+                    // Get revenue untuk divisi & witel ini
+                    $divisionRevenue = 0;
+                    if (!empty($divisionAccountManagers)) {
+                        $result = Revenue::whereIn('account_manager_id', $divisionAccountManagers)
+                            ->whereBetween('bulan', [$startDate, $endDate])
+                            ->sum('real_revenue');
+                        $divisionRevenue = $result ?: 0;
+                    }
+
+                    $divisionData[$division][] = round($divisionRevenue / 1000000, 2); // Convert to millions
+                }
+            }
+
+            // Format untuk Chart.js stacked bar
+            $datasets = [];
+            $colors = [
+                'DPS' => '#f59e0b', // Yellow
+                'DSS' => '#10b981', // Green
+                'DGS' => '#3b7ddd'  // Blue
+            ];
+
+            foreach ($divisionLabels as $division) {
+                $datasets[] = [
+                    'label' => $division,
+                    'data' => $divisionData[$division],
+                    'backgroundColor' => $colors[$division],
+                    'borderColor' => $colors[$division],
+                    'borderWidth' => 1
+                ];
+            }
+
+            return [
+                'labels' => $witelLabels,
+                'datasets' => $datasets
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in getStackedDivisionData: ' . $e->getMessage());
+            return [
+                'labels' => [],
+                'datasets' => []
+            ];
+        }
+    }
+
+    // NEW: Format period label for display
+    private function formatPeriodLabel($startDate, $endDate)
+    {
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        if ($start->isSameMonth($end)) {
+            return $start->format('F Y'); // "May 2025"
+        } else {
+            return $start->format('d M Y') . ' - ' . $end->format('d M Y');
+        }
+    }
+
+    // KEEP EXISTING: prepareChartData method for compatibility
     private function prepareChartData($witel, $regional, $startDate, $endDate)
     {
         try {
@@ -204,15 +388,10 @@ class WitelPerformController extends Controller
         }
     }
 
+    // KEEP EXISTING METHODS: All existing filter and data methods
+
     /**
      * Get monthly revenue data with option to choose between target_revenue or real_revenue
-     *
-     * @param array $accountManagerIds
-     * @param int $year
-     * @param string $startDate
-     * @param string $endDate
-     * @param string $revenueType 'target_revenue' or 'real_revenue'
-     * @return array
      */
     private function getMonthlyRevenueData($accountManagerIds, $year, $startDate, $endDate, $revenueType = 'real_revenue')
     {
@@ -240,9 +419,6 @@ class WitelPerformController extends Controller
 
         return $results;
     }
-
-    // Rest of the methods remain the same...
-    // (Keep all other methods unchanged as they are)
 
     private function getRevenueSummary($startDate, $endDate, $witel = 'all', $regional = 'all')
     {
@@ -344,10 +520,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get account manager IDs based on witel and regional filters
-     *
-     * @param string $witel
-     * @param string $regional
-     * @return array
      */
     private function getAccountManagerIdsByFilters($witel = 'all', $regional = 'all')
     {
@@ -366,10 +538,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get account managers by division
-     *
-     * @param string $divisionName
-     * @param array $accountManagerIds
-     * @return array
      */
     private function getAccountManagersByDivision($divisionName, $accountManagerIds = [])
     {
@@ -391,11 +559,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get revenue for specific period
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
     private function getRevenueForPeriod($accountManagerIds, $startDate, $endDate)
     {
@@ -422,11 +585,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get revenue data by division
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
     private function getDivisionRevenueData($accountManagerIds, $startDate, $endDate)
     {
@@ -465,11 +623,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get achievement percentage data by division
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
     private function getDivisionAchievementData($accountManagerIds, $startDate, $endDate)
     {
@@ -504,11 +657,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get performance data for all witels
-     *
-     * @param string $regional
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
     private function getWitelPerformanceData($regional, $startDate, $endDate)
     {
@@ -563,11 +711,9 @@ class WitelPerformController extends Controller
         }
     }
 
+    // UPDATED: All AJAX methods to return Chart.js data
     /**
-     * Update charts via AJAX
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * Update charts via AJAX - UPDATED for Chart.js
      */
     public function updateCharts(Request $request)
     {
@@ -578,8 +724,8 @@ class WitelPerformController extends Controller
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
+            // Generate updated Chart.js data
+            $chartData = $this->prepareChartJsData($witel, $regional, $startDate, $endDate);
 
             // Get updated summary data
             $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
@@ -593,16 +739,152 @@ class WitelPerformController extends Controller
 
             return response()->json([
                 'error' => 'Terjadi kesalahan dalam memproses data: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
+                'chartData' => $this->getDefaultChartJsData(),
                 'summaryData' => $this->getDefaultSummaryData()
             ], 500);
         }
     }
 
+    public function filterByRegional(Request $request)
+    {
+        try {
+            $regional = $request->input('regional', 'all');
+            $witel = $request->input('witel', 'all');
+            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+
+            // Generate updated Chart.js data
+            $chartData = $this->prepareChartJsData($witel, $regional, $startDate, $endDate);
+
+            // Get updated summary data
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+
+            return response()->json([
+                'chartData' => $chartData,
+                'summaryData' => $summaryData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in filterByRegional: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
+                'chartData' => $this->getDefaultChartJsData(),
+                'summaryData' => $this->getDefaultSummaryData()
+            ], 500);
+        }
+    }
+
+    public function filterByWitel(Request $request)
+    {
+        try {
+            $witel = $request->input('witel', 'all');
+            $regional = $request->input('regional', 'all');
+            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+
+            // Generate updated Chart.js data
+            $chartData = $this->prepareChartJsData($witel, $regional, $startDate, $endDate);
+
+            // Get updated summary data
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+
+            return response()->json([
+                'chartData' => $chartData,
+                'summaryData' => $summaryData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in filterByWitel: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
+                'chartData' => $this->getDefaultChartJsData(),
+                'summaryData' => $this->getDefaultSummaryData()
+            ], 500);
+        }
+    }
+
+    public function filterByDivisi(Request $request)
+    {
+        try {
+            $divisiList = $request->input('divisi', []);
+            $witel = $request->input('witel', 'all');
+            $regional = $request->input('regional', 'all');
+            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
+            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+
+            // If divisiList is empty, return all data
+            if (empty($divisiList)) {
+                return $this->updateCharts($request);
+            }
+
+            // Generate updated Chart.js data
+            $chartData = $this->prepareChartJsData($witel, $regional, $startDate, $endDate);
+
+            // Get updated summary data
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+
+            // Filter data berdasarkan divisi yang dipilih
+            if (!empty($chartData) && !empty($summaryData)) {
+                // Filter stacked division chart
+                if (isset($chartData['stackedDivision']['datasets'])) {
+                    $filteredDatasets = [];
+                    foreach ($chartData['stackedDivision']['datasets'] as $dataset) {
+                        if (in_array($dataset['label'], $divisiList)) {
+                            $filteredDatasets[] = $dataset;
+                        }
+                    }
+                    $chartData['stackedDivision']['datasets'] = $filteredDatasets;
+                }
+
+                // Filter summary data
+                $filteredSummary = [];
+                foreach ($summaryData as $division => $data) {
+                    if (in_array($division, $divisiList) || $division === 'RLEGS') {
+                        $filteredSummary[$division] = $data;
+                    }
+                }
+                $summaryData = $filteredSummary;
+            }
+
+            return response()->json([
+                'chartData' => $chartData,
+                'summaryData' => $summaryData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in filterByDivisi: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
+                'chartData' => $this->getDefaultChartJsData(),
+                'summaryData' => $this->getDefaultSummaryData()
+            ], 500);
+        }
+    }
+
+    // HELPER METHODS
+
     /**
-     * Get default chart data for error handling
-     *
-     * @return array
+     * Get default Chart.js data for error handling
+     */
+    private function getDefaultChartJsData()
+    {
+        return [
+            'isEmpty' => true,
+            'periodLabel' => 'No Data',
+            'periodPerformance' => [
+                'target_revenue' => 0,
+                'real_revenue' => 0,
+                'achievement' => 0
+            ],
+            'stackedDivision' => [
+                'labels' => [],
+                'datasets' => []
+            ]
+        ];
+    }
+
+    /**
+     * Get default chart data for error handling (keep for compatibility)
      */
     private function getDefaultChartData()
     {
@@ -636,8 +918,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get default summary data for error handling
-     *
-     * @return array
      */
     private function getDefaultSummaryData()
     {
@@ -655,8 +935,6 @@ class WitelPerformController extends Controller
 
     /**
      * Get default division data
-     *
-     * @return array
      */
     private function getDefaultDivisionData()
     {
@@ -669,166 +947,5 @@ class WitelPerformController extends Controller
             'real' => $defaultData,
             'achievement' => $defaultData
         ];
-    }
-
-    /**
-     * Filter data by witel
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function filterByWitel(Request $request)
-    {
-        try {
-            $witel = $request->input('witel', 'all');
-            $regional = $request->input('regional', 'all');
-            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
-
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
-
-            return response()->json([
-                'chartData' => $chartData,
-                'summaryData' => $summaryData
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error in filterByWitel: ' . $e->getMessage());
-
-            return response()->json([
-                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
-                'summaryData' => $this->getDefaultSummaryData()
-            ], 500);
-        }
-    }
-
-    /**
-     * Filter data by regional
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function filterByRegional(Request $request)
-    {
-        try {
-            $regional = $request->input('regional', 'all');
-            $witel = $request->input('witel', 'all');
-            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
-
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
-
-            return response()->json([
-                'chartData' => $chartData,
-                'summaryData' => $summaryData
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error in filterByRegional: ' . $e->getMessage());
-
-            return response()->json([
-                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
-                'summaryData' => $this->getDefaultSummaryData()
-            ], 500);
-        }
-    }
-
-    /**
-     * Filter data by division
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function filterByDivisi(Request $request)
-    {
-        try {
-            $divisiList = $request->input('divisi', []);
-            $witel = $request->input('witel', 'all');
-            $regional = $request->input('regional', 'all');
-            $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
-            $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
-
-            // If divisiList is empty, return all data
-            if (empty($divisiList)) {
-                return $this->updateCharts($request);
-            }
-
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
-
-            // Filter the data to only include selected divisions
-            if (!empty($chartData) && !empty($summaryData)) {
-                // Filter bar chart data
-                if (!empty($chartData['barChart'])) {
-                    $filteredDivisions = [];
-                    $filteredTarget = [];
-                    $filteredReal = [];
-                    $filteredAchievement = [];
-
-                    foreach ($chartData['barChart']['divisions'] as $index => $division) {
-                        if (in_array($division, $divisiList)) {
-                            $filteredDivisions[] = $division;
-                            $filteredTarget[] = $chartData['barChart']['series'][0]['data'][$index];
-                            $filteredReal[] = $chartData['barChart']['series'][1]['data'][$index];
-                            $filteredAchievement[] = $chartData['barChart']['series'][2]['data'][$index];
-                        }
-                    }
-
-                    $chartData['barChart']['divisions'] = $filteredDivisions;
-                    $chartData['barChart']['series'][0]['data'] = $filteredTarget;
-                    $chartData['barChart']['series'][1]['data'] = $filteredReal;
-                    $chartData['barChart']['series'][2]['data'] = $filteredAchievement;
-                }
-
-                // Filter donut chart data
-                if (!empty($chartData['donutChart'])) {
-                    $filteredLabels = [];
-                    $filteredSeries = [];
-
-                    foreach ($chartData['donutChart']['labels'] as $index => $label) {
-                        if (in_array($label, $divisiList)) {
-                            $filteredLabels[] = $label;
-                            $filteredSeries[] = $chartData['donutChart']['series'][$index];
-                        }
-                    }
-
-                    $chartData['donutChart']['labels'] = $filteredLabels;
-                    $chartData['donutChart']['series'] = $filteredSeries;
-                }
-
-                // Filter summary data
-                $filteredSummary = [];
-                foreach ($summaryData as $division => $data) {
-                    if (in_array($division, $divisiList)) {
-                        $filteredSummary[$division] = $data;
-                    }
-                }
-                $summaryData = $filteredSummary;
-            }
-
-            return response()->json([
-                'chartData' => $chartData,
-                'summaryData' => $summaryData
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error in filterByDivisi: ' . $e->getMessage());
-
-            return response()->json([
-                'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
-                'summaryData' => $this->getDefaultSummaryData()
-            ], 500);
-        }
     }
 }

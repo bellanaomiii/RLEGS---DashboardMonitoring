@@ -4,7 +4,6 @@
 
 @section('styles')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/css/bootstrap-select.min.css">
     <link rel="stylesheet" href="{{ asset('css/witel.css') }}">
     <style>
         /* Improved filters row styling */
@@ -54,6 +53,12 @@
         }
 
         #dateRangeText {
+            color: white;
+        }
+
+        .date-filter .fa-chevron-down {
+            margin-left: 10px;
+            font-size: 12px;
             color: white;
         }
 
@@ -238,47 +243,11 @@
             font-size: 16px;
             font-weight: 500;
         }
-
-        /* NEW: Chart.js styling */
-        .chart-filters {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .chart-filters .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .chart-filters .filter-group label {
-            font-size: 12px;
-            font-weight: 500;
-            color: #6c757d;
-            margin-bottom: 0;
-        }
-
-        .chart-canvas-container {
-            position: relative;
-            height: 350px;
-            width: 100%;
-        }
-
-        .chart-canvas-container canvas {
-            max-height: 350px !important;
-        }
-
-        /* Period label styling */
-        .period-label {
-            font-weight: 600;
-            color: #2c5aa0;
-            margin-left: 5px;
-        }
     </style>
 @endsection
 
 @section('content')
+    {{-- untuk bisa commit  --}}
     <div class="main-content">
         <!-- Header Dashboard -->
         <div class="header-dashboard">
@@ -381,6 +350,7 @@
         <div class="filters-row">
             <!-- Date Filter -->
             <div class="date-filter-container">
+                <!-- PERBAIKAN: Hanya menggunakan satu elemen untuk date picker (tanpa input hidden) -->
                 <div class="date-filter" id="dateRangeSelector">
                     <i class="far fa-calendar-alt"></i>
                     <span
@@ -465,6 +435,7 @@
                     @endphp
                     @foreach ($regions as $region)
                         @if ($i < 3)
+                            <!-- Show first 3 regions + 'Semua Witel' in first row -->
                             <div class="region-box {{ ($selectedRegion ?? '') == $region ? 'active' : '' }}"
                                 data-region="{{ $region }}">
                                 {{ $region }}
@@ -473,6 +444,7 @@
                         @php $i++; @endphp
                     @endforeach
                 @else
+                    <!-- Default Regions first row -->
                     @foreach (['Suramadu', 'Nusa Tenggara', 'Jatim Barat'] as $defaultRegion)
                         <div class="region-box {{ ($selectedRegion ?? '') == $defaultRegion ? 'active' : '' }}"
                             data-region="{{ $defaultRegion }}">
@@ -488,6 +460,7 @@
                     @php $i = 0; @endphp
                     @foreach ($regions as $region)
                         @if ($i >= 3 && $i < 7)
+                            <!-- Show the remaining regions in second row (up to 4) -->
                             <div class="region-box {{ ($selectedRegion ?? '') == $region ? 'active' : '' }}"
                                 data-region="{{ $region }}">
                                 {{ $region }}
@@ -496,6 +469,7 @@
                         @php $i++; @endphp
                     @endforeach
                 @else
+                    <!-- Default Regions second row -->
                     @foreach (['Yogya Jateng Selatan', 'Bali', 'Semarang Jateng Utara', 'Solo Jateng Timur'] as $defaultRegion)
                         <div class="region-box {{ ($selectedRegion ?? '') == $defaultRegion ? 'active' : '' }}"
                             data-region="{{ $defaultRegion }}">
@@ -506,52 +480,49 @@
             </div>
         </div>
 
-        <!-- NEW: Chart.js Charts replacing ApexCharts -->
+        <!-- Charts in a single column layout -->
         <div class="row">
-            <!-- Chart 1: Period Performance Chart (replacing Line Chart) -->
+            <!-- Line Chart - Target vs Real Revenue -->
             <div class="col-12 chart-container">
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
-                            <h5 class="chart-title">
-                                Grafik Performa Periode
-                                <span class="period-label" id="periodLabel">{{ $chartData['periodLabel'] ?? 'Mei 2025' }}</span>
-                            </h5>
-                            <p class="chart-subtitle">Target vs Realisasi berdasarkan periode yang dipilih</p>
-                        </div>
-
-                        <div class="chart-filters">
-                            <div class="filter-group">
-                                <label>Tampilan</label>
-                                <select id="chartType" class="selectpicker" data-style="btn-outline-primary">
-                                    <option value="combined" selected>Kombinasi</option>
-                                    <option value="revenue">Revenue</option>
-                                    <option value="achievement">Pencapaian</option>
-                                </select>
-                            </div>
+                            <h5 class="chart-title">Target vs. Realisasi Revenue</h5>
+                            <p class="chart-subtitle">Perbandingan target dan pencapaian pendapatan per bulan</p>
                         </div>
                     </div>
                     <div class="chart-body">
-                        <div class="chart-canvas-container">
-                            <canvas id="periodPerformanceChart"></canvas>
-                        </div>
+                        <div id="lineRevenueChart" style="height: 350px;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Chart 2: Stacked Division Chart (NEW) -->
+            <!-- Bar Chart - Revenue by Division -->
             <div class="col-12 chart-container">
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
-                            <h5 class="chart-title">Breakdown Pendapatan per Divisi & Witel</h5>
-                            <p class="chart-subtitle">Distribusi DPS, DSS, DGS berdasarkan witel yang dipilih</p>
+                            <h5 class="chart-title">Revenue Berdasarkan Divisi</h5>
+                            <p class="chart-subtitle">Perbandingan target dan realisasi pendapatan</p>
                         </div>
                     </div>
                     <div class="chart-body">
-                        <div class="chart-canvas-container">
-                            <canvas id="stackedDivisionChart"></canvas>
+                        <div id="barDivisionChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Donut Chart - Achievement per Division -->
+            <div class="col-12 chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h5 class="chart-title">Achievement per Divisi</h5>
+                            <p class="chart-subtitle">Persentase pencapaian target</p>
                         </div>
+                    </div>
+                    <div class="chart-body">
+                        <div id="donutAchievementChart" style="height: 350px;"></div>
                     </div>
                 </div>
             </div>
@@ -559,31 +530,22 @@
     </div>
 @endsection
 
+
 @section('scripts')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/js/bootstrap-select.min.js"></script>
-    <!-- Chart.js instead of ApexCharts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Get Chart.js data from controller
+            // Get chart data from controller
             const chartData = @json($chartData ?? []);
-            console.log('Chart.js data loaded:', chartData);
+            console.log('Chart data loaded:', chartData);
 
-            // Declare global variables for Chart.js instances
-            let periodPerformanceChartInstance;
-            let stackedDivisionChartInstance;
-
-            // Initialize Bootstrap Select
-            $('.selectpicker').selectpicker({
-                liveSearch: true,
-                liveSearchPlaceholder: 'Cari opsi...',
-                size: 5,
-                actionsBox: false,
-                dropupAuto: false,
-                mobile: false
-            });
+            // Declare global variables for chart instances
+            let lineRevenueChartInstance;
+            let donutAchievementChartInstance;
+            let barDivisionChartInstance;
+            let performanceWitelChartInstance;
 
             // Initialize date range picker
             const dateRangePicker = flatpickr("#dateRangeSelector", {
@@ -597,7 +559,8 @@
                     if (selectedDates.length === 2) {
                         const startDate = formatDate(selectedDates[0]);
                         const endDate = formatDate(selectedDates[1]);
-                        document.getElementById('dateRangeText').textContent = startDate + ' - ' + endDate;
+                        document.getElementById('dateRangeText').textContent = startDate + ' - ' +
+                            endDate;
 
                         // Update charts with new date range
                         updateCharts(selectedDates[0], selectedDates[1]);
@@ -608,12 +571,14 @@
             // Helper function to format date
             function formatDate(date) {
                 const day = date.getDate();
-                const month = date.toLocaleString('default', { month: 'short' });
+                const month = date.toLocaleString('default', {
+                    month: 'short'
+                });
                 const year = date.getFullYear();
                 return `${day} ${month} ${year}`;
             }
 
-            // FILTER BUTTON LOGIC (KEEP EXISTING)
+            // FILTER BUTTON LOGIC
             const filterButton = document.getElementById('filterButton');
             const filterPanel = document.getElementById('filterPanel');
             const filterOverlay = document.getElementById('filterOverlay');
@@ -630,13 +595,35 @@
                     this.classList.add('active');
 
                     selectedRegional = this.getAttribute('data-region');
+
+                    // Update chart berdasarkan regional yang dipilih
                     updateChartsByRegional(selectedRegional);
                 });
             });
 
+            // Find existing witel filter button and add event listeners
+            const witelFilterButton = document.querySelector('button[data-bs-toggle="dropdown"]');
+            const witelOptions = document.querySelectorAll('.dropdown-item');
+
+            if (witelFilterButton && witelOptions) {
+                witelOptions.forEach(option => {
+                    option.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        selectedWitel = this.getAttribute('data-value') || 'all';
+
+                        // Update button text
+                        witelFilterButton.innerHTML = this.innerHTML;
+
+                        // Update chart
+                        updateChartsByWitel(selectedWitel);
+                    });
+                });
+            }
+
             // Toggle filter panel with vanilla JS
             if (filterButton) {
                 filterButton.addEventListener('click', function(e) {
+                    console.log('Filter button clicked');
                     e.preventDefault();
                     e.stopPropagation();
 
@@ -715,11 +702,16 @@
                     ).map(cb => cb.value);
 
                     if (checkedTregs.length > 0) {
-                        selectedRegional = checkedTregs[0];
+                        // Update selectedRegional berdasarkan TREG yang dipilih
+                        selectedRegional = checkedTregs[0]; // Ambil yang pertama jika multiple
+
+                        // Update chart dengan filter regional
                         updateChartsByRegional(selectedRegional);
 
+                        // Update region-box appearance to match selection
                         regionalButtons.forEach(btn => {
                             btn.classList.remove('active');
+                            // Map TREG values to region names if needed
                             if (btn.getAttribute('data-region') === selectedRegional) {
                                 btn.classList.add('active');
                             }
@@ -733,19 +725,36 @@
                 });
             }
 
-            // Chart Type Selector
-            $('#chartType').on('changed.bs.select', function() {
-                renderPeriodPerformanceChart($(this).val());
+            // Update region-box click handler untuk sinkronisasi dengan TREG checkbox
+            const regionBoxes = document.querySelectorAll('.region-box');
+            regionBoxes.forEach(box => {
+                box.addEventListener('click', function() {
+                    regionBoxes.forEach(rb => rb.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const selectedRegion = this.getAttribute('data-region');
+                    selectedRegional = selectedRegion;
+
+                    // Update TREG checkboxes berdasarkan region yang dipilih
+                    const tregCheckboxes = document.querySelectorAll('#tregContent input');
+                    tregCheckboxes.forEach(checkbox => {
+                        checkbox.checked = checkbox.value === selectedRegion;
+                    });
+
+                    updateChartsByRegional(selectedRegion);
+                });
             });
 
-            // Update functions for filters
+            // Update function for division filter
             function applyDivisiFilterFunc(divisionList) {
                 showLoading();
                 console.log('Applying division filter:', divisionList);
 
                 const dateRange = dateRangePicker.selectedDates;
-                const startDate = dateRange.length > 0 ? dateRange[0] : new Date("{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}");
-                const endDate = dateRange.length > 1 ? dateRange[1] : new Date("{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}");
+                const startDate = dateRange.length > 0 ? dateRange[0] : new Date(
+                    "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}");
+                const endDate = dateRange.length > 1 ? dateRange[1] : new Date(
+                    "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}");
 
                 const formattedStartDate = formatDateForApi(startDate);
                 const formattedEndDate = formatDateForApi(endDate);
@@ -783,12 +792,56 @@
                     });
             }
 
+            // Update function for witel filter
+            function updateChartsByWitel(witel) {
+                showLoading();
+
+                const dateRange = dateRangePicker.selectedDates;
+                const startDate = dateRange.length > 0 ? dateRange[0] : new Date(
+                    "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}");
+                const endDate = dateRange.length > 1 ? dateRange[1] : new Date(
+                    "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}");
+
+                const formattedStartDate = formatDateForApi(startDate);
+                const formattedEndDate = formatDateForApi(endDate);
+
+                fetch('{{ route('witel.filter-by-witel') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            witel: witel,
+                            regional: selectedRegional,
+                            start_date: formattedStartDate,
+                            end_date: formattedEndDate
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        updateAllCharts(data.chartData);
+                        updateSummaryCards(data.summaryData);
+                        hideLoading();
+                        showAlert('success',
+                            `Data untuk ${witel === 'all' ? 'Semua Witel' : witel} berhasil dimuat`);
+                    })
+                    .catch(error => {
+                        console.error('Error applying witel filter:', error);
+                        hideLoading();
+                        showAlert('error', 'Gagal menerapkan filter: ' + error.message);
+                    });
+            }
+
+            // Update function for regional filter
             function updateChartsByRegional(regional) {
                 showLoading();
 
                 const dateRange = dateRangePicker.selectedDates;
-                const startDate = dateRange.length > 0 ? dateRange[0] : new Date("{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}");
-                const endDate = dateRange.length > 1 ? dateRange[1] : new Date("{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}");
+                const startDate = dateRange.length > 0 ? dateRange[0] : new Date(
+                    "{{ $startDate ?? \Carbon\Carbon::now()->startOfMonth()->format('Y-m-d') }}");
+                const endDate = dateRange.length > 1 ? dateRange[1] : new Date(
+                    "{{ $endDate ?? \Carbon\Carbon::now()->endOfMonth()->format('Y-m-d') }}");
 
                 const formattedStartDate = formatDateForApi(startDate);
                 const formattedEndDate = formatDateForApi(endDate);
@@ -811,7 +864,9 @@
                         updateAllCharts(data.chartData);
                         updateSummaryCards(data.summaryData);
                         hideLoading();
-                        showAlert('success', `Data untuk ${regional === 'all' ? 'Semua Regional' : regional} berhasil dimuat`);
+                        showAlert('success',
+                            `Data untuk ${regional === 'all' ? 'Semua Regional' : regional} berhasil dimuat`
+                        );
                     })
                     .catch(error => {
                         console.error('Error applying regional filter:', error);
@@ -820,6 +875,7 @@
                     });
             }
 
+            // Function to update charts with new date range
             function updateCharts(startDate, endDate) {
                 showLoading();
                 console.log('Updating charts with date range:', formatDate(startDate), '-', formatDate(endDate));
@@ -855,10 +911,11 @@
 
                         updateAllCharts(data.chartData);
                         updateSummaryCards(data.summaryData);
-                        updatePeriodLabel(data.chartData.periodLabel);
 
                         hideLoading();
-                        showAlert('success', `Data untuk periode ${formatDate(startDate)} - ${formatDate(endDate)} berhasil dimuat`);
+                        showAlert('success',
+                            `Data untuk periode ${formatDate(startDate)} - ${formatDate(endDate)} berhasil dimuat`
+                        );
                     })
                     .catch(error => {
                         console.error('Error updating charts:', error);
@@ -867,34 +924,36 @@
                     });
             }
 
-            // Helper functions
+            // Function to update filter button text
             function updateFilterButtonText(selectedDivisions) {
                 const filterButton = document.getElementById('filterButton');
+
                 if (!filterButton) return;
 
                 if (selectedDivisions.length === 1) {
                     filterButton.innerHTML = `
-                        <i class="fas fa-filter me-2"></i>
-                        Filter Divisi: <span class="filter-divisi-value">${selectedDivisions[0]}</span>
-                        <i class="fas fa-chevron-down ms-auto"></i>
-                    `;
+                <i class="fas fa-filter me-2"></i>
+                Filter Divisi: <span class="filter-divisi-value">${selectedDivisions[0]}</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            `;
                 } else if (selectedDivisions.length > 1 && selectedDivisions.length < 4) {
                     filterButton.innerHTML = `
-                        <i class="fas fa-filter me-2"></i>
-                        Filter Divisi: <span class="filter-divisi-value">${selectedDivisions.length} Divisi</span>
-                        <i class="fas fa-chevron-down ms-auto"></i>
-                    `;
+                <i class="fas fa-filter me-2"></i>
+                Filter Divisi: <span class="filter-divisi-value">${selectedDivisions.length} Divisi</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            `;
                 } else {
                     filterButton.innerHTML = `
-                        <i class="fas fa-filter me-2"></i>
-                        Filter Divisi
-                        <i class="fas fa-chevron-down ms-auto"></i>
-                    `;
+                <i class="fas fa-filter me-2"></i>
+                Filter Divisi
+                <i class="fas fa-chevron-down ms-auto"></i>
+            `;
                 }
 
                 showFilterAlert(selectedDivisions);
             }
 
+            // Function to show filter alert
             function showFilterAlert(selectedDivisions) {
                 if (selectedDivisions.length >= 4 || selectedDivisions.length === 0) {
                     const alertContainer = document.getElementById('alertContainer');
@@ -917,15 +976,16 @@
                 alert.style.borderColor = '#c8e6c9';
                 alert.style.color = '#2e7d32';
                 alert.innerHTML = `
-                    ${alertText}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
+            ${alertText}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
 
                 alertContainer.innerHTML = '';
                 alertContainer.appendChild(alert);
                 alertContainer.style.display = 'block';
             }
 
+            // Helper function to format date for API
             function formatDateForApi(date) {
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -933,23 +993,27 @@
                 return `${year}-${month}-${day}`;
             }
 
+            // Function to show loading state
             function showLoading() {
                 document.querySelectorAll('.chart-body').forEach(container => {
                     if (!container.querySelector('.loading-overlay')) {
                         const overlay = document.createElement('div');
                         overlay.className = 'loading-overlay';
-                        overlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+                        overlay.innerHTML =
+                            '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
                         container.appendChild(overlay);
                     }
                 });
             }
 
+            // Function to hide loading state
             function hideLoading() {
                 document.querySelectorAll('.loading-overlay').forEach(overlay => {
                     overlay.remove();
                 });
             }
 
+            // Function to show alert message
             function showAlert(type, message) {
                 const alertContainer = document.getElementById('alertContainer');
                 if (!alertContainer) return;
@@ -957,9 +1021,9 @@
                 const alert = document.createElement('div');
                 alert.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
                 alert.innerHTML = `
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
 
                 alertContainer.innerHTML = '';
                 alertContainer.appendChild(alert);
@@ -978,6 +1042,7 @@
                 }, 5000);
             }
 
+            // Function to show empty data state
             function showEmptyDataState(container) {
                 const emptyState = document.createElement('div');
                 emptyState.className = 'empty-data-state';
@@ -986,48 +1051,56 @@
                     <div class="empty-text">Maaf, belum ada data yang tercatat</div>
                 `;
 
+                // Check if already exists, if so, don't add again
                 if (!container.querySelector('.empty-data-state')) {
                     container.appendChild(emptyState);
                 }
             }
 
-            function updatePeriodLabel(newLabel) {
-                const periodLabelEl = document.getElementById('periodLabel');
-                if (periodLabelEl && newLabel) {
-                    periodLabelEl.textContent = newLabel;
-                }
-            }
-
-            // Chart.js rendering functions
+            // Updated updateAllCharts function
             function updateAllCharts(data) {
                 if (!data) return;
 
-                console.log('Updating Chart.js charts with data:', data);
+                console.log('Updating charts with data:', data);
 
                 // Check if data is empty
                 if (data.isEmpty === true) {
-                    const chartContainers = ["#periodPerformanceChart", "#stackedDivisionChart"];
+                    // Show empty state for all charts
+                    const chartContainers = [
+                        "#lineRevenueChart",
+                        "#barDivisionChart",
+                        "#donutAchievementChart"
+                    ];
 
                     chartContainers.forEach(chartId => {
                         const container = document.querySelector(chartId).parentElement;
                         showEmptyDataState(container);
 
-                        // Destroy existing chart instances
-                        if (chartId === "#periodPerformanceChart" && periodPerformanceChartInstance) {
-                            periodPerformanceChartInstance.destroy();
-                            periodPerformanceChartInstance = null;
+                        // Destroy any existing chart instances
+                        if (chartId === "#lineRevenueChart" && lineRevenueChartInstance) {
+                            lineRevenueChartInstance.destroy();
+                            lineRevenueChartInstance = null;
                         }
-                        if (chartId === "#stackedDivisionChart" && stackedDivisionChartInstance) {
-                            stackedDivisionChartInstance.destroy();
-                            stackedDivisionChartInstance = null;
+                        if (chartId === "#barDivisionChart" && barDivisionChartInstance) {
+                            barDivisionChartInstance.destroy();
+                            barDivisionChartInstance = null;
+                        }
+                        if (chartId === "#donutAchievementChart" && donutAchievementChartInstance) {
+                            donutAchievementChartInstance.destroy();
+                            donutAchievementChartInstance = null;
                         }
                     });
 
                     return;
                 }
 
-                // Remove empty states if data exists
-                const chartContainers = ["#periodPerformanceChart", "#stackedDivisionChart"];
+                // If we have data, remove any existing empty states
+                const chartContainers = [
+                    "#lineRevenueChart",
+                    "#barDivisionChart",
+                    "#donutAchievementChart"
+                ];
+
                 chartContainers.forEach(chartId => {
                     const container = document.querySelector(chartId).parentElement;
                     const existingEmpty = container.querySelector('.empty-data-state');
@@ -1036,285 +1109,61 @@
                     }
                 });
 
-                // Update Period Performance Chart
-                if (data.periodPerformance) {
-                    if (!periodPerformanceChartInstance) {
-                        renderPeriodPerformanceChart('combined', data.periodPerformance);
+                // Update Line Chart
+                if (data.lineChart) {
+                    if (!lineRevenueChartInstance) {
+                        initializeLineChart(data.lineChart);
                     } else {
-                        // Update existing chart with new data
-                        const chartType = $('#chartType').val() || 'combined';
-                        renderPeriodPerformanceChart(chartType, data.periodPerformance);
+                        lineRevenueChartInstance.updateOptions({
+                            xaxis: {
+                                categories: data.lineChart.months
+                            },
+                            series: data.lineChart.series
+                        });
                     }
                 }
 
-                // Update Stacked Division Chart
-                if (data.stackedDivision) {
-                    if (!stackedDivisionChartInstance) {
-                        renderStackedDivisionChart(data.stackedDivision);
+                // Update Bar Chart
+                if (data.barChart) {
+                    if (!barDivisionChartInstance) {
+                        initializeBarChart(data.barChart);
                     } else {
-                        stackedDivisionChartInstance.destroy();
-                        renderStackedDivisionChart(data.stackedDivision);
+                        barDivisionChartInstance.updateOptions({
+                            xaxis: {
+                                categories: data.barChart.divisions
+                            },
+                            series: data.barChart.series
+                        });
                     }
                 }
 
-                // Update period label
-                if (data.periodLabel) {
-                    updatePeriodLabel(data.periodLabel);
-                }
-            }
-
-            function renderPeriodPerformanceChart(type, data = null) {
-                const ctx = document.getElementById('periodPerformanceChart');
-                if (!ctx) {
-                    console.error('Period performance chart canvas not found');
-                    return;
-                }
-
-                // Use provided data or fallback to global chartData
-                const performanceData = data || (chartData && chartData.periodPerformance ? chartData.periodPerformance : null);
-
-                if (!performanceData) {
-                    console.error('No performance data available');
-                    return;
-                }
-
-                // Destroy existing chart
-                if (periodPerformanceChartInstance) {
-                    periodPerformanceChartInstance.destroy();
-                }
-
-                // Prepare data for Chart.js
-                const labels = ['Target', 'Realisasi']; // Simple labels for period view
-                const datasets = [];
-
-                if (type === 'combined' || type === 'revenue') {
-                    datasets.push({
-                        label: 'Target Revenue',
-                        data: [performanceData.target_revenue / 1000000, 0], // Convert to millions
-                        backgroundColor: 'rgba(28, 41, 85, 0.6)',
-                        borderColor: 'rgba(28, 41, 85, 1)',
-                        borderWidth: 1,
-                        yAxisID: 'y'
-                    });
-
-                    datasets.push({
-                        label: 'Real Revenue',
-                        data: [0, performanceData.real_revenue / 1000000], // Convert to millions
-                        backgroundColor: 'rgba(59, 125, 221, 0.6)',
-                        borderColor: 'rgba(59, 125, 221, 1)',
-                        borderWidth: 1,
-                        yAxisID: 'y'
-                    });
-                }
-
-                if (type === 'combined' || type === 'achievement') {
-                    datasets.push({
-                        label: 'Pencapaian (%)',
-                        data: [performanceData.achievement, performanceData.achievement],
-                        type: 'line',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderColor: '#1C2955',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#1C2955',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: '#1C2955',
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        fill: false,
-                        tension: 0.3,
-                        yAxisID: 'y1'
-                    });
-                }
-
-                // Configure scales
-                const scales = {};
-
-                if (type === 'combined' || type === 'revenue') {
-                    scales.y = {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Revenue (Juta Rp)',
-                            font: { weight: 'bold' }
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                if (value >= 1000000) {
-                                    return 'Rp ' + (value / 1000000).toFixed(1) + ' T';
-                                } else if (value >= 1000) {
-                                    return 'Rp ' + (value / 1000).toFixed(1) + ' M';
-                                } else {
-                                    return 'Rp ' + value.toFixed(1) + ' Jt';
-                                }
-                            }
-                        }
-                    };
-                }
-
-                if (type === 'combined' || type === 'achievement') {
-                    scales.y1 = {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Pencapaian (%)',
-                            font: { weight: 'bold' }
-                        },
-                        grid: {
-                            drawOnChartArea: type !== 'combined',
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    };
-                }
-
-                // Create new chart
-                periodPerformanceChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: datasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        scales: scales,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(28, 41, 85, 0.8)',
-                                titleFont: { weight: 'bold', size: 14 },
-                                bodyFont: { size: 13 },
-                                padding: 12,
-                                cornerRadius: 6,
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-
-                                        if (context.dataset.yAxisID === 'y1') {
-                                            label += context.parsed.y.toFixed(2) + '%';
-                                        } else {
-                                            const value = context.parsed.y;
-                                            if (value >= 1000000) {
-                                                label += 'Rp ' + (value / 1000000).toFixed(2) + ' T';
-                                            } else if (value >= 1000) {
-                                                label += 'Rp ' + (value / 1000).toFixed(2) + ' M';
-                                            } else {
-                                                label += 'Rp ' + new Intl.NumberFormat('id-ID').format(value) + ' Jt';
-                                            }
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
+                // Update Donut Chart
+                if (data.donutChart) {
+                    if (!donutAchievementChartInstance) {
+                        initializeDonutChart(data.donutChart);
+                    } else {
+                        donutAchievementChartInstance.updateOptions({
+                            labels: data.donutChart.labels,
+                            series: data.donutChart.series
+                        });
                     }
-                });
+                }
+
+                // Update Performance Witel Chart if exists
+                if (data.witelPerformance && performanceWitelChartInstance) {
+                    performanceWitelChartInstance.updateOptions({
+                        xaxis: {
+                            categories: data.witelPerformance.categories
+                        },
+                        series: [{
+                            name: 'Achievement (%)',
+                            data: data.witelPerformance.data
+                        }]
+                    });
+                }
             }
 
-            function renderStackedDivisionChart(data) {
-                const ctx = document.getElementById('stackedDivisionChart');
-                if (!ctx) {
-                    console.error('Stacked division chart canvas not found');
-                    return;
-                }
-
-                // Destroy existing chart
-                if (stackedDivisionChartInstance) {
-                    stackedDivisionChartInstance.destroy();
-                }
-
-                if (!data || !data.labels || data.labels.length === 0) {
-                    console.log('No stacked division data available');
-                    return;
-                }
-
-                // Create new stacked bar chart
-                stackedDivisionChartInstance = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.labels,
-                        datasets: data.datasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
-                        scales: {
-                            x: {
-                                stacked: true,
-                                title: {
-                                    display: true,
-                                    text: 'Witel'
-                                }
-                            },
-                            y: {
-                                stacked: true,
-                                title: {
-                                    display: true,
-                                    text: 'Revenue (Juta Rp)',
-                                    font: { weight: 'bold' }
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return 'Rp ' + value.toFixed(1) + ' M';
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(28, 41, 85, 0.8)',
-                                titleFont: { weight: 'bold', size: 14 },
-                                bodyFont: { size: 13 },
-                                padding: 12,
-                                cornerRadius: 6,
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        label += 'Rp ' + context.parsed.y.toFixed(2) + ' M';
-                                        return label;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
+            // Function to update summary cards with new data
             function updateSummaryCards(summaryData) {
                 if (!summaryData) return;
 
@@ -1325,6 +1174,7 @@
                 });
             }
 
+            // Helper function to update individual summary card
             function updateSummaryCard(division, data) {
                 const card = document.querySelector(`.summary-card.${division.toLowerCase()}`);
                 if (!card) return;
@@ -1338,8 +1188,14 @@
                 if (metaEl) {
                     metaEl.className = `summary-meta ${data.percentage_change >= 0 ? 'up' : 'down'}`;
 
+                    const iconEl = metaEl.querySelector('i');
+                    if (iconEl) {
+                        iconEl.className = `fas fa-arrow-${data.percentage_change >= 0 ? 'up' : 'down'}`;
+                    }
+
                     const percentText = `${Math.abs(data.percentage_change).toFixed(2)}% dari periode sebelumnya`;
-                    metaEl.innerHTML = `<i class="fas fa-arrow-${data.percentage_change >= 0 ? 'up' : 'down'}"></i> ${percentText}`;
+                    metaEl.innerHTML =
+                        `<i class="fas fa-arrow-${data.percentage_change >= 0 ? 'up' : 'down'}"></i> ${percentText}`;
                 }
 
                 const percentageEl = card.querySelector('.summary-percentage');
@@ -1348,6 +1204,7 @@
                 }
             }
 
+            // Helper function to format numbers
             function numberFormat(number) {
                 return new Intl.NumberFormat('id-ID', {
                     minimumFractionDigits: 2,
@@ -1355,32 +1212,265 @@
                 }).format(number);
             }
 
-            // Initialize charts on page load
+            // Initialize line chart function with updated colors
+            function initializeLineChart(data) {
+                const lineChartOptions = {
+                    chart: {
+                        type: 'line',
+                        height: 350,
+                        toolbar: {
+                            show: true
+                        },
+                        zoom: {
+                            enabled: true
+                        },
+                        fontFamily: "'Poppins', 'Helvetica', 'Arial', sans-serif"
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        width: 3
+                    },
+                    colors: ['#3b7ddd', '#10b981'], // Blue for Real Revenue, Green for Target Revenue
+                    series: data.series || [],
+                    grid: {
+                        borderColor: '#e0e0e0',
+                        row: {
+                            colors: ['#f8f9fa', 'transparent'],
+                            opacity: 0.5
+                        }
+                    },
+                    markers: {
+                        size: 5
+                    },
+                    xaxis: {
+                        categories: data.months || [],
+                        title: {
+                            text: 'Bulan'
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Revenue (Juta Rupiah)'
+                        },
+                        labels: {
+                            formatter: function(val) {
+                                return "Rp " + numberFormat(val) + " M";
+                            }
+                        }
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function(val) {
+                                return "Rp " + numberFormat(val) + " M";
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'right',
+                        floating: true,
+                        offsetY: -25,
+                        offsetX: -5
+                    }
+                };
+
+                const lineChartEl = document.querySelector("#lineRevenueChart");
+                if (lineChartEl) {
+                    lineRevenueChartInstance = new ApexCharts(lineChartEl, lineChartOptions);
+                    lineRevenueChartInstance.render();
+                }
+            }
+
+            // Initialize donut chart function
+            function initializeDonutChart(data) {
+                const donutChartOptions = {
+                    chart: {
+                        type: 'donut',
+                        height: 350,
+                        fontFamily: "'Poppins', 'Helvetica', 'Arial', sans-serif"
+                    },
+                    plotOptions: {
+                        pie: {
+                            donut: {
+                                size: '65%',
+                                labels: {
+                                    show: true,
+                                    total: {
+                                        show: true,
+                                        label: 'Total Achievement',
+                                        formatter: function(w) {
+                                            const sum = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                            const len = w.globals.seriesTotals.length;
+                                            return numberFormat(sum / len) + '%';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function(val, opts) {
+                            return numberFormat(opts.w.globals.series[opts.seriesIndex]) + '%';
+                        }
+                    },
+                    colors: ['#3b7ddd', '#10b981', '#f59e0b', '#ef4444'],
+                    series: data.series || [],
+                    labels: data.labels || [],
+                    responsive: [{
+                        breakpoint: 480,
+                        options: {
+                            chart: {
+                                width: 320
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }],
+                    tooltip: {
+                        y: {
+                            formatter: function(val) {
+                                return numberFormat(val) + "%";
+                            }
+                        }
+                    }
+                };
+
+                const donutChartEl = document.querySelector("#donutAchievementChart");
+                if (donutChartEl) {
+                    donutAchievementChartInstance = new ApexCharts(donutChartEl, donutChartOptions);
+                    donutAchievementChartInstance.render();
+                }
+            }
+
+            // Initialize bar chart function
+            function initializeBarChart(data) {
+                const barChartOptions = {
+                    chart: {
+                        type: 'bar',
+                        height: 350,
+                        stacked: false,
+                        toolbar: {
+                            show: true
+                        },
+                        fontFamily: "'Poppins', 'Helvetica', 'Arial', sans-serif"
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '55%',
+                            endingShape: 'rounded',
+                            borderRadius: 4
+                        }
+                    },
+                    dataLabels: {
+                        enabled: false
+                    },
+                    stroke: {
+                        show: true,
+                        width: 2,
+                        colors: ['transparent']
+                    },
+                    colors: ['#3b7ddd', '#10b981', '#f59e0b'],
+                    series: data.series || [],
+                    xaxis: {
+                        categories: data.divisions || [],
+                        title: {
+                            text: 'Divisi'
+                        }
+                    },
+                    yaxis: [{
+                            seriesName: 'Target',
+                            title: {
+                                text: 'Revenue (Juta Rupiah)'
+                            },
+                            labels: {
+                                formatter: function(val) {
+                                    return "Rp " + numberFormat(val) + " M";
+                                }
+                            }
+                        },
+                        {
+                            seriesName: 'Realisasi',
+                            show: false
+                        },
+                        {
+                            opposite: true,
+                            seriesName: 'Achievement (%)',
+                            title: {
+                                text: 'Achievement (%)'
+                            },
+                            labels: {
+                                formatter: function(val) {
+                                    return numberFormat(val) + "%";
+                                }
+                            }
+                        }
+                    ],
+                    tooltip: {
+                        y: {
+                            formatter: function(val, {
+                                seriesIndex
+                            }) {
+                                if (seriesIndex === 2) {
+                                    return numberFormat(val) + "%";
+                                }
+                                return "Rp " + numberFormat(val) + " M";
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        horizontalAlign: 'center'
+                    },
+                    fill: {
+                        opacity: 1
+                    }
+                };
+
+                const barChartEl = document.querySelector("#barDivisionChart");
+                if (barChartEl) {
+                    barDivisionChartInstance = new ApexCharts(barChartEl, barChartOptions);
+                    barDivisionChartInstance.render();
+                }
+            }
+
+            // Initialize all charts
             function initializeCharts() {
-                console.log('Initializing Chart.js charts with data:', chartData);
+                console.log('Initializing charts with data:', chartData);
 
                 if (!chartData) {
                     console.log('No chart data available');
-                    showEmptyDataState(document.querySelector("#periodPerformanceChart").parentElement);
-                    showEmptyDataState(document.querySelector("#stackedDivisionChart").parentElement);
+                    showEmptyDataState(document.querySelector("#lineRevenueChart").parentElement);
+                    showEmptyDataState(document.querySelector("#donutAchievementChart").parentElement);
+                    showEmptyDataState(document.querySelector("#barDivisionChart").parentElement);
                     return;
                 }
 
                 // Check if data is empty
                 if (chartData.isEmpty === true) {
                     console.log('Chart data is empty');
-                    showEmptyDataState(document.querySelector("#periodPerformanceChart").parentElement);
-                    showEmptyDataState(document.querySelector("#stackedDivisionChart").parentElement);
+                    showEmptyDataState(document.querySelector("#lineRevenueChart").parentElement);
+                    showEmptyDataState(document.querySelector("#donutAchievementChart").parentElement);
+                    showEmptyDataState(document.querySelector("#barDivisionChart").parentElement);
                     return;
                 }
 
-                // Initialize charts if data exists
-                if (chartData.periodPerformance) {
-                    renderPeriodPerformanceChart('combined', chartData.periodPerformance);
+                // Initialize charts only if data exists
+                if (chartData.lineChart) {
+                    initializeLineChart(chartData.lineChart);
                 }
 
-                if (chartData.stackedDivision) {
-                    renderStackedDivisionChart(chartData.stackedDivision);
+                if (chartData.barChart) {
+                    initializeBarChart(chartData.barChart);
+                }
+
+                if (chartData.donutChart) {
+                    initializeDonutChart(chartData.donutChart);
                 }
             }
 
@@ -1388,4 +1478,4 @@
             initializeCharts();
         });
     </script>
-@endsection
+@endsectiona

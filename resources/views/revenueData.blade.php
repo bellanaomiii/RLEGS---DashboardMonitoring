@@ -137,6 +137,49 @@
         .notification-persistent.info {
             border-left: 4px solid #17a2b8;
         }
+
+        .per-page-selection {
+            display: flex;
+            justify-content: right;
+            align-items: center;
+            margin-top: 10px;
+            margin-left: 1330px;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .per-page-select {
+            padding: 6px 8px; 
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 50px; 
+            max-width: 60px; 
+            width: auto; 
+            text-align: center; 
+        }
+        .per-page-select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .pagination-info {
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
     </style>
 @endsection
 
@@ -647,6 +690,16 @@
 
                         <!-- Pagination yang Diperbarui -->
                         @if ($revenues->hasPages())
+                        <!-- Per Page Selection -->
+                                <div class="per-page-selection">
+                                    <select id="perPage" class="per-page-select" onchange="changePerPage(this.value)">
+                                        <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                                        <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                                        <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="75" {{ request('per_page', 10) == 75 ? 'selected' : '' }}>75</option>
+                                        <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                                    </select>
+                                </div>
                             <div class="pagination-container">
                                 <ul class="pagination">
                                     <!-- Previous Page Link -->
@@ -808,6 +861,16 @@
 
                         <!-- Pagination untuk Account Manager -->
                         @if (isset($accountManagers) && $accountManagers->hasPages())
+                        <!-- Per Page Selection -->
+                                <div class="per-page-selection">
+                                    <select id="perPage" class="per-page-select" onchange="changePerPage(this.value)">
+                                        <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                                        <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                                        <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="75" {{ request('per_page', 10) == 75 ? 'selected' : '' }}>75</option>
+                                        <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                                    </select>
+                                </div>
                             <div class="pagination-container">
                                 <ul class="pagination">
                                     <!-- Previous Page Link -->
@@ -943,6 +1006,16 @@
 
                         <!-- Pagination untuk Corporate Customer - Diperbarui -->
                         @if (isset($corporateCustomers) && $corporateCustomers->hasPages())
+                        <!-- Per Page Selection -->
+                                <div class="per-page-selection">
+                                    <select id="perPage" class="per-page-select" onchange="changePerPage(this.value)">
+                                        <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                                        <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                                        <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="75" {{ request('per_page', 10) == 75 ? 'selected' : '' }}>75</option>
+                                        <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                                    </select>
+                                </div>
                             <div class="pagination-container">
                                 <ul class="pagination">
                                     <!-- Previous Page Link -->
@@ -1615,6 +1688,15 @@
             };
         });
     </script>
+
+    <script>
+        function changePerPage(perPage) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('per_page', perPage);
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
+        }
+    </script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

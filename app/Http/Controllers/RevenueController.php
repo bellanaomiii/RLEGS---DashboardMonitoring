@@ -22,6 +22,14 @@ class RevenueController extends Controller
     // Menampilkan halaman dashboard dengan data Revenue, Witel, Regional, dan Divisi
     public function index(Request $request)
     {
+            // Validasi dan ambil parameter per_page
+    $perPage = $request->get('per_page', 10);
+    
+    // Pastikan per_page adalah angka yang valid
+    if (!in_array($perPage, [10, 25, 50, 75, 100])) {
+        $perPage = 10;
+    }
+
         // Cek apakah user adalah admin
         if (Auth::user()->role !== 'admin') {
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
@@ -103,9 +111,9 @@ class RevenueController extends Controller
         $corporateCustomersQuery->orderBy('nama', 'asc');
 
         // Mengambil data dengan pagination
-        $revenues = $revenuesQuery->paginate(10);
-        $accountManagers = $accountManagersQuery->paginate(10);
-        $corporateCustomers = $corporateCustomersQuery->paginate(10);
+        $revenues = $revenuesQuery->paginate($perPage)->appends($request->query());
+        $accountManagers = $accountManagersQuery->paginate($perPage)->appends($request->query());
+        $corporateCustomers = $corporateCustomersQuery->paginate($perPage)->appends($request->query());
 
         // Data untuk filter
         $witels = Witel::all();
@@ -515,7 +523,7 @@ class RevenueController extends Controller
             $divisi = Divisi::select('id', 'nama')->get();
             $witels = Witel::select('id', 'nama')->get();
             $regionals = Regional::select('id', 'nama')->get(); // Tambahkan regionals
-            $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
+            $accountManagers = AccountManager::with(['witel', 'divisi', 'regional'])->paginate($perPage); 
             $corporateCustomers = collect([]);
             $revenues = collect([]);
             $yearRange = range(date('Y') - 5, date('Y') + 5);

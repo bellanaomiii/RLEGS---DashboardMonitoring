@@ -654,9 +654,6 @@
             <button class="period-tab {{ $currentPeriod == 'current_month' ? 'active' : '' }}" data-period="current_month">
                 <i class="fas fa-calendar-day me-2"></i>Bulan Ini
             </button>
-            <button class="period-tab {{ $currentPeriod == 'custom' ? 'active' : '' }}" data-period="custom">
-                <i class="fas fa-calendar-alt me-2"></i>Kustom
-            </button>
         </div>
 
         <div class="period-display">

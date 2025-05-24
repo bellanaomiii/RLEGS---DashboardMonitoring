@@ -116,6 +116,7 @@
             margin-bottom: 10px;
         }
 
+        /* ✅ NEW: Add tooltip for better UX */
         .region-box {
             flex: 1;
             max-width: 345px;
@@ -131,17 +132,188 @@
             overflow: hidden;
             text-overflow: ellipsis;
             transition: all 0.2s ease;
+            position: relative;
         }
 
-        .region-box:hover {
+        .region-box:hover:not([style*="pointer-events: none"]) {
             background-color: #e9ecef;
             border-color: #ced4da;
+            transform: translateY(-1px);
         }
 
         .region-box.active {
             background-color: #1e5bb0;
             color: white;
             border-color: #1e5bb0;
+            box-shadow: 0 2px 8px rgba(30, 91, 176, 0.3);
+        }
+
+        .region-box.active:hover:not([style*="pointer-events: none"]) {
+            background-color: #1a4f9a;
+            border-color: #1a4f9a;
+        }
+
+        /* ✅ UPDATED: Multi-select indicator with better positioning */
+        .region-box.active:not([data-region="all"])::after {
+            content: "✓";
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ✅ UPDATED: Disabled state styling with better visual feedback */
+        .region-box[style*="pointer-events: none"] {
+            cursor: not-allowed !important;
+            background-color: #f5f5f5 !important;
+            color: #999 !important;
+            border-color: #ddd !important;
+            position: relative;
+        }
+
+        .region-box[style*="pointer-events: none"]:hover {
+            background-color: #f5f5f5 !important;
+            transform: none !important;
+        }
+
+        /* ✅ NEW: Add "locked" icon for disabled buttons */
+        .region-box[style*="pointer-events: none"]:not(.active)::before {
+            content: "🔒";
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 10px;
+            opacity: 0.6;
+        }
+
+        /* ✅ NEW: Special styling for "Semua Witel" button */
+        .region-box[data-region="all"] {
+            font-weight: 600;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .region-box[data-region="all"].active {
+            background: linear-gradient(135deg, #1e5bb0 0%, #1a4f9a 100%);
+            font-weight: 700;
+        }
+
+        .region-box[data-region="all"]:hover:not([style*="pointer-events: none"]) {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        }
+
+        .region-box[data-region="all"].active:hover:not([style*="pointer-events: none"]) {
+            background: linear-gradient(135deg, #1a4f9a 0%, #164080 100%);
+        }
+
+        /* ✅ UPDATED: Color scheme documentation for charts */
+        /*
+        ==============================================
+        📊 WITEL PERFORM DASHBOARD - COLOR SCHEME:
+        ==============================================
+
+        🔵 Chart 1 - "Grafik Performa Periode":
+        - Target Revenue: Blue (#3b82f6) 🔵
+        - Real Revenue: Green (#22c55e) 🟢
+
+        🎨 Chart 2 - "Breakdown Pendapatan per Divisi & Witel":
+        - DSS (Digital Service Solutions): Purple (#8b5cf6) 💜
+        - DPS (Digital Platform Solutions): Teal (#06b6d4) 🩵
+        - DGS (Government, SOE & Private Services): Orange (#f59e0b) 🧡
+        - RLEGS: Hidden/Filtered (not shown in chart)
+
+        🎯 Achievement Indicators:
+        - Success (≥100%): Green (#22c55e)
+        - Good (≥80%): Blue (#3b82f6)
+        - Warning (≥60%): Orange (#f59e0b)
+        - Danger (<60%): Red (#ef4444)
+
+        ✅ Design Principles:
+        - No color conflicts between charts
+        - Consistent with brand guidelines
+        - Accessible color contrast
+        - Professional appearance
+        - FIXED: DGS = Government, SOE & Private Services (not Digital Global Solutions)
+        ==============================================
+        */
+
+        /* ✅ NEW: Achievement percentage styling with new color scheme */
+        .achievement-percentage {
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .achievement-percentage.success {
+            color: #22c55e; /* Green - matches chart 1 real revenue */
+        }
+
+        .achievement-percentage.good {
+            color: #3b82f6; /* Blue - matches chart 1 target revenue */
+        }
+
+        .achievement-percentage.warning {
+            color: #f59e0b; /* Orange - matches DGS color */
+        }
+
+        .achievement-percentage.danger {
+            color: #ef4444; /* Red - for very low achievement */
+        }
+
+        /* ✅ NEW: Division indicator colors for UI consistency */
+        .division-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .division-indicator.dss {
+            background-color: #8b5cf6; /* Purple */
+        }
+
+        .division-indicator.dps {
+            background-color: #06b6d4; /* Teal */
+        }
+
+        .division-indicator.dgs {
+            background-color: #f59e0b; /* Orange */
+        }
+
+        /* ✅ NEW: Chart container enhancements */
+        .chart-container {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-title .chart-icon {
+            width: 24px;
+            height: 24px;
+            opacity: 0.7;
         }
 
         /* Loading state for charts */
@@ -727,21 +899,116 @@
             const filterPanel = document.getElementById('filterPanel');
             const filterOverlay = document.getElementById('filterOverlay');
 
-            // ✅ FIXED: Witel Filter Logic (bukan regional!)
-            const witelButtons = document.querySelectorAll('.region-box'); // These are actually WITEL boxes
+            // ✅ UPDATED: Multi-Select Witel Filter Logic (Free Toggle)
+            const witelButtons = document.querySelectorAll('.region-box');
+            const semuaWitelButton = document.querySelector('.region-box[data-region="all"]');
 
-            // ✅ FIXED: Witel button click handler
+            // ✅ NEW: Free toggle witel button click handler
             witelButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    witelButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
-
-                    // ✅ FIXED: Update WITEL filter state, not regional
                     const selectedWitel = this.getAttribute('data-region');
-                    currentFilterState.selectedWitel = selectedWitel;
-                    updateChartsByWitel(selectedWitel);
+
+                    if (selectedWitel === 'all') {
+                        // ✅ CASE 1: "Semua Witel" clicked - can be toggled
+                        handleSemuaWitelToggle(this);
+                    } else {
+                        // ✅ CASE 2: Specific witel clicked - can be toggled
+                        handleSpecificWitelToggle(this, selectedWitel);
+                    }
                 });
             });
+
+            // ✅ NEW: Handle "Semua Witel" toggle (can be deactivated)
+            function handleSemuaWitelToggle(button) {
+                console.log('🔄 Semua Witel toggled, current state:', button.classList.contains('active'));
+
+                if (button.classList.contains('active')) {
+                    // ✅ DEACTIVATE "Semua Witel" - enable other buttons
+                    console.log('❌ Deactivating Semua Witel, enabling other buttons');
+                    button.classList.remove('active');
+                    enableAllWitelButtons();
+
+                    // No filter active, so don't call API - let user choose
+                    console.log('✨ All buttons enabled, waiting for user selection');
+                } else {
+                    // ✅ ACTIVATE "Semua Witel" - disable other buttons
+                    console.log('✅ Activating Semua Witel, disabling other buttons');
+                    resetAllWitelButtons();
+                    button.classList.add('active');
+                    disableOtherWitelButtons();
+
+                    // Update filter state and call API
+                    currentFilterState.selectedWitel = 'all';
+                    updateChartsByWitel('all');
+                }
+            }
+
+            // ✅ NEW: Handle specific witel toggle (free multi-select)
+            function handleSpecificWitelToggle(clickedButton, selectedWitel) {
+                console.log('🔄 Specific witel toggled:', selectedWitel, 'current state:', clickedButton.classList.contains('active'));
+
+                // Enable all buttons first (remove any disabled state)
+                enableAllWitelButtons();
+
+                // Deactivate "Semua Witel"
+                semuaWitelButton.classList.remove('active');
+
+                // Toggle clicked witel
+                const wasActive = clickedButton.classList.contains('active');
+                clickedButton.classList.toggle('active');
+                console.log(`${wasActive ? '❌' : '✅'} ${selectedWitel} ${wasActive ? 'deactivated' : 'activated'}`);
+
+                // Get all active witels (excluding "Semua Witel")
+                const activeWitels = getSelectedWitels()
+                    .filter(witel => witel !== 'all');
+
+                console.log('📋 Active witels after toggle:', activeWitels);
+
+                // If no witel selected, activate "Semua Witel"
+                if (activeWitels.length === 0) {
+                    console.log('🔄 No witel selected, auto-activating Semua Witel');
+                    semuaWitelButton.classList.add('active');
+                    disableOtherWitelButtons();
+                    currentFilterState.selectedWitel = 'all';
+                    updateChartsByWitel('all');
+                    return;
+                }
+
+                // Update filter state with active witels
+                currentFilterState.selectedWitel = activeWitels.length === 1 ? activeWitels[0] : activeWitels;
+                console.log('🎯 Updating charts with:', currentFilterState.selectedWitel);
+                updateChartsByWitel(activeWitels);
+            }
+
+            // ✅ NEW: Enable all witel buttons
+            function enableAllWitelButtons() {
+                console.log('🔓 Enabling all witel buttons');
+                witelButtons.forEach(btn => {
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                });
+            }
+
+            // ✅ NEW: Disable other witel buttons (except "Semua Witel")
+            function disableOtherWitelButtons() {
+                console.log('🔒 Disabling other witel buttons (except Semua Witel)');
+                witelButtons.forEach(btn => {
+                    if (btn.getAttribute('data-region') !== 'all') {
+                        btn.style.opacity = '0.5';
+                        btn.style.pointerEvents = 'none';
+                    }
+                });
+            }
+
+            // ✅ NEW: Reset all witel buttons to default state
+            function resetAllWitelButtons() {
+                console.log('🔄 Resetting all witel buttons to default state');
+                witelButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                });
+            }
 
             // Toggle filter panel with vanilla JS
             if (filterButton) {
@@ -844,13 +1111,15 @@
             // ✅ FIXED: Chart Type Selector - maintains current filter state
             $('#chartType').on('changed.bs.select', function() {
                 const selectedType = $(this).val();
-                console.log('Chart type changed to:', selectedType, 'with current filters:', currentFilterState);
+                console.log('🔄 Chart type changed to:', selectedType, 'with current filters:', currentFilterState);
 
-                // Re-render chart with current filter state
+                // Re-render chart with current filter state and NEW COLORS
                 if (chartData && chartData.periodPerformance) {
+                    console.log('🎨 Re-rendering period chart with new colors for type:', selectedType);
                     renderPeriodPerformanceChart(selectedType, chartData.periodPerformance);
                 } else {
                     // If no data, refresh with current filters
+                    console.log('🔄 No local data, refreshing with current filters');
                     refreshChartsWithCurrentFilters();
                 }
             });
@@ -906,7 +1175,7 @@
                 return { periods, labels };
             }
 
-            // ✅ FIXED: Enhanced Period Performance Chart with proper monthly data
+            // ✅ FIXED: Enhanced Period Performance Chart with proper monthly data and BLUE/GREEN colors
             function renderPeriodPerformanceChart(type, data = null) {
                 const ctx = document.getElementById('periodPerformanceChart');
                 if (!ctx) {
@@ -923,6 +1192,8 @@
                     console.error('No performance data available');
                     return;
                 }
+
+                console.log('🎨 Rendering period chart with new colors - Target: Blue, Real: Green');
 
                 // Destroy existing chart
                 if (periodPerformanceChartInstance) {
@@ -966,8 +1237,8 @@
                     datasets.push({
                         label: 'Target Revenue',
                         data: targetData,
-                        backgroundColor: 'rgba(28, 41, 85, 0.6)',
-                        borderColor: 'rgba(28, 41, 85, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',    // ✅ NEW: Blue for Target
+                        borderColor: '#3b82f6',                        // ✅ NEW: Blue border
                         borderWidth: 2,
                         yAxisID: 'y'
                     });
@@ -975,8 +1246,8 @@
                     datasets.push({
                         label: 'Real Revenue',
                         data: realData,
-                        backgroundColor: 'rgba(59, 125, 221, 0.6)',
-                        borderColor: 'rgba(59, 125, 221, 1)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',     // ✅ NEW: Green for Real
+                        borderColor: '#22c55e',                        // ✅ NEW: Green border
                         borderWidth: 2,
                         yAxisID: 'y'
                     });
@@ -1107,9 +1378,11 @@
                         }
                     }
                 });
+
+                console.log('✅ Period performance chart rendered with new colors!');
             }
 
-            // ✅ UPDATED: Enhanced Horizontal Stacked Division Chart with new colors
+            // ✅ UPDATED: Enhanced Horizontal Stacked Division Chart with NEW COLORS
             function renderStackedDivisionChart(data) {
                 const ctx = document.getElementById('stackedDivisionChart');
                 if (!ctx) {
@@ -1117,46 +1390,69 @@
                     return;
                 }
 
+                console.log('🎨 Rendering stacked division chart with data:', data);
+
                 // Destroy existing chart
                 if (stackedDivisionChartInstance) {
                     stackedDivisionChartInstance.destroy();
                 }
 
                 if (!data || !data.labels || data.labels.length === 0) {
-                    console.log('No stacked division data available');
+                    console.log('❌ No stacked division data available');
                     return;
                 }
 
-                // ✅ FILTER: Remove RLEGS from datasets and update colors
+                console.log('📊 Chart labels (witels):', data.labels);
+                console.log('📊 Chart datasets:', data.datasets.map(d => ({
+                    label: d.label,
+                    dataLength: d.data.length,
+                    totalRevenue: d.data.reduce((a, b) => a + b, 0)
+                })));
+
+                // ✅ UPDATED: New color scheme (avoid blue/green used in chart 1)
                 const filteredDatasets = data.datasets.filter(dataset => dataset.label !== 'RLEGS').map(dataset => {
-                    // ✅ UPDATED: Apply new gradient colors
-                    let backgroundColor, borderColor;
+                    let backgroundColor, borderColor, hoverBackgroundColor;
 
                     switch(dataset.label) {
-                        case 'DGS':
-                            backgroundColor = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
-                            borderColor = '#f59e0b';
+                        case 'DSS':
+                            // ✅ NEW: Purple/Violet for DSS (instead of green)
+                            backgroundColor = 'rgba(139, 92, 246, 0.8)';
+                            borderColor = '#8b5cf6';
+                            hoverBackgroundColor = 'rgba(139, 92, 246, 0.9)';
                             break;
                         case 'DPS':
-                            backgroundColor = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
-                            borderColor = '#3b82f6';
+                            // ✅ NEW: Teal/Cyan for DPS (instead of blue)
+                            backgroundColor = 'rgba(6, 182, 212, 0.8)';
+                            borderColor = '#06b6d4';
+                            hoverBackgroundColor = 'rgba(6, 182, 212, 0.9)';
                             break;
-                        case 'DSS':
-                            backgroundColor = 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)';
-                            borderColor = '#10b981';
+                        case 'DGS':
+                            // ✅ KEEP: Orange/Amber for DGS (unique color)
+                            backgroundColor = 'rgba(245, 158, 11, 0.8)';
+                            borderColor = '#f59e0b';
+                            hoverBackgroundColor = 'rgba(245, 158, 11, 0.9)';
                             break;
                         default:
                             backgroundColor = dataset.backgroundColor;
                             borderColor = dataset.borderColor;
+                            hoverBackgroundColor = dataset.backgroundColor;
                     }
+
+                    console.log(`📈 Dataset ${dataset.label}:`, {
+                        data: dataset.data,
+                        backgroundColor: backgroundColor
+                    });
 
                     return {
                         ...dataset,
                         backgroundColor: backgroundColor,
                         borderColor: borderColor,
+                        hoverBackgroundColor: hoverBackgroundColor,
                         borderWidth: 1
                     };
                 });
+
+                console.log('✅ Filtered datasets count:', filteredDatasets.length);
 
                 // Create horizontal stacked bar chart
                 stackedDivisionChartInstance = new Chart(ctx, {
@@ -1209,7 +1505,28 @@
                                 labels: {
                                     usePointStyle: true,
                                     padding: 20,
-                                    font: { size: 12, weight: '500' }
+                                    font: { size: 12, weight: '500' },
+                                    generateLabels: function(chart) {
+                                        const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                        const labels = original.call(this, chart);
+
+                                        // ✅ NEW: Add color descriptions for better UX
+                                        labels.forEach(label => {
+                                            switch(label.text) {
+                                                case 'DSS':
+                                                    label.text = 'DSS (Digital Service Solutions)';
+                                                    break;
+                                                case 'DPS':
+                                                    label.text = 'DPS (Digital Platform Solutions)';
+                                                    break;
+                                                case 'DGS':
+                                                    label.text = 'DGS (Digital Global Solutions)';
+                                                    break;
+                                            }
+                                        });
+
+                                        return labels;
+                                    }
                                 }
                             },
                             tooltip: {
@@ -1219,6 +1536,9 @@
                                 padding: 15,
                                 cornerRadius: 8,
                                 callbacks: {
+                                    title: function(context) {
+                                        return 'Witel: ' + context[0].label;
+                                    },
                                     label: function(context) {
                                         let label = context.dataset.label || '';
                                         if (label) {
@@ -1226,12 +1546,19 @@
                                         }
                                         label += 'Rp ' + context.parsed.x.toFixed(2) + ' M';
                                         return label;
+                                    },
+                                    afterBody: function(context) {
+                                        // Calculate total for this witel
+                                        const total = context.reduce((sum, item) => sum + item.parsed.x, 0);
+                                        return '\nTotal: Rp ' + total.toFixed(2) + ' M';
                                     }
                                 }
                             }
                         }
                     }
                 });
+
+                console.log('✅ Stacked division chart rendered successfully');
             }
 
             // Enhanced summary card updates
@@ -1316,10 +1643,12 @@
                 // Update charts
                 if (chartData.periodPerformance) {
                     const chartType = $('#chartType').val() || 'combined';
+                    console.log('🎯 Updating period chart with type:', chartType, 'and data:', chartData.periodPerformance);
                     renderPeriodPerformanceChart(chartType, chartData.periodPerformance);
                 }
 
                 if (chartData.stackedDivision) {
+                    console.log('🎯 Updating stacked chart with data:', chartData.stackedDivision);
                     renderStackedDivisionChart(chartData.stackedDivision);
                 }
 
@@ -1331,7 +1660,7 @@
                 }
             }
 
-            // ✅ NEW: Update charts by WITEL (not regional)
+            // ✅ UPDATED: Update charts by WITEL (supports multiple selection, ensure "all" case)
             function updateChartsByWitel(witel) {
                 showLoading();
 
@@ -1342,6 +1671,23 @@
                 const formattedStartDate = formatDateForApi(startDate);
                 const formattedEndDate = formatDateForApi(endDate);
 
+                // ✅ UPDATED: Handle both single and multiple witel selection, ensure "all" is sent as string
+                let witelParam;
+                let displayText;
+
+                if (witel === 'all') {
+                    witelParam = 'all'; // String, not array
+                    displayText = 'Semua Witel (7 Witel Individual)';
+                } else if (Array.isArray(witel)) {
+                    witelParam = witel;
+                    displayText = `${witel.length} Witel (${witel.join(', ')})`;
+                } else {
+                    witelParam = [witel]; // Convert single to array for consistency
+                    displayText = witel;
+                }
+
+                console.log('🎯 Sending witel parameter:', witelParam, 'Display:', displayText);
+
                 fetch('{{ route('witel.filter-by-witel') }}', {
                         method: 'POST',
                         headers: {
@@ -1349,7 +1695,7 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({
-                            witel: witel,
+                            witel: witelParam,
                             regional: currentFilterState.selectedRegional,
                             divisi: currentFilterState.selectedDivisi,
                             start_date: formattedStartDate,
@@ -1358,10 +1704,11 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        console.log('📊 Received chart data:', data.chartData);
                         updateAllCharts(data.chartData);
                         updateSummaryCards(data.summaryData);
                         hideLoading();
-                        showAlert('success', `Data untuk ${witel === 'all' ? 'Semua Witel' : witel} berhasil dimuat`);
+                        showAlert('success', `Data untuk ${displayText} berhasil dimuat`);
                     })
                     .catch(error => {
                         console.error('Error applying witel filter:', error);
@@ -1411,10 +1758,25 @@
 
             function updateCharts(startDate, endDate) {
                 showLoading();
-                console.log('Updating charts with date range:', formatDate(startDate), '-', formatDate(endDate));
+                console.log('🔄 Updating charts with date range:', formatDate(startDate), '-', formatDate(endDate));
+                console.log('🎯 Current witel state:', currentFilterState.selectedWitel);
 
                 const formattedStartDate = formatDateForApi(startDate);
                 const formattedEndDate = formatDateForApi(endDate);
+
+                // ✅ NEW: Ensure proper witel parameter formatting
+                let witelParam = currentFilterState.selectedWitel;
+                if (witelParam !== 'all' && !Array.isArray(witelParam)) {
+                    witelParam = [witelParam]; // Convert single witel to array
+                }
+
+                console.log('📤 Sending parameters:', {
+                    witel: witelParam,
+                    regional: currentFilterState.selectedRegional,
+                    divisi: currentFilterState.selectedDivisi,
+                    start_date: formattedStartDate,
+                    end_date: formattedEndDate
+                });
 
                 fetch('{{ route('witel.update-charts') }}', {
                         method: 'POST',
@@ -1423,7 +1785,7 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({
-                            witel: currentFilterState.selectedWitel,
+                            witel: witelParam,
                             regional: currentFilterState.selectedRegional,
                             divisi: currentFilterState.selectedDivisi,
                             start_date: formattedStartDate,
@@ -1435,6 +1797,7 @@
                         if (data.error) {
                             showAlert('warning', data.error);
                             if (data.chartData) {
+                                console.log('📊 Received chart data (with warning):', data.chartData);
                                 updateAllCharts(data.chartData);
                                 updateSummaryCards(data.summaryData);
                             }
@@ -1442,6 +1805,7 @@
                             return;
                         }
 
+                        console.log('📊 Received chart data (success):', data.chartData);
                         updateAllCharts(data.chartData);
                         updateSummaryCards(data.summaryData);
 
@@ -1643,13 +2007,62 @@
 
                 // Initialize charts
                 if (chartData.periodPerformance) {
+                    console.log('🚀 Initializing period chart with data:', chartData.periodPerformance);
                     renderPeriodPerformanceChart('combined', chartData.periodPerformance);
                 }
 
                 if (chartData.stackedDivision) {
+                    console.log('🚀 Initializing stacked chart with data:', chartData.stackedDivision);
                     renderStackedDivisionChart(chartData.stackedDivision);
                 }
             }
+
+            // ✅ NEW: Get currently selected witels
+            function getSelectedWitels() {
+                return Array.from(witelButtons)
+                    .filter(btn => btn.classList.contains('active'))
+                    .map(btn => btn.getAttribute('data-region'));
+            }
+
+            // ✅ UPDATED: Initialize witel buttons state on page load (with free toggle support)
+            function initializeWitelButtons() {
+                const currentWitel = currentFilterState.selectedWitel;
+                console.log('Initializing witel buttons with state:', currentWitel);
+
+                // Reset all buttons first
+                resetAllWitelButtons();
+
+                if (currentWitel === 'all') {
+                    // Activate "Semua Witel" and disable others
+                    semuaWitelButton.classList.add('active');
+                    disableOtherWitelButtons();
+                } else if (Array.isArray(currentWitel)) {
+                    // Handle multiple selection on page load
+                    enableAllWitelButtons();
+                    semuaWitelButton.classList.remove('active');
+                    currentWitel.forEach(witel => {
+                        const button = document.querySelector(`.region-box[data-region="${witel}"]`);
+                        if (button) {
+                            button.classList.add('active');
+                        }
+                    });
+                } else if (currentWitel && currentWitel !== 'all') {
+                    // Handle single specific witel
+                    enableAllWitelButtons();
+                    semuaWitelButton.classList.remove('active');
+                    const button = document.querySelector(`.region-box[data-region="${currentWitel}"]`);
+                    if (button) {
+                        button.classList.add('active');
+                    }
+                } else {
+                    // Default to "Semua Witel" if no valid state
+                    semuaWitelButton.classList.add('active');
+                    disableOtherWitelButtons();
+                }
+            }
+
+            // Initialize witel buttons state
+            initializeWitelButtons();
 
             // Initialize charts on page load
             initializeCharts();

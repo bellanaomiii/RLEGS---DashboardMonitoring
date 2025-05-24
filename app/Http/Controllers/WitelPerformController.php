@@ -43,6 +43,11 @@ class WitelPerformController extends Controller
             $selectedRegional = $request->input('regional', 'all');
             $selectedDivisi = $request->input('divisi', 'all');
 
+            // ✅ NEW: Handle array witel from multi-select
+            if (is_string($selectedWitel) && $selectedWitel !== 'all') {
+                $selectedWitel = [$selectedWitel];
+            }
+
             // Get all witel with fallback to default if empty
             $witels = Witel::pluck('nama')->toArray();
             if (empty($witels)) {
@@ -151,12 +156,12 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ FIXED: Prepare Chart.js compatible data structure
+     * ✅ UPDATED: Prepare Chart.js compatible data structure (supports multi-witel)
      */
     private function prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate)
     {
         try {
-            // ✅ FIXED: Get account manager IDs based on ALL filters INCLUDING divisi
+            // ✅ UPDATED: Get account manager IDs based on ALL filters INCLUDING divisi
             $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional, $divisi);
 
             if (empty($accountManagerIds)) {
@@ -203,18 +208,26 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ FIXED: Get stacked division data for Chart.js (exclude RLEGS)
+     * ✅ UPDATED: Get stacked division data for Chart.js (supports multi-witel, shows 7 bars for "all")
      */
     private function getStackedDivisionData($witel, $regional, $divisi, $startDate, $endDate)
     {
         try {
-            // Get witels to show on chart
+            // ✅ UPDATED: Get witels to show on chart (ALWAYS show individual witels)
             $witelsToShow = [];
             if ($witel !== 'all') {
-                $witelsToShow = [$witel];
+                if (is_array($witel)) {
+                    $witelsToShow = $witel;
+                } else {
+                    $witelsToShow = [$witel];
+                }
             } else {
+                // ✅ FIXED: When "all" selected, show 7 individual witels (not "all")
                 $witels = Witel::pluck('nama')->toArray();
                 $witelsToShow = !empty($witels) ? array_slice($witels, 0, 7) : array_slice($this->defaultWitels, 0, 7);
+
+                // ✅ NEW: Log for debugging
+                Log::info('Semua Witel selected, showing witels: ' . implode(', ', $witelsToShow));
             }
 
             // ✅ FIXED: Only show DSS, DPS, DGS (exclude RLEGS)
@@ -238,17 +251,34 @@ class WitelPerformController extends Controller
                 $data = [];
 
                 foreach ($witelsToShow as $witelName) {
-                    // Get account managers for this specific witel and division
-                    $witelAMs = $this->getAccountManagersByWitelAndDivision($witelName, $division);
+                    // ✅ UPDATED: Get account managers for this specific witel and division
+                    if ($witel === 'all') {
+                        // For "Semua Witel", get AMs for each individual witel
+                        $witelAMs = $this->getAccountManagersByWitelAndDivision($witelName, $division);
 
-                    // Apply regional filter if needed
-                    if ($regional !== 'all') {
-                        $regionalAMs = $this->getAccountManagerIdsByFilters('all', $regional, 'all');
-                        $witelAMs = array_intersect($witelAMs, $regionalAMs);
+                        // Apply regional filter if needed
+                        if ($regional !== 'all') {
+                            $regionalAMs = $this->getAccountManagerIdsByFilters('all', $regional, 'all');
+                            $witelAMs = array_intersect($witelAMs, $regionalAMs);
+                        }
+                    } else {
+                        // For specific witels, use existing logic
+                        $witelAMs = $this->getAccountManagersByWitelAndDivision($witelName, $division);
+
+                        // Apply regional filter if needed
+                        if ($regional !== 'all') {
+                            $regionalAMs = $this->getAccountManagerIdsByFilters('all', $regional, 'all');
+                            $witelAMs = array_intersect($witelAMs, $regionalAMs);
+                        }
                     }
 
                     $revenue = $this->getRevenueForPeriod($witelAMs, $startDate, $endDate, $division);
-                    $data[] = round($revenue['total_real'] / 1000000, 2); // Convert to millions
+                    $revenueInMillions = round($revenue['total_real'] / 1000000, 2); // Convert to millions
+
+                    // ✅ NEW: Log revenue data for debugging
+                    Log::info("Revenue for {$witelName} - {$division}: {$revenueInMillions}M (from {$revenue['total_real']})");
+
+                    $data[] = $revenueInMillions;
                 }
 
                 $datasets[] = [
@@ -259,6 +289,10 @@ class WitelPerformController extends Controller
                     'borderWidth' => 1
                 ];
             }
+
+            // ✅ NEW: Log final chart data
+            Log::info('Stacked chart labels: ' . implode(', ', $witelsToShow));
+            Log::info('Stacked chart datasets count: ' . count($datasets));
 
             return [
                 'labels' => $witelsToShow,
@@ -275,7 +309,7 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ FIXED: Get account manager IDs with ALL filters working properly
+     * ✅ UPDATED: Get account manager IDs with ALL filters working properly (supports multi-witel)
      */
     private function getAccountManagerIdsByFilters($witel = 'all', $regional = 'all', $divisi = 'all')
     {
@@ -289,11 +323,20 @@ class WitelPerformController extends Controller
             }
         }
 
-        // Apply witel filter
+        // ✅ UPDATED: Apply witel filter (supports array)
         if ($witel !== 'all') {
-            $witelId = Witel::where('nama', $witel)->first()?->id;
-            if ($witelId) {
-                $query->where('witel_id', $witelId);
+            if (is_array($witel)) {
+                // Multiple witels selected
+                $witelIds = Witel::whereIn('nama', $witel)->pluck('id')->toArray();
+                if (!empty($witelIds)) {
+                    $query->whereIn('witel_id', $witelIds);
+                }
+            } else {
+                // Single witel selected
+                $witelId = Witel::where('nama', $witel)->first()?->id;
+                if ($witelId) {
+                    $query->where('witel_id', $witelId);
+                }
             }
         }
 
@@ -321,16 +364,24 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * Get account managers by witel only
+     * ✅ UPDATED: Get account managers by witel (supports multiple witels)
      */
-    private function getAccountManagersByWitel($witelName)
+    private function getAccountManagersByWitel($witel)
     {
-        $witelId = Witel::where('nama', $witelName)->first()?->id;
-        if (!$witelId) {
-            return [];
+        if ($witel === 'all') {
+            return AccountManager::pluck('id')->toArray();
         }
 
-        return AccountManager::where('witel_id', $witelId)->pluck('id')->toArray();
+        if (is_array($witel)) {
+            $witelIds = Witel::whereIn('nama', $witel)->pluck('id')->toArray();
+            return AccountManager::whereIn('witel_id', $witelIds)->pluck('id')->toArray();
+        } else {
+            $witelId = Witel::where('nama', $witel)->first()?->id;
+            if (!$witelId) {
+                return [];
+            }
+            return AccountManager::where('witel_id', $witelId)->pluck('id')->toArray();
+        }
     }
 
     /**
@@ -354,7 +405,7 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ MAJOR FIX: Revenue summary with proper division filtering logic
+     * ✅ UPDATED: Revenue summary with proper division filtering logic (supports multi-witel)
      */
     private function getRevenueSummary($startDate, $endDate, $witel = 'all', $regional = 'all', $divisi = 'all')
     {
@@ -520,7 +571,7 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ UPDATED: Update charts via AJAX with proper Chart.js data
+     * ✅ UPDATED: Update charts via AJAX with proper Chart.js data (supports multi-witel)
      */
     public function updateCharts(Request $request)
     {
@@ -530,6 +581,11 @@ class WitelPerformController extends Controller
             $divisi = $request->input('divisi', 'all');
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+
+            // ✅ NEW: Handle array witel from frontend
+            if (is_array($witel) && count($witel) == 1) {
+                $witel = $witel[0]; // Convert single-item array to string
+            }
 
             // Generate updated Chart.js data
             $chartData = $this->prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate);
@@ -553,7 +609,7 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ UPDATED: Filter by witel with proper data
+     * ✅ UPDATED: Filter by witel with proper data (supports multi-witel)
      */
     public function filterByWitel(Request $request)
     {
@@ -563,6 +619,11 @@ class WitelPerformController extends Controller
             $divisi = $request->input('divisi', 'all');
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
+
+            // ✅ NEW: Log multi-witel request for debugging
+            if (is_array($witel)) {
+                Log::info('Multi-witel filter request: ' . implode(', ', $witel));
+            }
 
             $chartData = $this->prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate);
             $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional, $divisi);

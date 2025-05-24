@@ -16,6 +16,7 @@ use Maatwebsite\Excel\Concerns\SkipsFailures;
 use Maatwebsite\Excel\Concerns\RemembersRowNumber;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnError, SkipsOnFailure
 {
@@ -24,394 +25,554 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     private $importedCount = 0;
     private $updatedCount = 0;
     private $duplicateCount = 0;
-    private $processedRows = [];
+    private $errorCount = 0;
+    private $skippedCount = 0;
+
+    // ✅ IMPROVED: Detailed tracking seperti RevenueImport
+    private $errorDetails = [];
+    private $warningDetails = [];
+    private $successDetails = [];
+    private $processedRows = 0;
+
+    // ✅ IMPROVED: Master data caching dengan normalisasi
     private $witels = [];
     private $regionals = [];
     private $divisis = [];
+    private $existingAccountManagers = [];
+
+    private $chunkSize = 100; // ✅ Add chunking support
+
+    // ✅ EXPANDED: Alternative column names dengan lebih banyak variasi
+    private $alternativeColumns = [
+        'nik' => [
+            'nik', 'NIK', 'Nik', 'employee_id', 'emp_id', 'id_karyawan', 'Employee ID'
+        ],
+        'nama_am' => [
+            'nama am', 'NAMA AM', 'nama_am', 'Nama AM', 'account_manager', 'Account Manager',
+            'ACCOUNT_MANAGER', 'AM Name', 'AM_Name', 'namaAM', 'Name'
+        ],
+        'witel_ho' => [
+            'witel ho', 'WITEL HO', 'witel_ho', 'Witel HO', 'witel', 'WITEL', 'Witel'
+        ],
+        'regional' => [
+            'regional', 'REGIONAL', 'Regional', 'treg', 'TREG', 'Treg'
+        ],
+        'divisi' => [
+            'divisi', 'DIVISI', 'Divisi', 'division', 'Division', 'DIVISION'
+        ]
+    ];
 
     public function __construct()
     {
-        // Preload master data untuk lookup yang lebih cepat
         $this->loadMasterData();
+
+        // ✅ Set memory dan timeout untuk file besar
+        ini_set('memory_limit', '1024M');
+        set_time_limit(300); // 5 minutes
     }
 
     /**
-     * Load master data untuk witel, regional, dan divisi
+     * ✅ IMPROVED: Load master data dengan normalisasi string
      */
     private function loadMasterData()
     {
-        // Load witel data
-        $witels = Witel::all();
-        foreach ($witels as $witel) {
-            $this->witels[strtoupper($witel->nama)] = $witel->id;
+        try {
+            // Load witel data dengan normalisasi
+            $witels = Witel::all();
+            foreach ($witels as $witel) {
+                $this->witels['nama:' . $this->normalizeString($witel->nama)] = $witel;
+                $this->witels['id:' . $witel->id] = $witel;
+            }
+
+            // Load regional data dengan normalisasi
+            $regionals = Regional::all();
+            foreach ($regionals as $regional) {
+                $this->regionals['nama:' . $this->normalizeString($regional->nama)] = $regional;
+                $this->regionals['id:' . $regional->id] = $regional;
+            }
+
+            // Load divisi data dengan normalisasi
+            $divisis = Divisi::all();
+            foreach ($divisis as $divisi) {
+                $this->divisis['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
+                $this->divisis['id:' . $divisi->id] = $divisi;
+            }
+
+            // ✅ NEW: Load existing account managers
+            $existingAMs = AccountManager::with(['divisis'])->get();
+            foreach ($existingAMs as $am) {
+                $this->existingAccountManagers['nik:' . trim($am->nik)] = $am;
+                $this->existingAccountManagers['nama:' . $this->normalizeString($am->nama)] = $am;
+            }
+
+            Log::info('✅ Master data loaded for AccountManager import', [
+                'witels' => count($witels),
+                'regionals' => count($regionals),
+                'divisis' => count($divisis),
+                'existing_ams' => count($existingAMs)
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error loading master data: ' . $e->getMessage());
+            throw new \Exception('Gagal memuat master data: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ✅ NEW: Normalize string untuk konsistensi
+     */
+    private function normalizeString($string)
+    {
+        return strtolower(trim($string));
+    }
+
+    /**
+     * ✅ IMPROVED: Collection processing dengan chunking dan better error handling
+     */
+    public function collection(Collection $rows)
+    {
+        if ($rows->isEmpty()) {
+            $this->errorDetails[] = "❌ File Excel kosong atau tidak memiliki data";
+            return;
         }
 
-        // Load regional data
-        $regionals = Regional::all();
-        foreach ($regionals as $regional) {
-            $this->regionals[strtoupper($regional->nama)] = $regional->id;
-        }
+        // ✅ IMPROVED: Column identification dengan validasi
+        $firstRow = $rows->first();
+        $columnMap = $this->identifyColumns($firstRow);
 
-        // Load divisi data
-        $divisis = Divisi::all();
-        foreach ($divisis as $divisi) {
-            $this->divisis[strtoupper($divisi->nama)] = $divisi->id;
-        }
+        // ✅ NEW: Validate required columns
+        $this->validateRequiredColumns($columnMap);
 
-        Log::info('Master data loaded', [
-            'witels' => count($this->witels),
-            'regionals' => count($this->regionals),
-            'divisis' => count($this->divisis)
+        Log::info('📊 Starting AccountManager import', [
+            'total_rows' => $rows->count(),
+            'columns_found' => array_keys($columnMap)
+        ]);
+
+        // ✅ IMPROVED: Group data by NIK first, then process in chunks
+        $accountManagerData = $this->groupDataByNIK($rows->slice(1), $columnMap);
+
+        // Process grouped data
+        $this->processGroupedData($accountManagerData);
+
+        Log::info('✅ AccountManager import completed', [
+            'imported' => $this->importedCount,
+            'updated' => $this->updatedCount,
+            'duplicates' => $this->duplicateCount,
+            'errors' => $this->errorCount,
+            'skipped' => $this->skippedCount
         ]);
     }
 
     /**
-     * Import data as collection for pre-processing
+     * ✅ NEW: Validate required columns
      */
-    public function collection(Collection $rows)
+    private function validateRequiredColumns($columnMap)
     {
-        // Track unique entries based on NIK
-        $accountManagerData = [];
-        $existingEntries = [];
+        $requiredColumns = ['nik', 'nama_am'];
+        $missingColumns = [];
 
-        // Get all existing account managers by NIK
-        $existingAccountManagers = AccountManager::all()->pluck('id', 'nik')->toArray();
-
-        Log::info('Starting import of ' . count($rows) . ' rows');
-
-        // Identify column names in the CSV (case-insensitive)
-        $columnMap = $this->identifyColumns($rows->first());
-
-        Log::info('Identified columns', $columnMap);
-
-        // LANGKAH 1: Mengumpulkan semua data untuk setiap AM berdasarkan NIK
-        foreach ($rows as $index => $row) {
-            try {
-                // Skip first row if it's a header
-                if ($index === 0 && isset($row['NIK']) && $row['NIK'] === 'NIK') {
-                    continue;
-                }
-
-                // Extract values using the column map
-                $nik = $this->extractValue($row, $columnMap, 'nik');
-                $nama = $this->extractValue($row, $columnMap, 'nama_am');
-                $witelName = $this->extractValue($row, $columnMap, 'witel_ho');
-                $regionalName = $this->extractValue($row, $columnMap, 'regional');
-                $divisiName = $this->extractValue($row, $columnMap, 'divisi');
-
-                // Skip if any required field is empty
-                if (empty($nik) || empty($nama) || empty($witelName) || empty($regionalName) || empty($divisiName)) {
-                    Log::warning('Incomplete row in CSV', [
-                        'row' => $index + 2, // +2 for Excel row number (1-based index + header)
-                        'nik' => $nik,
-                        'nama' => $nama,
-                        'witel' => $witelName,
-                        'regional' => $regionalName,
-                        'divisi' => $divisiName
-                    ]);
-                    continue;
-                }
-
-                // Find witel_id by name
-                $witelId = $this->findWitelId($witelName);
-                if (!$witelId) {
-                    Log::warning("Witel '{$witelName}' not found in database", ['row' => $index + 2]);
-                    continue;
-                }
-
-                // Find regional_id by name
-                $regionalId = $this->findRegionalId($regionalName);
-                if (!$regionalId) {
-                    Log::warning("Regional '{$regionalName}' not found in database", ['row' => $index + 2]);
-                    continue;
-                }
-
-                // Find divisi_id by name
-                $divisiId = $this->findDivisiId($divisiName);
-                if (!$divisiId) {
-                    Log::warning("Divisi '{$divisiName}' not found in database", ['row' => $index + 2]);
-                    continue;
-                }
-
-                // Create a unique key for this AM based on NIK
-                if (!isset($accountManagerData[$nik])) {
-                    // Initialize data for this NIK if it doesn't exist yet
-                    $accountManagerData[$nik] = [
-                        'nama' => $nama,
-                        'witel_id' => $witelId,
-                        'regional_id' => $regionalId,
-                        'divisi_ids' => [], // Array untuk menyimpan semua ID divisi
-                        'is_existing' => array_key_exists($nik, $existingAccountManagers),
-                        'account_manager_id' => array_key_exists($nik, $existingAccountManagers) ? $existingAccountManagers[$nik] : null
-                    ];
-                }
-
-                // Tambahkan divisi_id ke array jika belum ada
-                if (!in_array($divisiId, $accountManagerData[$nik]['divisi_ids'])) {
-                    $accountManagerData[$nik]['divisi_ids'][] = $divisiId;
-                } else {
-                    $this->duplicateCount++;
-                    Log::info('Duplicate divisi found for NIK in CSV file', ['row' => $index + 2, 'nik' => $nik, 'divisi' => $divisiName]);
-                }
-
-                // Tandai baris ini sudah diproses
-                $this->processedRows[] = "$nik-$divisiId";
-
-            } catch (\Exception $e) {
-                Log::error('Error processing CSV row: ' . $e->getMessage(), [
-                    'row' => $index + 2,
-                    'exception' => $e
-                ]);
-                continue;
+        foreach ($requiredColumns as $required) {
+            if (!isset($columnMap[$required])) {
+                $missingColumns[] = $required;
             }
         }
 
-        // LANGKAH 2: Proses semua data yang sudah dikumpulkan
-        foreach ($accountManagerData as $nik => $data) {
+        if (!empty($missingColumns)) {
+            $error = "❌ Kolom wajib tidak ditemukan: " . implode(', ', $missingColumns);
+            $this->errorDetails[] = $error;
+            throw new \Exception($error);
+        }
+    }
+
+    /**
+     * ✅ IMPROVED: Group data by NIK untuk handle multiple divisi per AM
+     */
+    private function groupDataByNIK($rows, $columnMap)
+    {
+        $accountManagerData = [];
+
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2; // +2 for Excel row number
+            $this->processedRows++;
+
             try {
-                if ($data['is_existing']) {
-                    // Update existing account manager
-                    $accountManager = AccountManager::find($data['account_manager_id']);
+                if ($this->isEmptyRow($row)) {
+                    $this->skippedCount++;
+                    continue;
+                }
 
-                    if ($accountManager) {
-                        // Update data dasar
-                        $accountManager->update([
-                            'nama' => $data['nama'],
-                            'witel_id' => $data['witel_id'],
-                            'regional_id' => $data['regional_id'],
-                        ]);
+                // ✅ Extract and validate row data
+                $rowData = $this->extractRowData($row, $columnMap, $rowNumber);
+                if (!$rowData) {
+                    continue; // Skip jika data tidak valid
+                }
 
-                        // SYNC divisi - akan mengganti semua relasi dengan yang baru
-                        $accountManager->divisis()->sync($data['divisi_ids']);
+                $nik = $rowData['nik'];
 
-                        $this->updatedCount++;
-                        Log::info('Account Manager updated with multiple divisi', [
-                            'nik' => $nik,
-                            'id' => $data['account_manager_id'],
-                            'divisi_count' => count($data['divisi_ids']),
-                            'divisi_ids' => $data['divisi_ids']
-                        ]);
-                    }
+                // ✅ Find related entities
+                $witel = $this->findWitel($rowData['witel_name'], $rowNumber);
+                $regional = $this->findRegional($rowData['regional_name'], $rowNumber);
+                $divisi = $this->findDivisi($rowData['divisi_name'], $rowNumber);
+
+                if (!$witel || !$regional || !$divisi) {
+                    continue; // Skip if any required entity not found
+                }
+
+                // ✅ Group by NIK
+                if (!isset($accountManagerData[$nik])) {
+                    $accountManagerData[$nik] = [
+                        'nama' => $rowData['nama'],
+                        'witel_id' => $witel->id,
+                        'regional_id' => $regional->id,
+                        'divisi_ids' => [],
+                        'row_numbers' => []
+                    ];
+                }
+
+                // ✅ Add divisi if not already present
+                if (!in_array($divisi->id, $accountManagerData[$nik]['divisi_ids'])) {
+                    $accountManagerData[$nik]['divisi_ids'][] = $divisi->id;
+                    $accountManagerData[$nik]['row_numbers'][] = $rowNumber;
                 } else {
-                    // Create new account manager
-                    $newData = [
+                    $this->duplicateCount++;
+                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Duplikasi divisi '{$divisi->nama}' untuk NIK '{$nik}'";
+                }
+
+            } catch (\Exception $e) {
+                $this->errorCount++;
+                $errorMsg = "❌ Baris {$rowNumber}: " . $e->getMessage();
+                $this->errorDetails[] = $errorMsg;
+                Log::error($errorMsg, ['exception' => $e]);
+            }
+        }
+
+        return $accountManagerData;
+    }
+
+    /**
+     * ✅ NEW: Extract and validate row data
+     */
+    private function extractRowData($row, $columnMap, $rowNumber)
+    {
+        $data = [
+            'nik' => $this->extractValue($row, $columnMap, 'nik'),
+            'nama' => $this->extractValue($row, $columnMap, 'nama_am'),
+            'witel_name' => $this->extractValue($row, $columnMap, 'witel_ho'),
+            'regional_name' => $this->extractValue($row, $columnMap, 'regional'),
+            'divisi_name' => $this->extractValue($row, $columnMap, 'divisi')
+        ];
+
+        // ✅ Validate required fields
+        if (empty($data['nik'])) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: NIK kosong";
+            return null;
+        }
+
+        if (empty($data['nama'])) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Nama Account Manager kosong";
+            return null;
+        }
+
+        // ✅ Validate NIK format (assuming 5 digits)
+        if (!preg_match('/^\d{5}$/', $data['nik'])) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Format NIK tidak valid: '{$data['nik']}' (harus 5 digit)";
+            return null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * ✅ IMPROVED: Process grouped data dengan transaction
+     */
+    private function processGroupedData($accountManagerData)
+    {
+        foreach ($accountManagerData as $nik => $data) {
+            DB::beginTransaction();
+            try {
+                // ✅ Check if AM already exists
+                $existingAM = $this->findExistingAccountManager($nik, $data['nama']);
+
+                if ($existingAM) {
+                    // ✅ Update existing Account Manager
+                    $existingAM->update([
+                        'nama' => $data['nama'],
+                        'witel_id' => $data['witel_id'],
+                        'regional_id' => $data['regional_id'],
+                    ]);
+
+                    // ✅ Sync divisi (replace all existing relations)
+                    $existingAM->divisis()->sync($data['divisi_ids']);
+
+                    $this->updatedCount++;
+                    $this->successDetails[] = "✅ NIK {$nik}: Account Manager '{$data['nama']}' diperbarui dengan " . count($data['divisi_ids']) . " divisi";
+
+                } else {
+                    // ✅ Create new Account Manager
+                    $newAM = AccountManager::create([
                         'nama' => $data['nama'],
                         'nik' => $nik,
                         'witel_id' => $data['witel_id'],
                         'regional_id' => $data['regional_id'],
-                    ];
+                    ]);
 
-                    $accountManager = AccountManager::create($newData);
-
-                    // Attach all divisi
-                    $accountManager->divisis()->attach($data['divisi_ids']);
+                    // ✅ Attach divisi
+                    $newAM->divisis()->attach($data['divisi_ids']);
 
                     $this->importedCount++;
-                    Log::info('New Account Manager created with multiple divisi', [
-                        'nik' => $nik,
-                        'id' => $accountManager->id,
-                        'divisi_count' => count($data['divisi_ids']),
-                        'divisi_ids' => $data['divisi_ids']
-                    ]);
+                    $this->successDetails[] = "✅ NIK {$nik}: Account Manager baru '{$data['nama']}' dibuat dengan " . count($data['divisi_ids']) . " divisi";
                 }
+
+                DB::commit();
+
             } catch (\Exception $e) {
-                Log::error('Error saving Account Manager: ' . $e->getMessage(), [
-                    'nik' => $nik,
-                    'exception' => $e
-                ]);
+                DB::rollBack();
+                $this->errorCount++;
+                $errorMsg = "❌ NIK {$nik}: Gagal menyimpan - " . $e->getMessage();
+                $this->errorDetails[] = $errorMsg;
+                Log::error($errorMsg, ['exception' => $e]);
             }
         }
-
-        Log::info('Import completed', [
-            'imported_new' => $this->importedCount,
-            'updated' => $this->updatedCount,
-            'duplicates_skipped' => $this->duplicateCount,
-        ]);
-
-        return collect([
-            'imported' => $this->importedCount,
-            'updated' => $this->updatedCount,
-            'duplicates' => $this->duplicateCount
-        ]);
     }
 
     /**
-     * Identify column names in the CSV
+     * ✅ IMPROVED: Find existing Account Manager dengan fuzzy matching
      */
-    private function identifyColumns($firstRow)
+    private function findExistingAccountManager($nik, $nama)
     {
-        $map = [
-            'nik' => null,
-            'nama_am' => null,
-            'witel_ho' => null,
-            'regional' => null,
-            'divisi' => null
-        ];
+        // Try by NIK first
+        $nikKey = 'nik:' . trim($nik);
+        $existingAM = $this->existingAccountManagers[$nikKey] ?? null;
 
-        if (!$firstRow) {
-            return $map;
+        if ($existingAM) {
+            return $existingAM;
         }
 
-        foreach ($firstRow as $key => $value) {
-            $upperKey = strtoupper($key);
+        // Try by name
+        $namaKey = 'nama:' . $this->normalizeString($nama);
+        $existingAM = $this->existingAccountManagers[$namaKey] ?? null;
 
-            if ($upperKey === 'NIK') {
-                $map['nik'] = $key;
-            } elseif ($upperKey === 'NAMA AM' || $upperKey === 'NAMA_AM') {
-                $map['nama_am'] = $key;
-            } elseif ($upperKey === 'WITEL HO' || $upperKey === 'WITEL_HO') {
-                $map['witel_ho'] = $key;
-            } elseif ($upperKey === 'REGIONAL') {
-                $map['regional'] = $key;
-            } elseif ($upperKey === 'DIVISI') {
-                $map['divisi'] = $key;
-            }
+        if ($existingAM) {
+            $this->warningDetails[] = "⚠️ NIK {$nik}: Account Manager ditemukan berdasarkan nama: '{$nama}'";
+            return $existingAM;
         }
 
-        return $map;
+        // ✅ Fallback to database
+        $existingAM = AccountManager::where('nik', $nik)
+            ->orWhere('nama', 'like', "%{$nama}%")
+            ->first();
+
+        if ($existingAM) {
+            // Add to cache
+            $this->existingAccountManagers['nik:' . trim($existingAM->nik)] = $existingAM;
+            $this->existingAccountManagers['nama:' . $this->normalizeString($existingAM->nama)] = $existingAM;
+        }
+
+        return $existingAM;
     }
 
     /**
-     * Extract value from row using column map
+     * ✅ IMPROVED: Find Witel dengan error reporting
      */
-    private function extractValue($row, $columnMap, $field)
+    private function findWitel($witelName, $rowNumber)
     {
-        $key = $columnMap[$field] ?? null;
-
-        if ($key && isset($row[$key])) {
-            return trim((string)$row[$key]);
+        if (empty($witelName)) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Nama Witel kosong";
+            return null;
         }
 
-        // Try direct access for common column names
-        if ($field === 'nik' && isset($row['NIK'])) {
-            return trim((string)$row['NIK']);
-        } elseif ($field === 'nama_am' && isset($row['NAMA AM'])) {
-            return trim((string)$row['NAMA AM']);
-        } elseif ($field === 'witel_ho' && isset($row['WITEL HO'])) {
-            return trim((string)$row['WITEL HO']);
-        } elseif ($field === 'regional' && isset($row['REGIONAL'])) {
-            return trim((string)$row['REGIONAL']);
-        } elseif ($field === 'divisi' && isset($row['DIVISI'])) {
-            return trim((string)$row['DIVISI']);
+        $nameKey = 'nama:' . $this->normalizeString($witelName);
+        $witel = $this->witels[$nameKey] ?? null;
+
+        if ($witel) {
+            return $witel;
         }
 
+        // ✅ Fuzzy search
+        foreach ($this->witels as $key => $storedWitel) {
+            if (strpos($key, 'nama:') === 0) {
+                $storedName = substr($key, 5); // Remove 'nama:' prefix
+                if (strpos($storedName, $this->normalizeString($witelName)) !== false ||
+                    strpos($this->normalizeString($witelName), $storedName) !== false) {
+                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Witel ditemukan dengan fuzzy search: '{$witelName}' → '{$storedWitel->nama}'";
+                    return $storedWitel;
+                }
+            }
+        }
+
+        // ✅ Database fallback
+        $witel = Witel::where('nama', 'like', "%{$witelName}%")->first();
+        if ($witel) {
+            $this->witels['nama:' . $this->normalizeString($witel->nama)] = $witel;
+            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Witel ditemukan di database: '{$witelName}' → '{$witel->nama}'";
+            return $witel;
+        }
+
+        $this->errorDetails[] = "❌ Baris {$rowNumber}: Witel tidak ditemukan: '{$witelName}'";
         return null;
     }
 
     /**
-     * Find Witel ID by name
+     * ✅ IMPROVED: Find Regional dengan error reporting
      */
-    private function findWitelId($witelName)
-    {
-        if (empty($witelName)) {
-            return null;
-        }
-
-        $witelNameUpper = strtoupper(trim($witelName));
-
-        // Direct lookup by exact match
-        if (isset($this->witels[$witelNameUpper])) {
-            return $this->witels[$witelNameUpper];
-        }
-
-        // Fuzzy lookup if exact match failed
-        foreach ($this->witels as $name => $id) {
-            if (strpos($name, $witelNameUpper) !== false || strpos($witelNameUpper, $name) !== false) {
-                return $id;
-            }
-        }
-
-        // Fallback to database lookup
-        $witel = Witel::where('nama', 'like', "%{$witelName}%")->first();
-        return $witel ? $witel->id : null;
-    }
-
-    /**
-     * Find Regional ID by name
-     */
-    private function findRegionalId($regionalName)
+    private function findRegional($regionalName, $rowNumber)
     {
         if (empty($regionalName)) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Nama Regional kosong";
             return null;
         }
 
-        $regionalNameUpper = strtoupper(trim($regionalName));
+        $nameKey = 'nama:' . $this->normalizeString($regionalName);
+        $regional = $this->regionals[$nameKey] ?? null;
 
-        // Direct lookup by exact match
-        if (isset($this->regionals[$regionalNameUpper])) {
-            return $this->regionals[$regionalNameUpper];
+        if ($regional) {
+            return $regional;
         }
 
-        // Fuzzy lookup if exact match failed
-        foreach ($this->regionals as $name => $id) {
-            if (strpos($name, $regionalNameUpper) !== false || strpos($regionalNameUpper, $name) !== false) {
-                return $id;
+        // ✅ Fuzzy search
+        foreach ($this->regionals as $key => $storedRegional) {
+            if (strpos($key, 'nama:') === 0) {
+                $storedName = substr($key, 5);
+                if (strpos($storedName, $this->normalizeString($regionalName)) !== false ||
+                    strpos($this->normalizeString($regionalName), $storedName) !== false) {
+                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Regional ditemukan dengan fuzzy search: '{$regionalName}' → '{$storedRegional->nama}'";
+                    return $storedRegional;
+                }
             }
         }
 
-        // Fallback to database lookup
+        // ✅ Database fallback
         $regional = Regional::where('nama', 'like', "%{$regionalName}%")->first();
-        return $regional ? $regional->id : null;
+        if ($regional) {
+            $this->regionals['nama:' . $this->normalizeString($regional->nama)] = $regional;
+            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Regional ditemukan di database: '{$regionalName}' → '{$regional->nama}'";
+            return $regional;
+        }
+
+        $this->errorDetails[] = "❌ Baris {$rowNumber}: Regional tidak ditemukan: '{$regionalName}'";
+        return null;
     }
 
     /**
-     * Find Divisi ID by name
+     * ✅ IMPROVED: Find Divisi dengan error reporting
      */
-    private function findDivisiId($divisiName)
+    private function findDivisi($divisiName, $rowNumber)
     {
         if (empty($divisiName)) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Nama Divisi kosong";
             return null;
         }
 
-        $divisiNameUpper = strtoupper(trim($divisiName));
+        $nameKey = 'nama:' . $this->normalizeString($divisiName);
+        $divisi = $this->divisis[$nameKey] ?? null;
 
-        // Direct lookup by exact match
-        if (isset($this->divisis[$divisiNameUpper])) {
-            return $this->divisis[$divisiNameUpper];
+        if ($divisi) {
+            return $divisi;
         }
 
-        // Fuzzy lookup if exact match failed
-        foreach ($this->divisis as $name => $id) {
-            if (strpos($name, $divisiNameUpper) !== false || strpos($divisiNameUpper, $name) !== false) {
-                return $id;
+        // ✅ Fuzzy search
+        foreach ($this->divisis as $key => $storedDivisi) {
+            if (strpos($key, 'nama:') === 0) {
+                $storedName = substr($key, 5);
+                if (strpos($storedName, $this->normalizeString($divisiName)) !== false ||
+                    strpos($this->normalizeString($divisiName), $storedName) !== false) {
+                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Divisi ditemukan dengan fuzzy search: '{$divisiName}' → '{$storedDivisi->nama}'";
+                    return $storedDivisi;
+                }
             }
         }
 
-        // Fallback to database lookup
+        // ✅ Database fallback
         $divisi = Divisi::where('nama', 'like', "%{$divisiName}%")->first();
-        return $divisi ? $divisi->id : null;
+        if ($divisi) {
+            $this->divisis['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
+            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Divisi ditemukan di database: '{$divisiName}' → '{$divisi->nama}'";
+            return $divisi;
+        }
+
+        $this->errorDetails[] = "❌ Baris {$rowNumber}: Divisi tidak ditemukan: '{$divisiName}'";
+        return null;
     }
 
     /**
-     * Rules validasi untuk data Excel
+     * ✅ IMPROVED: Column identification dengan flexible matching
+     */
+    private function identifyColumns($firstRow)
+    {
+        $map = [];
+        $excelColumns = array_keys($firstRow->toArray());
+
+        foreach ($this->alternativeColumns as $standardKey => $alternatives) {
+            foreach ($alternatives as $altName) {
+                $foundColumn = collect($excelColumns)->first(function ($col) use ($altName) {
+                    return strtolower(trim($col)) === strtolower(trim($altName));
+                });
+
+                if ($foundColumn) {
+                    $map[$standardKey] = $foundColumn;
+                    break;
+                }
+            }
+        }
+
+        Log::info('📋 AccountManager column mapping', $map);
+        return $map;
+    }
+
+    /**
+     * Extract value dari row
+     */
+    private function extractValue($row, $columnMap, $field)
+    {
+        $key = $columnMap[$field] ?? null;
+        if ($key && isset($row[$key])) {
+            return trim((string)$row[$key]);
+        }
+        return null;
+    }
+
+    /**
+     * Check if row is empty
+     */
+    private function isEmptyRow($row)
+    {
+        foreach ($row as $value) {
+            if (!empty($value) && $value !== null && trim($value) !== '') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Rules validasi
      */
     public function rules(): array
     {
-        return [
-            // Semua kolom dibuat nullable agar validasi bisa flexible
-            '*.NIK' => 'nullable',
-            '*.NAMA AM' => 'nullable',
-            '*.WITEL HO' => 'nullable',
-            '*.REGIONAL' => 'nullable',
-            '*.DIVISI' => 'nullable',
-            // Untuk lowercase
-            '*.nik' => 'nullable',
-            '*.nama_am' => 'nullable',
-            '*.witel_ho' => 'nullable',
-            '*.regional' => 'nullable',
-            '*.divisi' => 'nullable'
-        ];
+        return [];
     }
 
     /**
-     * Get import results
+     * ✅ IMPROVED: Get comprehensive import results
      */
     public function getImportResults()
     {
         return [
             'imported' => $this->importedCount,
             'updated' => $this->updatedCount,
-            'duplicates' => $this->duplicateCount
+            'duplicates' => $this->duplicateCount,
+            'errors' => $this->errorCount,
+            'skipped' => $this->skippedCount,
+            'processed' => $this->processedRows,
+            'error_details' => $this->errorDetails,
+            'warning_details' => $this->warningDetails,
+            'success_details' => $this->successDetails,
+            'summary' => [
+                'total_processed' => $this->processedRows,
+                'success_rate' => $this->processedRows > 0 ? round(($this->importedCount + $this->updatedCount) / $this->processedRows * 100, 2) : 0,
+                'error_rate' => $this->processedRows > 0 ? round($this->errorCount / $this->processedRows * 100, 2) : 0
+            ]
         ];
     }
 }
+

@@ -14,12 +14,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-// Import namespace untuk Excel
 use Maatwebsite\Excel\Facades\Excel;
 
 class RevenueController extends Controller
 {
-    // Menampilkan halaman dashboard dengan data Revenue, Witel, Regional, dan Divisi
+    /**
+     * ✅ IMPROVED: Main index method dengan filter dan search yang lebih baik
+     */
     public function index(Request $request)
     {
         // Cek apakah user adalah admin
@@ -27,106 +28,246 @@ class RevenueController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
         }
 
-        // Query dasar
-        $revenuesQuery = Revenue::with(['accountManager', 'corporateCustomer', 'divisi']);
-        $accountManagersQuery = AccountManager::with(['witel', 'divisis', 'regional']);
-        $corporateCustomersQuery = CorporateCustomer::query();
+        // ✅ NEW: Deteksi apakah ini adalah request search/filter
+        $isSearching = $request->filled('search') ||
+                      $request->filled('witel') ||
+                      $request->filled('regional') ||
+                      $request->filled('divisi') ||
+                      $request->filled('month') ||
+                      $request->filled('year');
 
-        // Penerapan filter pencarian
-        if ($request->has('search') && !empty($request->search)) {
-            $search = $request->search;
+        // ✅ IMPROVED: Build filtered queries
+        $filters = $this->buildFilters($request);
 
-            // Filter revenue berdasarkan nama AM atau Customer
-            $revenuesQuery->where(function ($query) use ($search) {
-                $query->whereHas('accountManager', function ($q) use ($search) {
-                    $q->where('nama', 'LIKE', "%{$search}%");
-                })->orWhereHas('corporateCustomer', function ($q) use ($search) {
-                    $q->where('nama', 'LIKE', "%{$search}%");
-                });
-            });
+        // Apply filters to all queries
+        $revenuesQuery = $this->applyFilters(Revenue::with(['accountManager.witel', 'accountManager.regional', 'corporateCustomer', 'divisi']), $filters, 'revenue');
+        $accountManagersQuery = $this->applyFilters(AccountManager::with(['witel', 'divisis', 'regional']), $filters, 'account_manager');
+        $corporateCustomersQuery = $this->applyFilters(CorporateCustomer::query(), $filters, 'corporate_customer');
 
-            // Filter account manager berdasarkan nama
-            $accountManagersQuery->where('nama', 'LIKE', "%{$search}%");
-
-            // Filter corporate customer berdasarkan nama
-            $corporateCustomersQuery->where('nama', 'LIKE', "%{$search}%");
-        }
-
-        // Filter berdasarkan Witel
-        if ($request->has('witel') && !empty($request->witel)) {
-            $witelId = $request->witel;
-            $revenuesQuery->whereHas('accountManager', function ($query) use ($witelId) {
-                $query->where('witel_id', $witelId);
-            });
-
-            $accountManagersQuery->where('witel_id', $witelId);
-        }
-
-        // Filter berdasarkan Regional
-        if ($request->has('regional') && !empty($request->regional)) {
-            $regionalId = $request->regional;
-            $revenuesQuery->whereHas('accountManager', function ($query) use ($regionalId) {
-                $query->where('regional_id', $regionalId);
-            });
-
-            $accountManagersQuery->where('regional_id', $regionalId);
-        }
-
-        // Filter berdasarkan Divisi
-        if ($request->has('divisi') && !empty($request->divisi)) {
-            $divisiId = $request->divisi;
-
-            // Filter revenue berdasarkan divisi_id
-            $revenuesQuery->where('divisi_id', $divisiId);
-
-            // Filter account manager yang memiliki divisi tersebut
-            $accountManagersQuery->whereHas('divisis', function ($query) use ($divisiId) {
-                $query->where('divisi.id', $divisiId);
-            });
-        }
-
-        // Filter berdasarkan Bulan
-        if ($request->has('month') && !empty($request->month)) {
-            $month = $request->month;
-            $revenuesQuery->whereMonth('bulan', $month);
-        }
-
-        // Filter berdasarkan Tahun
-        if ($request->has('year') && !empty($request->year)) {
-            $year = $request->year;
-            $revenuesQuery->whereYear('bulan', $year);
-        }
-
-        // Mengurutkan data
+        // ✅ IMPROVED: Sorting
         $revenuesQuery->orderBy('bulan', 'desc');
         $accountManagersQuery->orderBy('nama', 'asc');
         $corporateCustomersQuery->orderBy('nama', 'asc');
 
-        // Mengambil data dengan pagination
-        $revenues = $revenuesQuery->paginate(10);
-        $accountManagers = $accountManagersQuery->paginate(10);
-        $corporateCustomers = $corporateCustomersQuery->paginate(10);
+        // ✅ IMPROVED: Pagination dengan preserve query parameters
+        $perPage = $request->input('per_page', 10);
 
-        // Data untuk filter
-        $witels = Witel::all();
-        $divisi = Divisi::all();
-        $regionals = Regional::all();
+        $revenues = $revenuesQuery->paginate($perPage)->appends($request->query());
+        $accountManagers = $accountManagersQuery->paginate($perPage)->appends($request->query());
+        $corporateCustomers = $corporateCustomersQuery->paginate($perPage)->appends($request->query());
 
-        // Rentang tahun untuk filter (dari 2020 hingga 100 tahun ke depan)
+        // Data untuk filter dropdowns
+        $witels = Witel::orderBy('nama')->get();
+        $divisi = Divisi::orderBy('nama')->get();
+        $regionals = Regional::orderBy('nama')->get();
+
+        // Rentang tahun untuk filter
         $currentYear = Carbon::now()->year;
-        $yearRange = range(2020, $currentYear + 100);
+        $yearRange = range(2020, $currentYear + 5);
 
-        return view('revenueData', compact('revenues', 'accountManagers', 'corporateCustomers', 'witels', 'divisi', 'regionals', 'yearRange'));
+        // ✅ NEW: Hitung statistik untuk info user
+        $stats = $this->calculateStats($filters);
+
+        // ✅ IMPROVED: Response berbeda untuk AJAX vs normal request
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('partials.revenue-tables', compact('revenues', 'accountManagers', 'corporateCustomers', 'isSearching', 'stats'))->render(),
+                'stats' => $stats
+            ]);
+        }
+
+        return view('revenueData', compact(
+            'revenues',
+            'accountManagers',
+            'corporateCustomers',
+            'witels',
+            'divisi',
+            'regionals',
+            'yearRange',
+            'isSearching',
+            'stats'
+        ));
     }
 
-    // Fungsi untuk halaman filter data revenue
+    /**
+     * ✅ NEW: Build filters array dari request
+     */
+    private function buildFilters(Request $request)
+    {
+        $filters = [];
+
+        if ($request->filled('search')) {
+            $filters['search'] = trim($request->search);
+        }
+
+        if ($request->filled('witel')) {
+            $filters['witel'] = $request->witel;
+        }
+
+        if ($request->filled('regional')) {
+            $filters['regional'] = $request->regional;
+        }
+
+        if ($request->filled('divisi')) {
+            $filters['divisi'] = $request->divisi;
+        }
+
+        if ($request->filled('month')) {
+            $filters['month'] = $request->month;
+        }
+
+        if ($request->filled('year')) {
+            $filters['year'] = $request->year;
+        }
+
+        return $filters;
+    }
+
+    /**
+     * ✅ NEW: Apply filters ke query builder
+     */
+    private function applyFilters($query, $filters, $type)
+    {
+        // Global search filter
+        if (isset($filters['search'])) {
+            $search = $filters['search'];
+
+            switch ($type) {
+                case 'revenue':
+                    $query->where(function ($q) use ($search) {
+                        $q->whereHas('accountManager', function ($subQ) use ($search) {
+                            $subQ->where('nama', 'LIKE', "%{$search}%")
+                                 ->orWhere('nik', 'LIKE', "%{$search}%");
+                        })->orWhereHas('corporateCustomer', function ($subQ) use ($search) {
+                            $subQ->where('nama', 'LIKE', "%{$search}%")
+                                 ->orWhere('nipnas', 'LIKE', "%{$search}%");
+                        })->orWhereHas('divisi', function ($subQ) use ($search) {
+                            $subQ->where('nama', 'LIKE', "%{$search}%");
+                        });
+                    });
+                    break;
+
+                case 'account_manager':
+                    $query->where(function ($q) use ($search) {
+                        $q->where('nama', 'LIKE', "%{$search}%")
+                          ->orWhere('nik', 'LIKE', "%{$search}%")
+                          ->orWhereHas('witel', function ($subQ) use ($search) {
+                              $subQ->where('nama', 'LIKE', "%{$search}%");
+                          })->orWhereHas('divisis', function ($subQ) use ($search) {
+                              $subQ->where('nama', 'LIKE', "%{$search}%");
+                          });
+                    });
+                    break;
+
+                case 'corporate_customer':
+                    $query->where(function ($q) use ($search) {
+                        $q->where('nama', 'LIKE', "%{$search}%")
+                          ->orWhere('nipnas', 'LIKE', "%{$search}%");
+                    });
+                    break;
+            }
+        }
+
+        // Witel filter
+        if (isset($filters['witel'])) {
+            switch ($type) {
+                case 'revenue':
+                    $query->whereHas('accountManager', function ($q) use ($filters) {
+                        $q->where('witel_id', $filters['witel']);
+                    });
+                    break;
+                case 'account_manager':
+                    $query->where('witel_id', $filters['witel']);
+                    break;
+            }
+        }
+
+        // Regional filter
+        if (isset($filters['regional'])) {
+            switch ($type) {
+                case 'revenue':
+                    $query->whereHas('accountManager', function ($q) use ($filters) {
+                        $q->where('regional_id', $filters['regional']);
+                    });
+                    break;
+                case 'account_manager':
+                    $query->where('regional_id', $filters['regional']);
+                    break;
+            }
+        }
+
+        // Divisi filter
+        if (isset($filters['divisi'])) {
+            switch ($type) {
+                case 'revenue':
+                    $query->where('divisi_id', $filters['divisi']);
+                    break;
+                case 'account_manager':
+                    $query->whereHas('divisis', function ($q) use ($filters) {
+                        $q->where('divisi.id', $filters['divisi']);
+                    });
+                    break;
+            }
+        }
+
+        // Month filter (hanya untuk revenue)
+        if (isset($filters['month']) && $type === 'revenue') {
+            $query->whereMonth('bulan', $filters['month']);
+        }
+
+        // Year filter (hanya untuk revenue)
+        if (isset($filters['year']) && $type === 'revenue') {
+            $query->whereYear('bulan', $filters['year']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * ✅ NEW: Calculate statistics untuk info user
+     */
+    private function calculateStats($filters)
+    {
+        $stats = [];
+
+        // Total revenue records
+        $revenueQuery = Revenue::query();
+        $revenueQuery = $this->applyFilters($revenueQuery, $filters, 'revenue');
+        $stats['total_revenues'] = $revenueQuery->count();
+
+        // Total account managers
+        $amQuery = AccountManager::query();
+        $amQuery = $this->applyFilters($amQuery, $filters, 'account_manager');
+        $stats['total_account_managers'] = $amQuery->count();
+
+        // Total corporate customers
+        $ccQuery = CorporateCustomer::query();
+        $ccQuery = $this->applyFilters($ccQuery, $filters, 'corporate_customer');
+        $stats['total_corporate_customers'] = $ccQuery->count();
+
+        // Sum of real revenue (hanya jika ada filter)
+        if (!empty($filters)) {
+            $revenueSum = Revenue::query();
+            $revenueSum = $this->applyFilters($revenueSum, $filters, 'revenue');
+            $stats['total_real_revenue'] = $revenueSum->sum('real_revenue');
+            $stats['total_target_revenue'] = $revenueSum->sum('target_revenue');
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Fungsi untuk halaman filter data revenue (alias untuk index)
+     */
     public function data(Request $request)
     {
-        // Ini adalah alias untuk index dengan parameter filter
         return $this->index($request);
     }
 
-    // Menyimpan data revenue baru
+    /**
+     * ✅ IMPROVED: Store method dengan validasi yang lebih ketat
+     */
     public function store(Request $request)
     {
         // Cek apakah user adalah admin
@@ -143,10 +284,10 @@ class RevenueController extends Controller
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'account_manager_id' => 'required|exists:account_managers,id',
-            'divisi_id' => 'required|exists:divisi,id', // Tambah validasi divisi_id
+            'divisi_id' => 'required|exists:divisi,id',
             'corporate_customer_id' => 'required|exists:corporate_customers,id',
-            'target_revenue' => 'required|numeric',
-            'real_revenue' => 'required|numeric',
+            'target_revenue' => 'required|numeric|min:0',
+            'real_revenue' => 'required|numeric|min:0',
             'bulan_month' => 'required|string|in:01,02,03,04,05,06,07,08,09,10,11,12',
             'bulan_year' => 'required|numeric|min:2000|max:2100',
         ]);
@@ -159,15 +300,13 @@ class RevenueController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Gabungkan bulan dan tahun menjadi format Y-m-d
         $bulan = $request->bulan_year . '-' . $request->bulan_month . '-01';
 
         try {
-            // Verifikasi bahwa divisi_id memang terkait dengan account_manager_id
+            // ✅ IMPROVED: Verifikasi relasi AM-Divisi
             $accountManager = AccountManager::findOrFail($request->account_manager_id);
             $divisiExists = $accountManager->divisis()->where('divisi.id', $request->divisi_id)->exists();
 
@@ -175,13 +314,14 @@ class RevenueController extends Controller
                 throw new \Exception('Divisi yang dipilih tidak terkait dengan Account Manager.');
             }
 
-            // Cek apakah data sudah ada (perhatikan penambahan divisi_id)
-            $existingRevenue = Revenue::where('account_manager_id', $request->account_manager_id)
-                ->where('divisi_id', $request->divisi_id) // Tambah filter divisi
-                ->where('corporate_customer_id', $request->corporate_customer_id)
-                ->whereYear('bulan', $request->bulan_year)
-                ->whereMonth('bulan', $request->bulan_month)
-                ->first();
+            // Cek duplikasi data
+            $existingRevenue = Revenue::where([
+                'account_manager_id' => $request->account_manager_id,
+                'divisi_id' => $request->divisi_id,
+                'corporate_customer_id' => $request->corporate_customer_id,
+            ])->whereYear('bulan', $request->bulan_year)
+              ->whereMonth('bulan', $request->bulan_month)
+              ->first();
 
             if ($existingRevenue) {
                 // Update data yang sudah ada
@@ -189,19 +329,17 @@ class RevenueController extends Controller
                     'target_revenue' => $request->target_revenue,
                     'real_revenue' => $request->real_revenue
                 ]);
-
                 $message = 'Data Revenue berhasil diperbarui.';
             } else {
-                // Buat data baru dengan format bulan yang benar (YYYY-MM-DD)
+                // Buat data baru
                 Revenue::create([
                     'account_manager_id' => $request->account_manager_id,
-                    'divisi_id' => $request->divisi_id, // Tambah divisi_id
+                    'divisi_id' => $request->divisi_id,
                     'corporate_customer_id' => $request->corporate_customer_id,
                     'target_revenue' => $request->target_revenue,
                     'real_revenue' => $request->real_revenue,
                     'bulan' => $bulan
                 ]);
-
                 $message = 'Data Revenue berhasil ditambahkan.';
             }
 
@@ -234,7 +372,9 @@ class RevenueController extends Controller
         }
     }
 
-    // Edit data revenue
+    /**
+     * Edit data revenue
+     */
     public function edit($id)
     {
         // Cek apakah user adalah admin
@@ -242,22 +382,29 @@ class RevenueController extends Controller
             return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengedit data revenue.');
         }
 
-        $revenue = Revenue::findOrFail($id);
-        $accountManagers = AccountManager::all();
-        $corporateCustomers = CorporateCustomer::all();
-        $witels = Witel::all();
-        $divisi = Divisi::all();
-        $regionals = Regional::all();
+        try {
+            $revenue = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])->findOrFail($id);
+            $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->orderBy('nama')->get();
+            $corporateCustomers = CorporateCustomer::orderBy('nama')->get();
+            $witels = Witel::orderBy('nama')->get();
+            $divisi = Divisi::orderBy('nama')->get();
+            $regionals = Regional::orderBy('nama')->get();
 
-        // Parse bulan untuk tampilan form
-        $bulanParts = explode('-', $revenue->bulan);
-        $year = $bulanParts[0];
-        $month = $bulanParts[1];
+            // Parse bulan untuk tampilan form
+            $bulanParts = explode('-', $revenue->bulan);
+            $year = $bulanParts[0];
+            $month = $bulanParts[1];
 
-        return view('revenue.edit', compact('revenue', 'accountManagers', 'corporateCustomers', 'witels', 'divisi', 'regionals', 'year', 'month'));
+            return view('revenue.edit', compact('revenue', 'accountManagers', 'corporateCustomers', 'witels', 'divisi', 'regionals', 'year', 'month'));
+        } catch (\Exception $e) {
+            Log::error('Error loading edit form: ' . $e->getMessage());
+            return redirect()->route('revenue.index')->with('error', 'Gagal memuat form edit: ' . $e->getMessage());
+        }
     }
 
-    // Update data revenue
+    /**
+     * ✅ IMPROVED: Update method dengan validasi yang lebih ketat
+     */
     public function update(Request $request, $id)
     {
         // Cek apakah user adalah admin
@@ -274,10 +421,10 @@ class RevenueController extends Controller
         // Validasi data input
         $validator = Validator::make($request->all(), [
             'account_manager_id' => 'required|exists:account_managers,id',
-            'divisi_id' => 'required|exists:divisi,id', // Tambahkan validasi divisi_id
+            'divisi_id' => 'required|exists:divisi,id',
             'corporate_customer_id' => 'required|exists:corporate_customers,id',
-            'target_revenue' => 'required|numeric',
-            'real_revenue' => 'required|numeric',
+            'target_revenue' => 'required|numeric|min:0',
+            'real_revenue' => 'required|numeric|min:0',
             'bulan_month' => 'required|string|in:01,02,03,04,05,06,07,08,09,10,11,12',
             'bulan_year' => 'required|numeric|min:2000|max:2100',
         ]);
@@ -290,11 +437,9 @@ class RevenueController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Gabungkan bulan dan tahun menjadi format Y-m-d
         $bulan = $request->bulan_year . '-' . $request->bulan_month . '-01';
 
         try {
@@ -308,10 +453,10 @@ class RevenueController extends Controller
 
             $revenue = Revenue::findOrFail($id);
 
-            // Update data revenue dengan format tanggal yang benar
+            // Update data revenue
             $revenue->update([
                 'account_manager_id' => $request->account_manager_id,
-                'divisi_id' => $request->divisi_id, // Tambahkan divisi_id
+                'divisi_id' => $request->divisi_id,
                 'corporate_customer_id' => $request->corporate_customer_id,
                 'target_revenue' => $request->target_revenue,
                 'real_revenue' => $request->real_revenue,
@@ -340,7 +485,9 @@ class RevenueController extends Controller
         }
     }
 
-    // Hapus data revenue
+    /**
+     * Hapus data revenue
+     */
     public function destroy($id)
     {
         // Cek apakah user adalah admin
@@ -354,70 +501,148 @@ class RevenueController extends Controller
 
             return redirect()->route('revenue.index')->with('success', 'Revenue berhasil dihapus.');
         } catch (\Exception $e) {
+            Log::error('Error saat menghapus revenue: ' . $e->getMessage());
             return redirect()->route('revenue.index')->with('error', 'Gagal menghapus revenue: ' . $e->getMessage());
         }
     }
 
-    // Fungsi pencarian Account Manager
-    public function searchAccountManager(Request $request)
-    {
-        $search = $request->input('search');
-        $accountManagers = AccountManager::where('nama', 'LIKE', "%{$search}%")->get();
-        return response()->json($accountManagers);
-    }
-
-    // Fungsi pencarian Corporate Customer
-    public function searchCorporateCustomer(Request $request)
-    {
-        $search = $request->input('search');
-        $corporateCustomers = CorporateCustomer::where('nama', 'LIKE', "%{$search}%")->get();
-        return response()->json($corporateCustomers);
-    }
-
-    // Fungsi untuk search global yang mengembalikan data dari 3 kategori
+    /**
+     * ✅ IMPROVED: Enhanced global search dengan info lebih detail
+     */
     public function search(Request $request)
     {
         $search = $request->input('search');
 
         if (empty($search)) {
             return response()->json([
+                'success' => true,
                 'accountManagers' => [],
                 'corporateCustomers' => [],
-                'revenues' => []
+                'revenues' => [],
+                'stats' => [
+                    'total_results' => 0,
+                    'account_managers_count' => 0,
+                    'corporate_customers_count' => 0,
+                    'revenues_count' => 0
+                ]
             ]);
         }
 
-        // Cari account managers
-        $accountManagers = AccountManager::where('nama', 'LIKE', "%{$search}%")
+        try {
+            // Search Account Managers
+            $accountManagers = AccountManager::where(function ($query) use ($search) {
+                $query->where('nama', 'LIKE', "%{$search}%")
+                      ->orWhere('nik', 'LIKE', "%{$search}%");
+            })
             ->with(['witel', 'divisis', 'regional'])
-            ->take(5)
+            ->orderBy('nama')
+            ->limit(10)
             ->get();
 
-        // Cari corporate customers
-        $corporateCustomers = CorporateCustomer::where('nama', 'LIKE', "%{$search}%")
-            ->take(5)
-            ->get();
-
-        // Cari revenues (kombinasi AM dan CC)
-        $revenues = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])
-            ->whereHas('accountManager', function ($query) use ($search) {
-                $query->where('nama', 'LIKE', "%{$search}%");
+            // Search Corporate Customers
+            $corporateCustomers = CorporateCustomer::where(function ($query) use ($search) {
+                $query->where('nama', 'LIKE', "%{$search}%")
+                      ->orWhere('nipnas', 'LIKE', "%{$search}%");
             })
-            ->orWhereHas('corporateCustomer', function ($query) use ($search) {
-                $query->where('nama', 'LIKE', "%{$search}%");
-            })
-            ->orderBy('bulan', 'desc')
-            ->take(5)
+            ->orderBy('nama')
+            ->limit(10)
             ->get();
 
-        return response()->json([
-            'accountManagers' => $accountManagers,
-            'corporateCustomers' => $corporateCustomers,
-            'revenues' => $revenues
-        ]);
+            // Search Revenues
+            $revenues = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->where(function ($query) use ($search) {
+                    $query->whereHas('accountManager', function ($q) use ($search) {
+                        $q->where('nama', 'LIKE', "%{$search}%")
+                          ->orWhere('nik', 'LIKE', "%{$search}%");
+                    })->orWhereHas('corporateCustomer', function ($q) use ($search) {
+                        $q->where('nama', 'LIKE', "%{$search}%")
+                          ->orWhere('nipnas', 'LIKE', "%{$search}%");
+                    })->orWhereHas('divisi', function ($q) use ($search) {
+                        $q->where('nama', 'LIKE', "%{$search}%");
+                    });
+                })
+                ->orderBy('bulan', 'desc')
+                ->limit(10)
+                ->get();
+
+            $stats = [
+                'total_results' => $accountManagers->count() + $corporateCustomers->count() + $revenues->count(),
+                'account_managers_count' => $accountManagers->count(),
+                'corporate_customers_count' => $corporateCustomers->count(),
+                'revenues_count' => $revenues->count()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'accountManagers' => $accountManagers,
+                'corporateCustomers' => $corporateCustomers,
+                'revenues' => $revenues,
+                'stats' => $stats
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error dalam search: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal melakukan pencarian: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    // Fungsi untuk export data revenue
+    /**
+     * ✅ NEW: Quick filter - untuk filter cepat tanpa reload
+     */
+    public function quickFilter(Request $request)
+    {
+        try {
+            $filters = $this->buildFilters($request);
+
+            // Build queries dengan filter
+            $revenuesQuery = $this->applyFilters(Revenue::with(['accountManager.witel', 'corporateCustomer', 'divisi']), $filters, 'revenue');
+            $accountManagersQuery = $this->applyFilters(AccountManager::with(['witel', 'divisis', 'regional']), $filters, 'account_manager');
+            $corporateCustomersQuery = $this->applyFilters(CorporateCustomer::query(), $filters, 'corporate_customer');
+
+            // Get results
+            $revenues = $revenuesQuery->orderBy('bulan', 'desc')->limit(20)->get();
+            $accountManagers = $accountManagersQuery->orderBy('nama')->limit(20)->get();
+            $corporateCustomers = $corporateCustomersQuery->orderBy('nama')->limit(20)->get();
+
+            $stats = $this->calculateStats($filters);
+
+            return response()->json([
+                'success' => true,
+                'revenues' => $revenues,
+                'accountManagers' => $accountManagers,
+                'corporateCustomers' => $corporateCustomers,
+                'stats' => $stats,
+                'has_filters' => !empty($filters)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error dalam quick filter: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal melakukan filter: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NEW: Reset filter - kembali ke tampilan normal
+     */
+    public function resetFilter(Request $request)
+    {
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'redirect' => route('revenue.index')
+            ]);
+        }
+
+        return redirect()->route('revenue.index');
+    }
+
+    /**
+     * Fungsi untuk export data revenue
+     */
     public function export()
     {
         // Cek apakah user adalah admin
@@ -428,37 +653,110 @@ class RevenueController extends Controller
         try {
             return Excel::download(new \App\Exports\RevenueExport, 'revenue-data-' . date('Y-m-d') . '.xlsx');
         } catch (\Exception $e) {
+            Log::error('Error saat export: ' . $e->getMessage());
             return redirect()->route('revenue.index')->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
         }
     }
 
-    // Fungsi untuk import data revenue dari Excel
+    /**
+     * ✅ IMPROVED: Import method dengan detailed error handling
+     */
     public function import(Request $request)
     {
         // Cek apakah user adalah admin
         if (Auth::user()->role !== 'admin') {
-            return redirect()->route('revenue.index')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengimpor data revenue.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengimpor data revenue.'
+            ], 403);
         }
 
         // Validasi file input
         $validator = Validator::make($request->all(), [
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
+            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // ✅ Increased to 10MB
+            'year' => 'nullable|numeric|min:2000|max:2100'
         ]);
 
         if ($validator->fails()) {
-            return redirect()->route('revenue.index')->withErrors($validator)->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak valid',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         try {
-            Excel::import(new \App\Imports\RevenueImport, $request->file('file'));
-            return redirect()->route('revenue.index')->with('success', 'Data revenue berhasil diimpor.');
+            // ✅ IMPROVED: Create import instance dengan year parameter
+            $year = $request->input('year', date('Y'));
+            $import = new \App\Imports\RevenueImport($year);
+
+            // Set memory limit dan timeout untuk file besar
+            ini_set('memory_limit', '1024M');
+            set_time_limit(300); // 5 minutes
+
+            // Import file
+            Excel::import($import, $request->file('file'));
+
+            // ✅ IMPROVED: Get detailed results
+            $results = $import->getImportResults();
+
+            // ✅ NEW: Build response berdasarkan hasil import
+            if ($results['errors'] > 0) {
+                // Ada error - return dengan detail error untuk popup
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Import selesai dengan beberapa error',
+                    'data' => [
+                        'imported' => $results['imported'],
+                        'duplicates' => $results['duplicates'],
+                        'errors' => $results['errors'],
+                        'error_details' => $results['error_details'], // ✅ Detail baris yang error
+                        'total_processed' => $results['imported'] + $results['duplicates'] + $results['errors']
+                    ],
+                    'show_popup' => true, // ✅ Flag untuk popup
+                    'popup_type' => 'warning',
+                    'popup_title' => 'Import Selesai dengan Warning',
+                    'require_manual_close' => true // ✅ Manual close popup
+                ]);
+            } else {
+                // Semua berhasil
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Data revenue berhasil diimpor semuanya!',
+                    'data' => [
+                        'imported' => $results['imported'],
+                        'duplicates' => $results['duplicates'],
+                        'errors' => 0,
+                        'total_processed' => $results['imported'] + $results['duplicates']
+                    ],
+                    'show_popup' => true,
+                    'popup_type' => 'success',
+                    'popup_title' => 'Import Berhasil',
+                    'require_manual_close' => false // ✅ Auto close untuk success
+                ]);
+            }
+
         } catch (\Exception $e) {
-            Log::error('Error saat mengimpor revenue: ' . $e->getMessage());
-            return redirect()->route('revenue.index')->with('error', 'Gagal mengimpor data: ' . $e->getMessage());
+            Log::error('Error saat mengimpor revenue: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengimpor data: ' . $e->getMessage(),
+                'show_popup' => true,
+                'popup_type' => 'error',
+                'popup_title' => 'Import Gagal',
+                'require_manual_close' => true
+            ], 500);
         }
     }
 
-    // Fungsi untuk mengunduh template Excel untuk import data
+    /**
+     * Fungsi untuk mengunduh template Excel untuk import data
+     */
     public function template()
     {
         // Cek apakah user adalah admin
@@ -469,25 +767,24 @@ class RevenueController extends Controller
         try {
             return Excel::download(new \App\Exports\RevenueTemplateExport, 'revenue-template.xlsx');
         } catch (\Exception $e) {
+            Log::error('Error saat download template: ' . $e->getMessage());
             return redirect()->route('revenue.index')->with('error', 'Gagal mengunduh template: ' . $e->getMessage());
         }
     }
 
-    // Fungsi untuk mendapatkan divisi berdasarkan Account Manager
+    /**
+     * Fungsi untuk mendapatkan divisi berdasarkan Account Manager
+     */
     public function getAccountManagerDivisions($id)
     {
         try {
-            // Ambil account manager berdasarkan ID
             $accountManager = AccountManager::findOrFail($id);
+            $divisis = $accountManager->divisis()->select('divisi.id', 'divisi.nama')->orderBy('divisi.nama')->get();
 
-            // Ambil semua divisi terkait account manager tersebut
-            $divisis = $accountManager->divisis()->select('divisi.id', 'divisi.nama')->get();
-
-            // Log untuk debugging
             Log::info('Divisi untuk Account Manager', [
                 'account_manager_id' => $id,
                 'account_manager_name' => $accountManager->nama,
-                'divisis' => $divisis->toArray()
+                'divisis_count' => $divisis->count()
             ]);
 
             return response()->json([
@@ -507,25 +804,23 @@ class RevenueController extends Controller
         }
     }
 
-    // Method untuk RevenueData view
+    /**
+     * Method untuk RevenueData view (fallback)
+     */
     public function showRevenueData()
     {
         try {
-            // Pastikan data divisi dan regional adalah Collection, bukan boolean
-            $divisi = Divisi::select('id', 'nama')->get();
-            $witels = Witel::select('id', 'nama')->get();
-            $regionals = Regional::select('id', 'nama')->get(); // Tambahkan regionals
+            $divisi = Divisi::select('id', 'nama')->orderBy('nama')->get();
+            $witels = Witel::select('id', 'nama')->orderBy('nama')->get();
+            $regionals = Regional::select('id', 'nama')->orderBy('nama')->get();
             $accountManagers = AccountManager::with(['witel', 'divisis', 'regional'])->paginate(10);
             $corporateCustomers = collect([]);
             $revenues = collect([]);
             $yearRange = range(date('Y') - 5, date('Y') + 5);
+            $isSearching = false;
+            $stats = $this->calculateStats([]);
 
-            Log::info('Data untuk revenueData:', [
-                'divisi_count' => $divisi->count(),
-                'regional_count' => $regionals->count(),
-            ]);
-
-            return view('revenueData', compact('divisi', 'witels', 'regionals', 'accountManagers', 'corporateCustomers', 'revenues', 'yearRange'));
+            return view('revenueData', compact('divisi', 'witels', 'regionals', 'accountManagers', 'corporateCustomers', 'revenues', 'yearRange', 'isSearching', 'stats'));
         } catch (\Exception $e) {
             Log::error('Error loading revenueData: ' . $e->getMessage());
             return view('revenueData', [
@@ -536,13 +831,15 @@ class RevenueController extends Controller
                 'corporateCustomers' => collect([]),
                 'revenues' => collect([]),
                 'yearRange' => range(date('Y') - 5, date('Y') + 5),
+                'isSearching' => false,
+                'stats' => [],
                 'error' => 'Gagal memuat data: ' . $e->getMessage()
             ]);
         }
     }
 
     /**
-     * Mendapatkan data Revenue untuk edit via AJAX
+     * ✅ IMPROVED: Mendapatkan data Revenue untuk edit via AJAX
      */
     public function getRevenueData($id)
     {
@@ -569,7 +866,8 @@ class RevenueController extends Controller
                 'bulan' => $revenue->bulan,
                 'account_manager' => $revenue->accountManager ? [
                     'id' => $revenue->accountManager->id,
-                    'nama' => $revenue->accountManager->nama
+                    'nama' => $revenue->accountManager->nama,
+                    'nik' => $revenue->accountManager->nik
                 ] : null,
                 'divisi' => $revenue->divisi ? [
                     'id' => $revenue->divisi->id,
@@ -577,15 +875,10 @@ class RevenueController extends Controller
                 ] : null,
                 'corporate_customer' => $revenue->corporateCustomer ? [
                     'id' => $revenue->corporateCustomer->id,
-                    'nama' => $revenue->corporateCustomer->nama
+                    'nama' => $revenue->corporateCustomer->nama,
+                    'nipnas' => $revenue->corporateCustomer->nipnas
                 ] : null
             ];
-
-            Log::info('Revenue data fetched for edit:', [
-                'id' => $id,
-                'account_manager' => $revenue->accountManager->nama ?? 'N/A',
-                'corporate_customer' => $revenue->corporateCustomer->nama ?? 'N/A'
-            ]);
 
             return response()->json([
                 'success' => true,
@@ -606,7 +899,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * Update Revenue via AJAX
+     * ✅ IMPROVED: Update Revenue via AJAX
      */
     public function updateRevenue(Request $request, $id)
     {
@@ -626,14 +919,12 @@ class RevenueController extends Controller
                 'account_manager_id' => 'required|exists:account_managers,id',
                 'divisi_id' => 'required|exists:divisi,id',
                 'corporate_customer_id' => 'required|exists:corporate_customers,id',
-                'target_revenue' => 'required|numeric',
-                'real_revenue' => 'required|numeric',
+                'target_revenue' => 'required|numeric|min:0',
+                'real_revenue' => 'required|numeric|min:0',
                 'bulan' => 'required|date_format:Y-m',
             ]);
 
             if ($validator->fails()) {
-                Log::warning('Revenue update validation failed via AJAX:', $validator->errors()->toArray());
-
                 return response()->json([
                     'success' => false,
                     'message' => 'Validasi gagal',
@@ -679,6 +970,63 @@ class RevenueController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memperbarui Revenue: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NEW: Search Account Manager untuk dropdown/autocomplete
+     */
+    public function searchAccountManager(Request $request)
+    {
+        try {
+            $search = $request->input('search');
+            $accountManagers = AccountManager::where(function ($query) use ($search) {
+                $query->where('nama', 'LIKE', "%{$search}%")
+                      ->orWhere('nik', 'LIKE', "%{$search}%");
+            })
+            ->with(['witel', 'divisis'])
+            ->orderBy('nama')
+            ->limit(10)
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $accountManagers
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error searching Account Manager: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mencari Account Manager'
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NEW: Search Corporate Customer untuk dropdown/autocomplete
+     */
+    public function searchCorporateCustomer(Request $request)
+    {
+        try {
+            $search = $request->input('search');
+            $corporateCustomers = CorporateCustomer::where(function ($query) use ($search) {
+                $query->where('nama', 'LIKE', "%{$search}%")
+                      ->orWhere('nipnas', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('nama')
+            ->limit(10)
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $corporateCustomers
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error searching Corporate Customer: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mencari Corporate Customer'
             ], 500);
         }
     }

@@ -18,8 +18,7 @@ use App\Http\Controllers\WitelLeaderboardController;
 use App\Http\Controllers\DivisiLeaderboardController;
 use App\Http\Controllers\WitelPerformController;
 use App\Http\Controllers\RegionalController;
-use App\Http\Controllers\DivisiController;
-use App\Http\Controllers\WitelController;
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -67,14 +66,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
 
-    // Import route (menggunakan queue)
-    Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
+    // ✅ UPDATED: Revenue Excel routes - menggunakan RevenueController langsung
+    Route::post('/revenue/import', [RevenueController::class, 'import'])->name('revenue.import');
+    Route::get('/revenue/export', [RevenueController::class, 'export'])->name('revenue.export');
+    Route::get('/revenue/template', [RevenueController::class, 'template'])->name('revenue.template');
+
+    // ✅ LEGACY: Keep existing routes for backward compatibility (jika masih digunakan)
+    Route::post('/revenue/import-legacy', [RevenueExcelController::class, 'import'])->name('revenue.import.legacy');
+    Route::get('/revenue/template-legacy', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template.legacy');
 
     // Check status import
     Route::get('/revenue/import-status', [RevenueExcelController::class, 'checkImportStatus'])->name('revenue.import.status');
-
-    // Revenue Excel routes
-    Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');
 
     // Search routes - available for all authenticated users
     Route::get('/search-am', [RevenueController::class, 'searchAccountManager'])->name('revenue.searchAccountManager');
@@ -90,6 +92,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account_manager.edit');
     Route::put('/account-manager/{id}', [AccountManagerController::class, 'update'])->name('account_manager.update');
     Route::delete('/account-manager/{id}', [AccountManagerController::class, 'destroy'])->name('account_manager.destroy');
+
+    // ✅ UPDATED: Account Manager Excel routes - menggunakan AccountManagerController langsung
+    Route::post('/account-manager/import', [AccountManagerController::class, 'import'])->name('account_manager.import');
+    Route::get('/account-manager/export', [AccountManagerController::class, 'export'])->name('account_manager.export');
+    Route::get('/account-manager/template', [AccountManagerController::class, 'template'])->name('account_manager.template');
+
+    // ✅ LEGACY: Keep existing routes for backward compatibility (jika masih digunakan)
+    Route::post('/account-manager/import-legacy', [AccountManagerExcelController::class, 'import'])->name('account_manager.import.legacy');
+    Route::get('/account-manager/template-legacy', [AccountManagerExcelController::class, 'downloadTemplate'])->name('account_manager.template.legacy');
 
     // Divisi untuk Account Manager
     Route::get('/api/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('api.account-manager.divisi');
@@ -107,10 +118,6 @@ Route::middleware('auth')->group(function () {
     // Ubah dari POST ke PUT untuk update
     Route::put('/api/revenue/{id}/update', [RevenueController::class, 'updateRevenue']);
 
-    // Account Manager Excel routes
-    Route::post('/account-manager/import', [AccountManagerExcelController::class, 'import'])->name('account_manager.import');
-    Route::get('/account-manager/template', [AccountManagerExcelController::class, 'downloadTemplate'])->name('account_manager.template');
-
     // Corporate Customer routes
     Route::get('/corporate-customer', [CorporateCustomerController::class, 'index'])->name('corporate_customer.index');
     Route::get('/corporate-customer/create', [CorporateCustomerController::class, 'create'])->name('corporate_customer.create');
@@ -119,9 +126,18 @@ Route::middleware('auth')->group(function () {
     Route::put('/corporate-customer/{id}', [CorporateCustomerController::class, 'update'])->name('corporate_customer.update');
     Route::delete('/corporate-customer/{id}', [CorporateCustomerController::class, 'destroy'])->name('corporate_customer.destroy');
 
-    // Corporate Customer Excel routes
-    Route::post('/corporate-customer/import', [CorporateCustomerExcelController::class, 'import'])->name('corporate_customer.import');
-    Route::get('/corporate-customer/template', [CorporateCustomerExcelController::class, 'downloadTemplate'])->name('corporate_customer.template');
+    // ✅ UPDATED: Corporate Customer Excel routes - menggunakan CorporateCustomerController langsung
+    Route::post('/corporate-customer/import', [CorporateCustomerController::class, 'import'])->name('corporate_customer.import');
+    Route::get('/corporate-customer/export', [CorporateCustomerController::class, 'export'])->name('corporate_customer.export');
+    Route::get('/corporate-customer/template', [CorporateCustomerController::class, 'template'])->name('corporate_customer.template');
+
+    // ✅ LEGACY: Keep existing routes for backward compatibility (jika masih digunakan)
+    Route::post('/corporate-customer/import-legacy', [CorporateCustomerExcelController::class, 'import'])->name('corporate_customer.import.legacy');
+    Route::get('/corporate-customer/template-legacy', [CorporateCustomerExcelController::class, 'downloadTemplate'])->name('corporate_customer.template.legacy');
+
+    // ✅ NEW: Search routes untuk Account Manager dan Corporate Customer
+    Route::get('/account-manager/search', [AccountManagerController::class, 'search'])->name('account_manager.search');
+    Route::get('/corporate-customer/search', [CorporateCustomerController::class, 'search'])->name('corporate_customer.search');
 
     // Leaderboard dan Witel Performance - dapat diakses semua user
     Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
@@ -148,6 +164,10 @@ Route::middleware('auth')->group(function () {
 
     // API endpoint untuk mengambil data Regional (jika diperlukan)
     Route::get('/api/regionals', [RegionalController::class, 'getRegionals'])->name('api.regionals');
+
+    // ✅ NEW: API endpoints untuk mendapatkan data dropdown
+    Route::get('/api/divisi', [AccountManagerController::class, 'getDivisi'])->name('api.divisi');
+    Route::get('/api/regional', [AccountManagerController::class, 'getRegional'])->name('api.regional');
 
     // Performansi Witel route
     Route::get('/MonitoringLOP', function () {

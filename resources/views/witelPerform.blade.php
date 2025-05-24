@@ -1116,7 +1116,7 @@
                 // Re-render chart with current filter state and NEW COLORS
                 if (chartData && chartData.periodPerformance) {
                     console.log('🎨 Re-rendering period chart with new colors for type:', selectedType);
-                    renderPeriodPerformanceChart(selectedType, chartData.periodPerformance);
+                    renderPeriodPerformanceChart(selectedType, chartData.periodPerformance, chartData.timeSeriesData);
                 } else {
                     // If no data, refresh with current filters
                     console.log('🔄 No local data, refreshing with current filters');
@@ -1154,29 +1154,8 @@
                 });
             }
 
-            // ✅ FIXED: Generate proper monthly periods based on actual data
-            function generateMonthlyPeriodsFromData(startDate, endDate, revenueData) {
-                const periods = [];
-                const labels = [];
-
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-
-                const current = new Date(start.getFullYear(), start.getMonth(), 1);
-
-                while (current <= end) {
-                    const monthName = current.toLocaleString('default', { month: 'short' });
-                    const year = current.getFullYear();
-                    labels.push(`${monthName} ${year}`);
-                    periods.push(new Date(current));
-                    current.setMonth(current.getMonth() + 1);
-                }
-
-                return { periods, labels };
-            }
-
-            // ✅ FIXED: Enhanced Period Performance Chart with proper monthly data and BLUE/GREEN colors
-            function renderPeriodPerformanceChart(type, data = null) {
+            // ✅ FIXED: Enhanced Period Performance Chart with REAL time series data from controller
+            function renderPeriodPerformanceChart(type, performanceData = null, timeSeriesData = null) {
                 const ctx = document.getElementById('periodPerformanceChart');
                 if (!ctx) {
                     console.error('Period performance chart canvas not found');
@@ -1184,51 +1163,53 @@
                 }
 
                 // Use current chart data if no data provided
-                if (!data && chartData && chartData.periodPerformance) {
-                    data = chartData.periodPerformance;
+                if (!performanceData && chartData && chartData.periodPerformance) {
+                    performanceData = chartData.periodPerformance;
                 }
 
-                if (!data) {
+                if (!timeSeriesData && chartData && chartData.timeSeriesData) {
+                    timeSeriesData = chartData.timeSeriesData;
+                }
+
+                if (!performanceData) {
                     console.error('No performance data available');
                     return;
                 }
 
-                console.log('🎨 Rendering period chart with new colors - Target: Blue, Real: Green');
+                console.log('🎨 Rendering period chart with time series data:', timeSeriesData);
+                console.log('🎨 Performance data:', performanceData);
 
                 // Destroy existing chart
                 if (periodPerformanceChartInstance) {
                     periodPerformanceChartInstance.destroy();
                 }
 
-                // ✅ FIXED: Generate proper X-axis based on selected date range
-                const startDate = new Date(currentFilterState.startDate);
-                const endDate = new Date(currentFilterState.endDate);
+                // ✅ FIXED: Use time series data from controller if available
+                let labels, targetData, realData, achievementData;
 
-                const { periods, labels } = generateMonthlyPeriodsFromData(startDate, endDate, data);
+                if (timeSeriesData && timeSeriesData.labels && timeSeriesData.labels.length > 0) {
+                    // ✅ USE CONTROLLER TIME SERIES DATA
+                    console.log('✅ Using controller time series data');
+                    labels = timeSeriesData.labels;
+                    targetData = timeSeriesData.targetData;
+                    realData = timeSeriesData.realData;
+                    achievementData = timeSeriesData.achievementData;
+                } else {
+                    // ✅ FALLBACK: Use period performance data (single point)
+                    console.log('⚠️ No time series data, using fallback single period');
+                    labels = [currentFilterState.startDate === currentFilterState.endDate ?
+                        new Date(currentFilterState.startDate).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) :
+                        'Periode Terpilih'
+                    ];
+                    targetData = [performanceData.target_revenue / 1000000]; // Convert to millions
+                    realData = [performanceData.real_revenue / 1000000]; // Convert to millions
+                    achievementData = [performanceData.achievement];
+                }
 
-                // ✅ FIXED: Don't divide data - use actual values per period
-                // If we have real revenue data by month, use it; otherwise put all in one month
-                const targetDataPerPeriod = data.target_revenue / 1000000; // Convert to millions
-                const realDataPerPeriod = data.real_revenue / 1000000; // Convert to millions
-
-                // ✅ FIXED: Only put data in the month that has data (e.g., May), others = 0
-                const targetData = labels.map((label, index) => {
-                    // Check if this month matches our data period
-                    // For now, put all data in first period - you can enhance this based on actual monthly data
-                    const monthYear = label.toLowerCase();
-                    if (monthYear.includes('mei') || monthYear.includes('may')) {
-                        return targetDataPerPeriod;
-                    }
-                    return 0;
-                });
-
-                const realData = labels.map((label, index) => {
-                    const monthYear = label.toLowerCase();
-                    if (monthYear.includes('mei') || monthYear.includes('may')) {
-                        return realDataPerPeriod;
-                    }
-                    return 0;
-                });
+                console.log('📊 Chart labels:', labels);
+                console.log('📊 Target data:', targetData);
+                console.log('📊 Real data:', realData);
+                console.log('📊 Achievement data:', achievementData);
 
                 // Prepare datasets
                 const datasets = [];
@@ -1254,14 +1235,6 @@
                 }
 
                 if (type === 'combined' || type === 'achievement') {
-                    const achievementData = labels.map((label, index) => {
-                        const monthYear = label.toLowerCase();
-                        if (monthYear.includes('mei') || monthYear.includes('may')) {
-                            return data.achievement;
-                        }
-                        return 0;
-                    });
-
                     datasets.push({
                         label: 'Pencapaian (%)',
                         data: achievementData,
@@ -1379,7 +1352,7 @@
                     }
                 });
 
-                console.log('✅ Period performance chart rendered with new colors!');
+                console.log('✅ Period performance chart rendered with time series data!');
             }
 
             // ✅ UPDATED: Enhanced Horizontal Stacked Division Chart with NEW COLORS
@@ -1644,7 +1617,8 @@
                 if (chartData.periodPerformance) {
                     const chartType = $('#chartType').val() || 'combined';
                     console.log('🎯 Updating period chart with type:', chartType, 'and data:', chartData.periodPerformance);
-                    renderPeriodPerformanceChart(chartType, chartData.periodPerformance);
+                    console.log('🎯 Time series data:', chartData.timeSeriesData);
+                    renderPeriodPerformanceChart(chartType, chartData.periodPerformance, chartData.timeSeriesData);
                 }
 
                 if (chartData.stackedDivision) {
@@ -2008,7 +1982,8 @@
                 // Initialize charts
                 if (chartData.periodPerformance) {
                     console.log('🚀 Initializing period chart with data:', chartData.periodPerformance);
-                    renderPeriodPerformanceChart('combined', chartData.periodPerformance);
+                    console.log('🚀 Time series data:', chartData.timeSeriesData);
+                    renderPeriodPerformanceChart('combined', chartData.periodPerformance, chartData.timeSeriesData);
                 }
 
                 if (chartData.stackedDivision) {

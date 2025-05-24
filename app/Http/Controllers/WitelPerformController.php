@@ -156,7 +156,95 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * ✅ UPDATED: Prepare Chart.js compatible data structure (supports multi-witel)
+     * ✅ FIXED: Get monthly time series data for line chart - properly generate ALL months in range
+     */
+    private function getMonthlyTimeSeriesData($witel, $regional, $divisi, $startDate, $endDate)
+    {
+        try {
+            // Get account manager IDs based on filters
+            $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional, $divisi);
+
+            if (empty($accountManagerIds)) {
+                return [
+                    'labels' => [],
+                    'targetData' => [],
+                    'realData' => [],
+                    'achievementData' => []
+                ];
+            }
+
+            // ✅ FIXED: Proper month iteration to ensure ALL months are included
+            $start = Carbon::parse($startDate)->startOfMonth();
+            $end = Carbon::parse($endDate)->endOfMonth();
+
+            $labels = [];
+            $targetData = [];
+            $realData = [];
+            $achievementData = [];
+
+            // ✅ FIXED: Use proper Carbon iteration to avoid skipping months
+            $current = $start->copy();
+
+            Log::info('🔄 Generating monthly data from: ' . $current->format('Y-m-d') . ' to: ' . $end->format('Y-m-d'));
+
+            while ($current->lte($end)) {
+                $monthStart = $current->copy()->startOfMonth()->format('Y-m-d');
+                $monthEnd = $current->copy()->endOfMonth()->format('Y-m-d');
+
+                Log::info('📅 Processing month: ' . $current->format('M Y') . ' (Range: ' . $monthStart . ' to ' . $monthEnd . ')');
+
+                // Get revenue data for this specific month
+                $monthlyRevenue = $this->getRevenueForPeriod($accountManagerIds, $monthStart, $monthEnd, $divisi);
+
+                $monthLabel = $current->format('M Y');
+                $targetAmount = round($monthlyRevenue['total_target'] / 1000000, 2); // Convert to millions
+                $realAmount = round($monthlyRevenue['total_real'] / 1000000, 2); // Convert to millions
+
+                // Calculate achievement percentage
+                $achievement = 0;
+                if ($monthlyRevenue['total_target'] > 0) {
+                    $achievement = ($monthlyRevenue['total_real'] / $monthlyRevenue['total_target']) * 100;
+                }
+
+                $labels[] = $monthLabel;
+                $targetData[] = $targetAmount;
+                $realData[] = $realAmount;
+                $achievementData[] = round($achievement, 2);
+
+                Log::info('💰 ' . $monthLabel . ' - Target: ' . $targetAmount . 'M, Real: ' . $realAmount . 'M, Achievement: ' . round($achievement, 2) . '%');
+
+                // ✅ FIXED: Move to next month WITHOUT calling startOfMonth() which was causing issues
+                $current->addMonth();
+            }
+
+            // Final logging for debugging
+            Log::info('✅ Monthly time series data generated for period: ' . $startDate . ' to ' . $endDate);
+            Log::info('📊 Total months generated: ' . count($labels));
+            Log::info('📋 Labels: ' . implode(', ', $labels));
+            Log::info('💵 Target data: ' . implode(', ', $targetData));
+            Log::info('💰 Real data: ' . implode(', ', $realData));
+
+            return [
+                'labels' => $labels,
+                'targetData' => $targetData,
+                'realData' => $realData,
+                'achievementData' => $achievementData
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error in getMonthlyTimeSeriesData: ' . $e->getMessage());
+            Log::error('🔍 Error trace: ' . $e->getTraceAsString());
+            return [
+                'labels' => [],
+                'targetData' => [],
+                'realData' => [],
+                'achievementData' => []
+            ];
+        }
+    }
+
+    /**
+     * ✅ UPDATED: Prepare Chart.js compatible data structure (supports multi-witel + time series)
      */
     private function prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate)
     {
@@ -169,6 +257,7 @@ class WitelPerformController extends Controller
                     'isEmpty' => true,
                     'periodPerformance' => null,
                     'stackedDivision' => null,
+                    'timeSeriesData' => null,
                     'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
                 ];
             }
@@ -184,6 +273,9 @@ class WitelPerformController extends Controller
             // Get stacked division data (by witel) - exclude RLEGS
             $stackedData = $this->getStackedDivisionData($witel, $regional, $divisi, $startDate, $endDate);
 
+            // ✅ NEW: Get monthly time series data for line chart
+            $timeSeriesData = $this->getMonthlyTimeSeriesData($witel, $regional, $divisi, $startDate, $endDate);
+
             return [
                 'isEmpty' => false,
                 'periodPerformance' => [
@@ -192,6 +284,7 @@ class WitelPerformController extends Controller
                     'achievement' => round($achievement, 2)
                 ],
                 'stackedDivision' => $stackedData,
+                'timeSeriesData' => $timeSeriesData,
                 'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
             ];
 
@@ -202,6 +295,7 @@ class WitelPerformController extends Controller
                 'isEmpty' => true,
                 'periodPerformance' => null,
                 'stackedDivision' => null,
+                'timeSeriesData' => null,
                 'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
             ];
         }

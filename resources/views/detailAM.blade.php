@@ -163,21 +163,22 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.12);
     }
 
-    /* Special styling for different divisions */
-    .divisi-pill.dps {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        color: #1e40af;
+    /* === Divisi Pill Color Styling === */
+    .divisi-pill.dss {
+        background: linear-gradient(135deg, #fef6f2 0%, #f8e4d8 100%);
+        color: #D29062;
     }
 
-    .divisi-pill.dss {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        color: #166534;
+    .divisi-pill.dps {
+        background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+        color: #F4A300;
     }
 
     .divisi-pill.dgs {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #92400e;
+        background: linear-gradient(135deg, #fff3e0 0%, #ffccbc 100%);
+        color: #D95A00;
     }
+
 
     /* Improved profile meta layout - horizontal layout */
     .profile-meta {
@@ -1671,25 +1672,26 @@ $(document).ready(function() {
         // Create datasets based on view type
         let datasets = [];
 
-        if (type === 'combined' || type === 'revenue') {
-            datasets.push({
-                label: 'Real Revenue',
-                data: revenueData,
-                backgroundColor: 'rgba(59, 125, 221, 0.6)',
-                borderColor: 'rgba(59, 125, 221, 1)',
-                borderWidth: 1,
-                yAxisID: 'y'
-            });
+    if (type === 'combined' || type === 'revenue') {
+        datasets.push({
+            label: 'Real Revenue',
+            data: revenueData,
+            backgroundColor: 'rgba(46, 204, 113, 0.6)', // hijau
+            borderColor: 'rgba(46, 204, 113, 1)',
+            borderWidth: 1,
+            yAxisID: 'y'
+        });
 
-            datasets.push({
-                label: 'Target Revenue',
-                data: targetData,
-                backgroundColor: 'rgba(28, 41, 85, 0.2)',
-                borderColor: 'rgba(28, 41, 85, 1)',
-                borderWidth: 1,
-                yAxisID: 'y'
-            });
-        }
+        datasets.push({
+            label: 'Target Revenue',
+            data: targetData,
+            backgroundColor: 'rgba(0, 82, 204, 0.2)',  // biru lebih pekat
+            borderColor: 'rgba(0, 82, 204, 1)',
+            borderWidth: 1,
+            yAxisID: 'y'
+        });
+    }
+
 
         if (type === 'combined' || type === 'achievement') {
             datasets.push({

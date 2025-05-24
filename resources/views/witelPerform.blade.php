@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.14.0-beta3/css/bootstrap-select.min.css">
     <link rel="stylesheet" href="{{ asset('css/witel.css') }}">
     <style>
-        /* ✅ REVERTED: Keep original styling without gray backgrounds */
         .filters-row {
             position: relative;
             display: flex;
@@ -116,7 +115,6 @@
             margin-bottom: 10px;
         }
 
-        /* ✅ NEW: Add tooltip for better UX */
         .region-box {
             flex: 1;
             max-width: 345px;
@@ -153,7 +151,6 @@
             border-color: #1a4f9a;
         }
 
-        /* ✅ UPDATED: Multi-select indicator with better positioning */
         .region-box.active:not([data-region="all"])::after {
             content: "✓";
             position: absolute;
@@ -171,7 +168,6 @@
             justify-content: center;
         }
 
-        /* ✅ UPDATED: Disabled state styling with better visual feedback */
         .region-box[style*="pointer-events: none"] {
             cursor: not-allowed !important;
             background-color: #f5f5f5 !important;
@@ -185,7 +181,7 @@
             transform: none !important;
         }
 
-        /* ✅ NEW: Add "locked" icon for disabled buttons */
+        /*  Add "locked" icon for disabled buttons */
         .region-box[style*="pointer-events: none"]:not(.active)::before {
             content: "🔒";
             position: absolute;
@@ -195,7 +191,6 @@
             opacity: 0.6;
         }
 
-        /* ✅ NEW: Special styling for "Semua Witel" button */
         .region-box[data-region="all"] {
             font-weight: 600;
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -214,38 +209,7 @@
             background: linear-gradient(135deg, #1a4f9a 0%, #164080 100%);
         }
 
-        /* ✅ UPDATED: Color scheme documentation for charts */
-        /*
-        ==============================================
-        📊 WITEL PERFORM DASHBOARD - COLOR SCHEME:
-        ==============================================
-
-        🔵 Chart 1 - "Grafik Performa Periode":
-        - Target Revenue: Blue (#3b82f6) 🔵
-        - Real Revenue: Green (#22c55e) 🟢
-
-        🎨 Chart 2 - "Breakdown Pendapatan per Divisi & Witel":
-        - DSS (Digital Service Solutions): Purple (#8b5cf6) 💜
-        - DPS (Digital Platform Solutions): Teal (#06b6d4) 🩵
-        - DGS (Government, SOE & Private Services): Orange (#f59e0b) 🧡
-        - RLEGS: Hidden/Filtered (not shown in chart)
-
-        🎯 Achievement Indicators:
-        - Success (≥100%): Green (#22c55e)
-        - Good (≥80%): Blue (#3b82f6)
-        - Warning (≥60%): Orange (#f59e0b)
-        - Danger (<60%): Red (#ef4444)
-
-        ✅ Design Principles:
-        - No color conflicts between charts
-        - Consistent with brand guidelines
-        - Accessible color contrast
-        - Professional appearance
-        - FIXED: DGS = Government, SOE & Private Services (not Digital Global Solutions)
-        ==============================================
-        */
-
-        /* ✅ NEW: Achievement percentage styling with new color scheme */
+        /* Achievement percentage styling */
         .achievement-percentage {
             font-size: 1.2em;
             font-weight: bold;
@@ -253,22 +217,21 @@
         }
 
         .achievement-percentage.success {
-            color: #22c55e; /* Green - matches chart 1 real revenue */
+            color: #22c55e; 
         }
 
         .achievement-percentage.good {
-            color: #3b82f6; /* Blue - matches chart 1 target revenue */
+            color: #3b82f6; 
         }
 
         .achievement-percentage.warning {
-            color: #f59e0b; /* Orange - matches DGS color */
+            color: #f59e0b; 
         }
 
         .achievement-percentage.danger {
-            color: #ef4444; /* Red - for very low achievement */
+            color: #ef4444; 
         }
 
-        /* ✅ NEW: Division indicator colors for UI consistency */
         .division-indicator {
             display: inline-block;
             width: 12px;
@@ -278,19 +241,36 @@
             vertical-align: middle;
         }
 
-        .division-indicator.dss {
-            background-color: #8b5cf6; /* Purple */
+        /* === Summary Card Color Styling === */
+        .summary-card.rlegs {
+            border-left: 6px solid #C62828;
+        }
+        .summary-card.rlegs .summary-icon {
+            background-color: #C62828;
         }
 
-        .division-indicator.dps {
-            background-color: #06b6d4; /* Teal */
+        .summary-card.dss {
+            border-left: 6px solid #D29062;
+        }
+        .summary-card.dss .summary-icon {
+            background-color: #D29062;
         }
 
-        .division-indicator.dgs {
-            background-color: #f59e0b; /* Orange */
+        .summary-card.dps {
+            border-left: 6px solid #F4A300;
+        }
+        .summary-card.dps .summary-icon {
+            background-color: #F4A300;
         }
 
-        /* ✅ NEW: Chart container enhancements */
+        .summary-card.dgs {
+            border-left: 6px solid #D95A00;
+        }
+        .summary-card.dgs .summary-icon {
+            background-color: #D95A00;
+        }
+
+        /* Chart container enhancements */
         .chart-container {
             position: relative;
             background: white;
@@ -316,7 +296,6 @@
             opacity: 0.7;
         }
 
-        /* Loading state for charts */
         .loading-overlay {
             position: absolute;
             top: 0;
@@ -330,7 +309,6 @@
             z-index: 10;
         }
 
-        /* Chart container position relative for overlay */
         .chart-body {
             position: relative;
             min-height: 350px;
@@ -411,7 +389,7 @@
             font-weight: 500;
         }
 
-        /* ✅ UPDATED: Chart header layout */
+        /* Chart header layout */
         .chart-title-container {
             display: flex;
             justify-content: space-between;
@@ -449,7 +427,7 @@
             max-height: 350px !important;
         }
 
-        /* ✅ NEW: Horizontal chart container */
+        /* Horizontal chart container */
         .horizontal-chart-container {
             height: 500px;
         }
@@ -464,7 +442,7 @@
             font-weight: 600;
         }
 
-        /* ✅ FIXED: Bootstrap Select Dropdown Styling */
+        /* Bootstrap Select Dropdown Styling */
         .bootstrap-select .dropdown-toggle {
             background-color: #2c5aa0 !important;
             border-color: #2c5aa0 !important;
@@ -500,7 +478,7 @@
             color: white !important;
         }
 
-        /* ✅ UPDATED: Dynamic achievement colors for summary cards */
+        /* Dynamic achievement colors for summary cards */
         .summary-percentage.achieved {
             background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
@@ -525,7 +503,7 @@
             </p>
         </div>
 
-        <!-- ✅ UPDATED: Summary Cards with dynamic achievement colors -->
+        <!-- Summary Cards with dynamic achievement colors -->
         <div class="summary-cards">
             <div class="summary-card rlegs">
                 <div class="summary-icon rlegs">
@@ -739,10 +717,9 @@
                     <div class="chart-header">
                         <div class="chart-title-container">
                             <h5 class="chart-title">
-                                Grafik Performa Periode
+                                Grafik Performa Witel Periode
                                 <span class="period-label" id="periodLabel">{{ $chartData['periodLabel'] ?? 'Mei 2025' }}</span>
                             </h5>
-                            <!-- ✅ FIXED: Moved filter to right side, horizontal with title -->
                             <div class="chart-filters">
                                 <div class="filter-group">
                                     <label>Tampilan</label>
@@ -764,13 +741,13 @@
                 </div>
             </div>
 
-            <!-- ✅ UPDATED: Chart 2: Horizontal Stacked Division Chart -->
+            <!-- Horizontal Stacked Division Chart -->
             <div class="col-12 chart-container">
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
-                            <h5 class="chart-title">Breakdown Pendapatan per Divisi & Witel</h5>
-                            <p class="chart-subtitle">Distribusi DSS, DPS, DGS berdasarkan witel yang dipilih (Tanpa RLEGS)</p>
+                            <h5 class="chart-title">Pendapatan Divisi RLEGS</h5>
+                            <p class="chart-subtitle">Distribusi Pendapatan DSS, DPS, DGS berdasarkan Witel yang Anda pilih</p>
                         </div>
                     </div>
                     <div class="chart-body">
@@ -1215,20 +1192,22 @@
                 const datasets = [];
 
                 if (type === 'combined' || type === 'revenue') {
+                    // Target Revenue - Blue
                     datasets.push({
                         label: 'Target Revenue',
                         data: targetData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',    // ✅ NEW: Blue for Target
-                        borderColor: '#3b82f6',                        // ✅ NEW: Blue border
+                        backgroundColor: 'rgba(0, 82, 204, 0.2)',   
+                        borderColor: 'rgba(0, 82, 204, 1)',         
                         borderWidth: 2,
                         yAxisID: 'y'
                     });
 
+                    // Real Revenue - Green
                     datasets.push({
                         label: 'Real Revenue',
                         data: realData,
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)',     // ✅ NEW: Green for Real
-                        borderColor: '#22c55e',                        // ✅ NEW: Green border
+                        backgroundColor: 'rgba(46, 204, 113, 0.6)', 
+                        borderColor: 'rgba(46, 204, 113, 1)',       
                         borderWidth: 2,
                         yAxisID: 'y'
                     });
@@ -1264,7 +1243,7 @@
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'Revenue (Juta Rp)',
+                            text: 'Revenue (Juta Rupiah)',
                             font: { weight: 'bold', size: 14 }
                         },
                         ticks: {
@@ -1382,28 +1361,29 @@
                     totalRevenue: d.data.reduce((a, b) => a + b, 0)
                 })));
 
-                // ✅ UPDATED: New color scheme (avoid blue/green used in chart 1)
-                const filteredDatasets = data.datasets.filter(dataset => dataset.label !== 'RLEGS').map(dataset => {
+            const filteredDatasets = data.datasets
+                .filter(dataset => dataset.label !== 'RLEGS')
+                .map(dataset => {
                     let backgroundColor, borderColor, hoverBackgroundColor;
 
-                    switch(dataset.label) {
+                    switch (dataset.label) {
                         case 'DSS':
-                            // ✅ NEW: Purple/Violet for DSS (instead of green)
-                            backgroundColor = 'rgba(139, 92, 246, 0.8)';
-                            borderColor = '#8b5cf6';
-                            hoverBackgroundColor = 'rgba(139, 92, 246, 0.9)';
+                            // Terracotta – hangat, natural, profesional
+                            backgroundColor = 'rgba(210, 144, 98, 0.9)';
+                            borderColor = '#D29062';
+                            hoverBackgroundColor = 'rgba(195, 130, 85, 1)';
                             break;
                         case 'DPS':
-                            // ✅ NEW: Teal/Cyan for DPS (instead of blue)
-                            backgroundColor = 'rgba(6, 182, 212, 0.8)';
-                            borderColor = '#06b6d4';
-                            hoverBackgroundColor = 'rgba(6, 182, 212, 0.9)';
+                            // Amber Gold – terang dan tegas
+                            backgroundColor = 'rgba(244, 163, 0, 0.9)';
+                            borderColor = '#F4A300';
+                            hoverBackgroundColor = 'rgba(230, 150, 0, 1)';
                             break;
                         case 'DGS':
-                            // ✅ KEEP: Orange/Amber for DGS (unique color)
-                            backgroundColor = 'rgba(245, 158, 11, 0.8)';
-                            borderColor = '#f59e0b';
-                            hoverBackgroundColor = 'rgba(245, 158, 11, 0.9)';
+                            // Burnt Orange – kontras kuat dan profesional
+                            backgroundColor = 'rgba(217, 90, 0, 0.9)';
+                            borderColor = '#D95A00';
+                            hoverBackgroundColor = 'rgba(200, 80, 0, 1)';
                             break;
                         default:
                             backgroundColor = dataset.backgroundColor;
@@ -1411,19 +1391,17 @@
                             hoverBackgroundColor = dataset.backgroundColor;
                     }
 
-                    console.log(`📈 Dataset ${dataset.label}:`, {
-                        data: dataset.data,
-                        backgroundColor: backgroundColor
-                    });
-
                     return {
                         ...dataset,
-                        backgroundColor: backgroundColor,
-                        borderColor: borderColor,
-                        hoverBackgroundColor: hoverBackgroundColor,
-                        borderWidth: 1
+                        backgroundColor,
+                        borderColor,
+                        hoverBackgroundColor,
+                        borderWidth: 2.5
                     };
                 });
+
+
+
 
                 console.log('✅ Filtered datasets count:', filteredDatasets.length);
 
@@ -1447,7 +1425,7 @@
                                 stacked: true,
                                 title: {
                                     display: true,
-                                    text: 'Revenue (Juta Rp)',
+                                    text: 'Revenue (Juta Rupiah)',
                                     font: { weight: 'bold', size: 14 }
                                 },
                                 ticks: {
@@ -1487,13 +1465,13 @@
                                         labels.forEach(label => {
                                             switch(label.text) {
                                                 case 'DSS':
-                                                    label.text = 'DSS (Digital Service Solutions)';
+                                                    label.text = 'DSS';
                                                     break;
                                                 case 'DPS':
-                                                    label.text = 'DPS (Digital Platform Solutions)';
+                                                    label.text = 'DPS';
                                                     break;
                                                 case 'DGS':
-                                                    label.text = 'DGS (Digital Global Solutions)';
+                                                    label.text = 'DGS';
                                                     break;
                                             }
                                         });

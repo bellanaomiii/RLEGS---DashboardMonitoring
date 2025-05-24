@@ -10,7 +10,6 @@ use App\Models\AccountManager;
 use App\Models\Regional;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Log;
 
 class WitelPerformController extends Controller
@@ -21,9 +20,9 @@ class WitelPerformController extends Controller
     protected $defaultDivisions = ['DSS', 'DPS', 'DGS', 'RLEGS'];
 
     /**
-     * Default regions if none exist in the database
+     * Default witels if none exist in the database
      */
-    protected $defaultRegions = [
+    protected $defaultWitels = [
         'Suramadu',
         'Nusa Tenggara',
         'Jatim Barat',
@@ -47,7 +46,7 @@ class WitelPerformController extends Controller
             // Get all witel with fallback to default if empty
             $witels = Witel::pluck('nama')->toArray();
             if (empty($witels)) {
-                $witels = $this->defaultRegions;
+                $witels = $this->defaultWitels;
             }
 
             // Get all regionals
@@ -62,16 +61,15 @@ class WitelPerformController extends Controller
                 $divisis = $this->defaultDivisions;
             }
 
-            // Get revenue summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $selectedWitel, $selectedRegional);
+            // ✅ FIXED: Get revenue summary data with proper filter application
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $selectedWitel, $selectedRegional, $selectedDivisi);
 
-            // Prepare chart data for ApexCharts
-            $chartData = $this->prepareChartData($selectedWitel, $selectedRegional, $startDate, $endDate);
+            // ✅ FIXED: Prepare Chart.js compatible data with proper filters
+            $chartData = $this->prepareChartJsData($selectedWitel, $selectedRegional, $selectedDivisi, $startDate, $endDate);
 
-            // Set regions for view (backward compatibility)
+            // Set regions for view
             $regions = $witels;
 
-            // Return view with all necessary variables
             return view('witelPerform', compact(
                 'witels',
                 'regionals',
@@ -86,222 +84,342 @@ class WitelPerformController extends Controller
                 'regions'
             ));
         } catch (\Exception $e) {
-            // Log error for debugging
             Log::error('Error in WitelPerformController: ' . $e->getMessage());
             Log::error('Error trace: ' . $e->getTraceAsString());
 
-            // Display error page with message
             return view('error', ['message' => 'Terjadi kesalahan dalam memproses data: ' . $e->getMessage()]);
         }
     }
 
-    private function prepareChartData($witel, $regional, $startDate, $endDate)
+    /**
+     * Format numbers for card summary (full format: milyar/juta/ribu)
+     */
+    private function formatNumberFull($number, $decimals = 2)
+    {
+        if ($number >= 1000000000) {
+            return number_format($number / 1000000000, $decimals) . ' milyar';
+        } elseif ($number >= 1000000) {
+            return number_format($number / 1000000, $decimals) . ' juta';
+        } elseif ($number >= 1000) {
+            return number_format($number / 1000, $decimals) . ' ribu';
+        } else {
+            return number_format($number, $decimals);
+        }
+    }
+
+    /**
+     * Format numbers for charts (short format: B/M/K)
+     */
+    private function formatNumberShort($number, $decimals = 2)
+    {
+        if ($number >= 1000000000) {
+            return number_format($number / 1000000000, $decimals) . ' B';
+        } elseif ($number >= 1000000) {
+            return number_format($number / 1000000, $decimals) . ' M';
+        } elseif ($number >= 1000) {
+            return number_format($number / 1000, $decimals) . ' K';
+        } else {
+            return number_format($number, $decimals);
+        }
+    }
+
+    /**
+     * ✅ FIXED: Generate proper period label for date ranges
+     */
+    private function generatePeriodLabel($startDate, $endDate)
+    {
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        $startMonth = $start->format('M');
+        $endMonth = $end->format('M');
+        $startYear = $start->format('Y');
+        $endYear = $end->format('Y');
+
+        // Same month and year
+        if ($start->isSameMonth($end)) {
+            return $startMonth . ' ' . $startYear;
+        }
+        // Same year, different months
+        elseif ($startYear === $endYear) {
+            return $startMonth . ' - ' . $endMonth . ' ' . $startYear;
+        }
+        // Different years
+        else {
+            return $startMonth . ' ' . $startYear . ' - ' . $endMonth . ' ' . $endYear;
+        }
+    }
+
+    /**
+     * ✅ FIXED: Prepare Chart.js compatible data structure
+     */
+    private function prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate)
     {
         try {
-            // Get account manager IDs based on filters
-            $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional);
+            // ✅ FIXED: Get account manager IDs based on ALL filters INCLUDING divisi
+            $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional, $divisi);
 
-            // Get monthly target and real revenue data for current year
-            $currentYear = date('Y');
-
-            // Get monthly data for target and real revenue
-            $targetRevenueData = $this->getMonthlyRevenueData($accountManagerIds, $currentYear, $startDate, $endDate, 'target_revenue');
-            $realRevenueData = $this->getMonthlyRevenueData($accountManagerIds, $currentYear, $startDate, $endDate, 'real_revenue');
-
-            // Get revenue data by division
-            $divisionData = $this->getDivisionRevenueData($accountManagerIds, $startDate, $endDate);
-
-            // Get achievement percentage by division
-            $achievementData = $this->getDivisionAchievementData($accountManagerIds, $startDate, $endDate);
-
-            // Get performance data for all witels
-            $witelPerformanceData = $this->getWitelPerformanceData($regional, $startDate, $endDate);
-
-            // Format months for the trend chart
-            $months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-
-            // Check if we have any data
-            $hasData = false;
-            if (!empty(array_filter($targetRevenueData)) ||
-                !empty(array_filter($realRevenueData)) ||
-                !empty(array_filter($divisionData['real'] ?? [])) ||
-                !empty(array_filter($achievementData))) {
-                $hasData = true;
+            if (empty($accountManagerIds)) {
+                return [
+                    'isEmpty' => true,
+                    'periodPerformance' => null,
+                    'stackedDivision' => null,
+                    'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
+                ];
             }
 
-            // Return all chart data as an array
-            return [
-                'isEmpty' => !$hasData,
-                'lineChart' => [
-                    'months' => $months,
-                    'series' => [
-                        [
-                            'name' => 'Real Revenue',
-                            'data' => array_values($realRevenueData)
-                        ],
-                        [
-                            'name' => 'Target Revenue',
-                            'data' => array_values($targetRevenueData)
-                        ]
-                    ]
-                ],
-                'barChart' => [
-                    'divisions' => array_keys($divisionData['target'] ?? $this->getDefaultDivisionData()['target']),
-                    'series' => [
-                        [
-                            'name' => 'Target',
-                            'data' => array_values($divisionData['target'] ?? $this->getDefaultDivisionData()['target'])
-                        ],
-                        [
-                            'name' => 'Realisasi',
-                            'data' => array_values($divisionData['real'] ?? $this->getDefaultDivisionData()['real'])
-                        ],
-                        [
-                            'name' => 'Achievement (%)',
-                            'data' => array_values($divisionData['achievement'] ?? $this->getDefaultDivisionData()['achievement'])
-                        ]
-                    ]
-                ],
-                'donutChart' => [
-                    'labels' => array_keys($achievementData),
-                    'series' => array_values($achievementData)
-                ],
-                'witelPerformance' => $witelPerformanceData
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error in prepareChartData: ' . $e->getMessage());
-            Log::error('Error trace: ' . $e->getTraceAsString());
+            // Get period performance data
+            $periodData = $this->getRevenueForPeriod($accountManagerIds, $startDate, $endDate, $divisi);
 
-            // Return empty data structure on error with error flag
+            // Calculate achievement
+            $achievement = $periodData['total_target'] > 0
+                ? ($periodData['total_real'] / $periodData['total_target']) * 100
+                : 0;
+
+            // Get stacked division data (by witel) - exclude RLEGS
+            $stackedData = $this->getStackedDivisionData($witel, $regional, $divisi, $startDate, $endDate);
+
+            return [
+                'isEmpty' => false,
+                'periodPerformance' => [
+                    'target_revenue' => $periodData['total_target'],
+                    'real_revenue' => $periodData['total_real'],
+                    'achievement' => round($achievement, 2)
+                ],
+                'stackedDivision' => $stackedData,
+                'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error in prepareChartJsData: ' . $e->getMessage());
+
             return [
                 'isEmpty' => true,
-                'error' => true,
-                'message' => $e->getMessage(),
-                'lineChart' => [
-                    'months' => ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-                    'series' => [
-                        ['name' => 'Real Revenue', 'data' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-                        ['name' => 'Target Revenue', 'data' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-                    ]
-                ],
-                'barChart' => [
-                    'divisions' => $this->defaultDivisions,
-                    'series' => [
-                        ['name' => 'Target', 'data' => [0, 0, 0, 0]],
-                        ['name' => 'Realisasi', 'data' => [0, 0, 0, 0]],
-                        ['name' => 'Achievement (%)', 'data' => [0, 0, 0, 0]]
-                    ]
-                ],
-                'donutChart' => [
-                    'labels' => $this->defaultDivisions,
-                    'series' => [0, 0, 0, 0]
-                ],
-                'witelPerformance' => [
-                    'categories' => ['Tidak ada data'],
-                    'data' => [0]
-                ]
+                'periodPerformance' => null,
+                'stackedDivision' => null,
+                'periodLabel' => $this->generatePeriodLabel($startDate, $endDate)
             ];
         }
     }
 
     /**
-     * Get monthly revenue data with option to choose between target_revenue or real_revenue
-     *
-     * @param array $accountManagerIds
-     * @param int $year
-     * @param string $startDate
-     * @param string $endDate
-     * @param string $revenueType 'target_revenue' or 'real_revenue'
-     * @return array
+     * ✅ FIXED: Get stacked division data for Chart.js (exclude RLEGS)
      */
-    private function getMonthlyRevenueData($accountManagerIds, $year, $startDate, $endDate, $revenueType = 'real_revenue')
+    private function getStackedDivisionData($witel, $regional, $divisi, $startDate, $endDate)
     {
-        // Initialize results array with zeros for all months
-        $results = array_fill(1, 12, 0);
+        try {
+            // Get witels to show on chart
+            $witelsToShow = [];
+            if ($witel !== 'all') {
+                $witelsToShow = [$witel];
+            } else {
+                $witels = Witel::pluck('nama')->toArray();
+                $witelsToShow = !empty($witels) ? array_slice($witels, 0, 7) : array_slice($this->defaultWitels, 0, 7);
+            }
 
-        if (empty($accountManagerIds)) {
-            return $results;
+            // ✅ FIXED: Only show DSS, DPS, DGS (exclude RLEGS)
+            $divisionsToShow = ['DSS', 'DPS', 'DGS'];
+
+            // ✅ FIXED: If specific division selected, only show that one
+            if ($divisi !== 'all' && is_array($divisi)) {
+                $divisionsToShow = array_intersect($divisi, ['DSS', 'DPS', 'DGS']);
+            } elseif ($divisi !== 'all' && !is_array($divisi) && in_array($divisi, ['DSS', 'DPS', 'DGS'])) {
+                $divisionsToShow = [$divisi];
+            }
+
+            $datasets = [];
+            $colors = [
+                'DSS' => ['bg' => 'rgba(187, 247, 208, 0.8)', 'border' => '#10b981'],
+                'DPS' => ['bg' => 'rgba(191, 219, 254, 0.8)', 'border' => '#3b82f6'],
+                'DGS' => ['bg' => 'rgba(253, 230, 138, 0.8)', 'border' => '#f59e0b']
+            ];
+
+            foreach ($divisionsToShow as $division) {
+                $data = [];
+
+                foreach ($witelsToShow as $witelName) {
+                    // Get account managers for this specific witel and division
+                    $witelAMs = $this->getAccountManagersByWitelAndDivision($witelName, $division);
+
+                    // Apply regional filter if needed
+                    if ($regional !== 'all') {
+                        $regionalAMs = $this->getAccountManagerIdsByFilters('all', $regional, 'all');
+                        $witelAMs = array_intersect($witelAMs, $regionalAMs);
+                    }
+
+                    $revenue = $this->getRevenueForPeriod($witelAMs, $startDate, $endDate, $division);
+                    $data[] = round($revenue['total_real'] / 1000000, 2); // Convert to millions
+                }
+
+                $datasets[] = [
+                    'label' => $division,
+                    'data' => $data,
+                    'backgroundColor' => $colors[$division]['bg'],
+                    'borderColor' => $colors[$division]['border'],
+                    'borderWidth' => 1
+                ];
+            }
+
+            return [
+                'labels' => $witelsToShow,
+                'datasets' => $datasets
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error in getStackedDivisionData: ' . $e->getMessage());
+            return [
+                'labels' => [],
+                'datasets' => []
+            ];
         }
-
-        // Get monthly aggregated revenue data
-        $data = Revenue::whereIn('account_manager_id', $accountManagerIds)
-            ->whereYear('bulan', $year)
-            ->select(
-                DB::raw('MONTH(bulan) as month'),
-                DB::raw("SUM($revenueType) as total_revenue")
-            )
-            ->groupBy('month')
-            ->get();
-
-        // Populate results with data
-        foreach ($data as $item) {
-            $results[$item->month] = $item->total_revenue / 1000000; // Convert to millions
-        }
-
-        return $results;
     }
 
-    // Rest of the methods remain the same...
-    // (Keep all other methods unchanged as they are)
-
-    private function getRevenueSummary($startDate, $endDate, $witel = 'all', $regional = 'all')
+    /**
+     * ✅ FIXED: Get account manager IDs with ALL filters working properly
+     */
+    private function getAccountManagerIdsByFilters($witel = 'all', $regional = 'all', $divisi = 'all')
     {
-        $divisions = $this->defaultDivisions;
+        $query = AccountManager::query();
+
+        // Apply regional filter
+        if ($regional !== 'all') {
+            $regionalId = Regional::where('nama', $regional)->first()?->id;
+            if ($regionalId) {
+                $query->where('regional_id', $regionalId);
+            }
+        }
+
+        // Apply witel filter
+        if ($witel !== 'all') {
+            $witelId = Witel::where('nama', $witel)->first()?->id;
+            if ($witelId) {
+                $query->where('witel_id', $witelId);
+            }
+        }
+
+        $accountManagerIds = $query->pluck('id')->toArray();
+
+        // ✅ FIXED: Apply division filter using many-to-many relationship
+        if ($divisi !== 'all' && !empty($accountManagerIds)) {
+            if (is_array($divisi)) {
+                $divisionIds = Divisi::whereIn('nama', $divisi)->pluck('id')->toArray();
+            } else {
+                $divisionIds = Divisi::where('nama', $divisi)->pluck('id')->toArray();
+            }
+
+            if (!empty($divisionIds)) {
+                $accountManagerIds = DB::table('account_manager_divisi')
+                    ->whereIn('account_manager_id', $accountManagerIds)
+                    ->whereIn('divisi_id', $divisionIds)
+                    ->pluck('account_manager_id')
+                    ->unique()
+                    ->toArray();
+            }
+        }
+
+        return $accountManagerIds;
+    }
+
+    /**
+     * Get account managers by witel only
+     */
+    private function getAccountManagersByWitel($witelName)
+    {
+        $witelId = Witel::where('nama', $witelName)->first()?->id;
+        if (!$witelId) {
+            return [];
+        }
+
+        return AccountManager::where('witel_id', $witelId)->pluck('id')->toArray();
+    }
+
+    /**
+     * Get account managers by witel and division
+     */
+    private function getAccountManagersByWitelAndDivision($witelName, $divisionName)
+    {
+        $witelId = Witel::where('nama', $witelName)->first()?->id;
+        $divisionId = Divisi::where('nama', $divisionName)->first()?->id;
+
+        if (!$witelId || !$divisionId) {
+            return [];
+        }
+
+        return DB::table('account_manager_divisi')
+            ->join('account_managers', 'account_manager_divisi.account_manager_id', '=', 'account_managers.id')
+            ->where('account_managers.witel_id', $witelId)
+            ->where('account_manager_divisi.divisi_id', $divisionId)
+            ->pluck('account_managers.id')
+            ->toArray();
+    }
+
+    /**
+     * ✅ MAJOR FIX: Revenue summary with proper division filtering logic
+     */
+    private function getRevenueSummary($startDate, $endDate, $witel = 'all', $regional = 'all', $divisi = 'all')
+    {
         $data = [];
 
         try {
-            // Get account manager IDs based on filters
-            $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional);
+            // ✅ FIXED: Determine which divisions to show based on filter
+            $divisionsToShow = $this->defaultDivisions;
 
-            // Handle different date periods for comparison to calculate change percentage
-            $currentPeriodStart = Carbon::parse($startDate);
-            $currentPeriodEnd = Carbon::parse($endDate);
-            $daysDifference = $currentPeriodEnd->diffInDays($currentPeriodStart) ?: 30;
-
-            $previousPeriodEnd = $currentPeriodStart->copy()->subDay();
-            $previousPeriodStart = $previousPeriodEnd->copy()->subDays($daysDifference);
-
-            // For each division, get revenue data
-            foreach ($divisions as $division) {
-                if ($division === 'RLEGS') {
-                    // RLEGS includes all account managers
-                    $currentPeriodData = $this->getRevenueForPeriod(
-                        $accountManagerIds,
-                        $currentPeriodStart->format('Y-m-d'),
-                        $currentPeriodEnd->format('Y-m-d')
-                    );
-
-                    $previousPeriodData = $this->getRevenueForPeriod(
-                        $accountManagerIds,
-                        $previousPeriodStart->format('Y-m-d'),
-                        $previousPeriodEnd->format('Y-m-d')
-                    );
-                } else {
-                    // Get account managers who have this division
-                    $divisionAccountManagers = $this->getAccountManagersByDivision($division, $accountManagerIds);
-
-                    if (empty($divisionAccountManagers)) {
-                        $data[$division] = [
-                            'total_real' => 0,
-                            'total_target' => 0,
-                            'percentage_change' => 0,
-                            'achievement' => 0
-                        ];
-                        continue;
+            if ($divisi !== 'all') {
+                if (is_array($divisi)) {
+                    $divisionsToShow = $divisi;
+                    // Add RLEGS if multiple divisions selected (as it represents total)
+                    if (count($divisi) > 1 && !in_array('RLEGS', $divisi)) {
+                        $divisionsToShow[] = 'RLEGS';
                     }
-
-                    $currentPeriodData = $this->getRevenueForPeriod(
-                        $divisionAccountManagers,
-                        $currentPeriodStart->format('Y-m-d'),
-                        $currentPeriodEnd->format('Y-m-d')
-                    );
-
-                    $previousPeriodData = $this->getRevenueForPeriod(
-                        $divisionAccountManagers,
-                        $previousPeriodStart->format('Y-m-d'),
-                        $previousPeriodEnd->format('Y-m-d')
-                    );
+                } else {
+                    $divisionsToShow = [$divisi];
                 }
+            }
+
+            foreach ($divisionsToShow as $division) {
+                // ✅ FIXED: Get account manager IDs based on ACTUAL division
+                if ($division === 'RLEGS') {
+                    // RLEGS = ALL account managers (ignoring division filter for RLEGS calculation)
+                    $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional, 'all');
+                } else {
+                    // ✅ FIXED: For individual divisions, get ONLY that division's AMs
+                    $accountManagerIds = $this->getAccountManagerIdsByFilters($witel, $regional, $division);
+                }
+
+                // Skip if no account managers found
+                if (empty($accountManagerIds)) {
+                    $data[$division] = [
+                        'total_real' => 0,
+                        'total_real_formatted' => '0',
+                        'total_target' => 0,
+                        'total_target_formatted' => '0',
+                        'percentage_change' => 0,
+                        'achievement' => 0
+                    ];
+                    continue;
+                }
+
+                // Calculate current and previous period data
+                $currentPeriodStart = Carbon::parse($startDate);
+                $currentPeriodEnd = Carbon::parse($endDate);
+                $daysDifference = $currentPeriodEnd->diffInDays($currentPeriodStart) ?: 30;
+
+                $previousPeriodEnd = $currentPeriodStart->copy()->subDay();
+                $previousPeriodStart = $previousPeriodEnd->copy()->subDays($daysDifference);
+
+                $currentPeriodData = $this->getRevenueForPeriod(
+                    $accountManagerIds,
+                    $currentPeriodStart->format('Y-m-d'),
+                    $currentPeriodEnd->format('Y-m-d'),
+                    $division  // ✅ PASS division name to filter revenues
+                );
+
+                $previousPeriodData = $this->getRevenueForPeriod(
+                    $accountManagerIds,
+                    $previousPeriodStart->format('Y-m-d'),
+                    $previousPeriodEnd->format('Y-m-d'),
+                    $division  // ✅ PASS division name to filter revenues
+                );
 
                 // Calculate percentage change
                 $percentageChange = 0;
@@ -315,10 +433,12 @@ class WitelPerformController extends Controller
                     $achievement = ($currentPeriodData['total_real'] / $currentPeriodData['total_target']) * 100;
                 }
 
-                // Format numbers for display
+                // ✅ FIXED: Format numbers properly for card display
                 $data[$division] = [
-                    'total_real' => $currentPeriodData['total_real'] / 1000000, // Convert to millions
-                    'total_target' => $currentPeriodData['total_target'] / 1000000, // Convert to millions
+                    'total_real' => $currentPeriodData['total_real'], // Keep raw number
+                    'total_real_formatted' => $this->formatNumberFull($currentPeriodData['total_real']), // Formatted string
+                    'total_target' => $currentPeriodData['total_target'], // Keep raw number
+                    'total_target_formatted' => $this->formatNumberFull($currentPeriodData['total_target']), // Formatted string
                     'percentage_change' => round($percentageChange, 2),
                     'achievement' => round($achievement, 2)
                 ];
@@ -329,10 +449,12 @@ class WitelPerformController extends Controller
             Log::error('Error in getRevenueSummary: ' . $e->getMessage());
 
             // Return default data if error occurs
-            foreach ($divisions as $division) {
+            foreach ($this->defaultDivisions as $division) {
                 $data[$division] = [
                     'total_real' => 0,
+                    'total_real_formatted' => '0',
                     'total_target' => 0,
+                    'total_target_formatted' => '0',
                     'percentage_change' => 0,
                     'achievement' => 0
                 ];
@@ -343,38 +465,11 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * Get account manager IDs based on witel and regional filters
-     *
-     * @param string $witel
-     * @param string $regional
-     * @return array
-     */
-    private function getAccountManagerIdsByFilters($witel = 'all', $regional = 'all')
-    {
-        $query = AccountManager::query();
-
-        // Apply regional filter
-        if ($regional !== 'all') {
-            $regionalId = Regional::where('nama', $regional)->first()?->id;
-            if ($regionalId) {
-                $query->where('regional_id', $regionalId);
-            }
-        }
-
-        return $query->pluck('id')->toArray();
-    }
-
-    /**
      * Get account managers by division
-     *
-     * @param string $divisionName
-     * @param array $accountManagerIds
-     * @return array
      */
     private function getAccountManagersByDivision($divisionName, $accountManagerIds = [])
     {
         $divisionId = Divisi::where('nama', $divisionName)->first()?->id;
-
         if (!$divisionId) {
             return [];
         }
@@ -390,14 +485,9 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * Get revenue for specific period
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
+     * ✅ FIXED: Get revenue for specific period with division filter
      */
-    private function getRevenueForPeriod($accountManagerIds, $startDate, $endDate)
+    private function getRevenueForPeriod($accountManagerIds, $startDate, $endDate, $divisionName = null)
     {
         if (empty($accountManagerIds)) {
             return [
@@ -406,9 +496,18 @@ class WitelPerformController extends Controller
             ];
         }
 
-        $result = Revenue::whereIn('account_manager_id', $accountManagerIds)
-            ->whereBetween('bulan', [$startDate, $endDate])
-            ->select(
+        $query = Revenue::whereIn('account_manager_id', $accountManagerIds)
+            ->whereBetween('bulan', [$startDate, $endDate]);
+
+        // ✅ MAJOR FIX: Add division filter to revenue query
+        if (!empty($divisionName) && $divisionName !== 'RLEGS') {
+            $divisionId = Divisi::where('nama', $divisionName)->first()?->id;
+            if ($divisionId) {
+                $query->where('divisi_id', $divisionId);
+            }
+        }
+
+        $result = $query->select(
                 DB::raw('COALESCE(SUM(target_revenue), 0) as total_target'),
                 DB::raw('COALESCE(SUM(real_revenue), 0) as total_real')
             )
@@ -421,153 +520,7 @@ class WitelPerformController extends Controller
     }
 
     /**
-     * Get revenue data by division
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
-     */
-    private function getDivisionRevenueData($accountManagerIds, $startDate, $endDate)
-    {
-        // Initialize arrays for each division
-        $target = [];
-        $real = [];
-        $achievement = [];
-
-        try {
-            foreach ($this->defaultDivisions as $division) {
-                if ($division === 'RLEGS') {
-                    // RLEGS includes all account managers
-                    $data = $this->getRevenueForPeriod($accountManagerIds, $startDate, $endDate);
-                } else {
-                    // Get account managers who have this division
-                    $divisionAccountManagers = $this->getAccountManagersByDivision($division, $accountManagerIds);
-                    $data = $this->getRevenueForPeriod($divisionAccountManagers, $startDate, $endDate);
-                }
-
-                $target[$division] = round($data['total_target'] / 1000000, 2);
-                $real[$division] = round($data['total_real'] / 1000000, 2);
-                $achievement[$division] = $data['total_target'] > 0 ?
-                    round(($data['total_real'] / $data['total_target']) * 100, 2) : 0;
-            }
-
-            return [
-                'target' => $target,
-                'real' => $real,
-                'achievement' => $achievement
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error in getDivisionRevenueData: ' . $e->getMessage());
-            return $this->getDefaultDivisionData();
-        }
-    }
-
-    /**
-     * Get achievement percentage data by division
-     *
-     * @param array $accountManagerIds
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
-     */
-    private function getDivisionAchievementData($accountManagerIds, $startDate, $endDate)
-    {
-        $results = [];
-
-        try {
-            foreach ($this->defaultDivisions as $division) {
-                if ($division === 'RLEGS') {
-                    // RLEGS includes all account managers
-                    $data = $this->getRevenueForPeriod($accountManagerIds, $startDate, $endDate);
-                } else {
-                    // Get account managers who have this division
-                    $divisionAccountManagers = $this->getAccountManagersByDivision($division, $accountManagerIds);
-                    $data = $this->getRevenueForPeriod($divisionAccountManagers, $startDate, $endDate);
-                }
-
-                $results[$division] = $data['total_target'] > 0 ?
-                    round(($data['total_real'] / $data['total_target']) * 100, 2) : 0;
-            }
-
-            return $results;
-        } catch (\Exception $e) {
-            Log::error('Error in getDivisionAchievementData: ' . $e->getMessage());
-
-            // Return default data
-            foreach ($this->defaultDivisions as $division) {
-                $results[$division] = 0;
-            }
-            return $results;
-        }
-    }
-
-    /**
-     * Get performance data for all witels
-     *
-     * @param string $regional
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
-     */
-    private function getWitelPerformanceData($regional, $startDate, $endDate)
-    {
-        try {
-            $witelPerformance = [];
-
-            // Get account manager IDs filtered by regional
-            $accountManagerIds = $this->getAccountManagerIdsByFilters('all', $regional);
-
-            // Get all witels
-            $allWitels = Witel::all();
-
-            if ($allWitels->isEmpty()) {
-                return [
-                    'categories' => ['Tidak ada data witel'],
-                    'data' => [0]
-                ];
-            }
-
-            foreach ($allWitels as $witel) {
-                // Get account managers for this witel
-                $data = $this->getRevenueForPeriod($accountManagerIds, $startDate, $endDate);
-
-                // Calculate achievement percentage
-                $achievement = $data['total_target'] > 0 ?
-                    round(($data['total_real'] / $data['total_target']) * 100, 2) : 0;
-
-                $witelPerformance[$witel->nama] = $achievement;
-            }
-
-            // Sort by performance (achievement) in descending order
-            arsort($witelPerformance);
-
-            // If no data found, provide defaults
-            if (empty($witelPerformance)) {
-                return [
-                    'categories' => ['Tidak ada data'],
-                    'data' => [0]
-                ];
-            }
-
-            return [
-                'categories' => array_keys($witelPerformance),
-                'data' => array_values($witelPerformance)
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error in getWitelPerformanceData: ' . $e->getMessage());
-            return [
-                'categories' => ['Tidak ada data'],
-                'data' => [0]
-            ];
-        }
-    }
-
-    /**
-     * Update charts via AJAX
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ UPDATED: Update charts via AJAX with proper Chart.js data
      */
     public function updateCharts(Request $request)
     {
@@ -578,11 +531,11 @@ class WitelPerformController extends Controller
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
+            // Generate updated Chart.js data
+            $chartData = $this->prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate);
 
             // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional, $divisi);
 
             return response()->json([
                 'chartData' => $chartData,
@@ -593,103 +546,26 @@ class WitelPerformController extends Controller
 
             return response()->json([
                 'error' => 'Terjadi kesalahan dalam memproses data: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
+                'chartData' => ['isEmpty' => true],
                 'summaryData' => $this->getDefaultSummaryData()
             ], 500);
         }
     }
 
     /**
-     * Get default chart data for error handling
-     *
-     * @return array
-     */
-    private function getDefaultChartData()
-    {
-        return [
-            'isEmpty' => true,
-            'lineChart' => [
-                'months' => ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-                'series' => [
-                    ['name' => 'Real Revenue', 'data' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-                    ['name' => 'Target Revenue', 'data' => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-                ]
-            ],
-            'barChart' => [
-                'divisions' => $this->defaultDivisions,
-                'series' => [
-                    ['name' => 'Target', 'data' => [0, 0, 0, 0]],
-                    ['name' => 'Realisasi', 'data' => [0, 0, 0, 0]],
-                    ['name' => 'Achievement (%)', 'data' => [0, 0, 0, 0]]
-                ]
-            ],
-            'donutChart' => [
-                'labels' => $this->defaultDivisions,
-                'series' => [0, 0, 0, 0]
-            ],
-            'witelPerformance' => [
-                'categories' => ['Tidak ada data'],
-                'data' => [0]
-            ]
-        ];
-    }
-
-    /**
-     * Get default summary data for error handling
-     *
-     * @return array
-     */
-    private function getDefaultSummaryData()
-    {
-        $defaultData = [];
-        foreach ($this->defaultDivisions as $division) {
-            $defaultData[$division] = [
-                'total_real' => 0,
-                'total_target' => 0,
-                'percentage_change' => 0,
-                'achievement' => 0
-            ];
-        }
-        return $defaultData;
-    }
-
-    /**
-     * Get default division data
-     *
-     * @return array
-     */
-    private function getDefaultDivisionData()
-    {
-        $defaultData = [];
-        foreach ($this->defaultDivisions as $division) {
-            $defaultData[$division] = 0;
-        }
-        return [
-            'target' => $defaultData,
-            'real' => $defaultData,
-            'achievement' => $defaultData
-        ];
-    }
-
-    /**
-     * Filter data by witel
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ UPDATED: Filter by witel with proper data
      */
     public function filterByWitel(Request $request)
     {
         try {
             $witel = $request->input('witel', 'all');
             $regional = $request->input('regional', 'all');
+            $divisi = $request->input('divisi', 'all');
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+            $chartData = $this->prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate);
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional, $divisi);
 
             return response()->json([
                 'chartData' => $chartData,
@@ -700,31 +576,26 @@ class WitelPerformController extends Controller
 
             return response()->json([
                 'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
+                'chartData' => ['isEmpty' => true],
                 'summaryData' => $this->getDefaultSummaryData()
             ], 500);
         }
     }
 
     /**
-     * Filter data by regional
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ UPDATED: Filter by regional with proper data
      */
     public function filterByRegional(Request $request)
     {
         try {
             $regional = $request->input('regional', 'all');
             $witel = $request->input('witel', 'all');
+            $divisi = $request->input('divisi', 'all');
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
+            $chartData = $this->prepareChartJsData($witel, $regional, $divisi, $startDate, $endDate);
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional, $divisi);
 
             return response()->json([
                 'chartData' => $chartData,
@@ -735,17 +606,14 @@ class WitelPerformController extends Controller
 
             return response()->json([
                 'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
+                'chartData' => ['isEmpty' => true],
                 'summaryData' => $this->getDefaultSummaryData()
             ], 500);
         }
     }
 
     /**
-     * Filter data by division
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * ✅ UPDATED: Filter by division with proper data
      */
     public function filterByDivisi(Request $request)
     {
@@ -756,66 +624,12 @@ class WitelPerformController extends Controller
             $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->format('Y-m-d'));
 
-            // If divisiList is empty, return all data
             if (empty($divisiList)) {
-                return $this->updateCharts($request);
+                $divisiList = 'all';
             }
 
-            // Generate updated chart data
-            $chartData = $this->prepareChartData($witel, $regional, $startDate, $endDate);
-
-            // Get updated summary data
-            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional);
-
-            // Filter the data to only include selected divisions
-            if (!empty($chartData) && !empty($summaryData)) {
-                // Filter bar chart data
-                if (!empty($chartData['barChart'])) {
-                    $filteredDivisions = [];
-                    $filteredTarget = [];
-                    $filteredReal = [];
-                    $filteredAchievement = [];
-
-                    foreach ($chartData['barChart']['divisions'] as $index => $division) {
-                        if (in_array($division, $divisiList)) {
-                            $filteredDivisions[] = $division;
-                            $filteredTarget[] = $chartData['barChart']['series'][0]['data'][$index];
-                            $filteredReal[] = $chartData['barChart']['series'][1]['data'][$index];
-                            $filteredAchievement[] = $chartData['barChart']['series'][2]['data'][$index];
-                        }
-                    }
-
-                    $chartData['barChart']['divisions'] = $filteredDivisions;
-                    $chartData['barChart']['series'][0]['data'] = $filteredTarget;
-                    $chartData['barChart']['series'][1]['data'] = $filteredReal;
-                    $chartData['barChart']['series'][2]['data'] = $filteredAchievement;
-                }
-
-                // Filter donut chart data
-                if (!empty($chartData['donutChart'])) {
-                    $filteredLabels = [];
-                    $filteredSeries = [];
-
-                    foreach ($chartData['donutChart']['labels'] as $index => $label) {
-                        if (in_array($label, $divisiList)) {
-                            $filteredLabels[] = $label;
-                            $filteredSeries[] = $chartData['donutChart']['series'][$index];
-                        }
-                    }
-
-                    $chartData['donutChart']['labels'] = $filteredLabels;
-                    $chartData['donutChart']['series'] = $filteredSeries;
-                }
-
-                // Filter summary data
-                $filteredSummary = [];
-                foreach ($summaryData as $division => $data) {
-                    if (in_array($division, $divisiList)) {
-                        $filteredSummary[$division] = $data;
-                    }
-                }
-                $summaryData = $filteredSummary;
-            }
+            $chartData = $this->prepareChartJsData($witel, $regional, $divisiList, $startDate, $endDate);
+            $summaryData = $this->getRevenueSummary($startDate, $endDate, $witel, $regional, $divisiList);
 
             return response()->json([
                 'chartData' => $chartData,
@@ -826,9 +640,28 @@ class WitelPerformController extends Controller
 
             return response()->json([
                 'error' => 'Terjadi kesalahan dalam memproses filter: ' . $e->getMessage(),
-                'chartData' => $this->getDefaultChartData(),
+                'chartData' => ['isEmpty' => true],
                 'summaryData' => $this->getDefaultSummaryData()
             ], 500);
         }
+    }
+
+    /**
+     * Get default summary data for error handling
+     */
+    private function getDefaultSummaryData()
+    {
+        $defaultData = [];
+        foreach ($this->defaultDivisions as $division) {
+            $defaultData[$division] = [
+                'total_real' => 0,
+                'total_real_formatted' => '0',
+                'total_target' => 0,
+                'total_target_formatted' => '0',
+                'percentage_change' => 0,
+                'achievement' => 0
+            ];
+        }
+        return $defaultData;
     }
 }

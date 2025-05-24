@@ -12,21 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Add foreign key constraints after all tables are created
+        // Add witel_id foreign key to users table
         Schema::table('users', function (Blueprint $table) {
-            // ✅ Add witel_id foreign key if witel table exists and FK doesn't exist
+            // Only add foreign key if witel table exists and FK doesn't exist
             if (Schema::hasTable('witel') && !$this->foreignKeyExists('users', 'witel_id')) {
                 $table->foreign('witel_id')
                     ->references('id')
                     ->on('witel')
-                    ->onDelete('set null');
-            }
-
-            // ✅ Add account_manager_id foreign key if account_managers table exists and FK doesn't exist
-            if (Schema::hasTable('account_managers') && !$this->foreignKeyExists('users', 'account_manager_id')) {
-                $table->foreign('account_manager_id')
-                    ->references('id')
-                    ->on('account_managers')
                     ->onDelete('set null');
             }
         });
@@ -38,18 +30,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // ✅ SAFELY drop foreign keys with try-catch
+            // ✅ SAFELY drop foreign key
             try {
                 if ($this->foreignKeyExists('users', 'witel_id')) {
                     $table->dropForeign(['witel_id']);
-                }
-            } catch (\Exception $e) {
-                // Foreign key doesn't exist, continue
-            }
-
-            try {
-                if ($this->foreignKeyExists('users', 'account_manager_id')) {
-                    $table->dropForeign(['account_manager_id']);
                 }
             } catch (\Exception $e) {
                 // Foreign key doesn't exist, continue

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -27,13 +28,8 @@ return new class extends Migration
                 $table->rememberToken();
                 $table->timestamps();
 
-                // Foreign key untuk witel hanya ditambahkan jika tabel witel sudah ada
-                if (Schema::hasTable('witel')) {
-                    $table->foreign('witel_id')
-                        ->references('id')
-                        ->on('witel')
-                        ->onDelete('set null');
-                }
+                // ✅ FIXED: Don't add foreign key here, will be added in separate migration
+                // Foreign key akan ditambahkan di migration terpisah untuk menghindari konflik
             });
         }
 
@@ -64,35 +60,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Hapus tabel dengan urutan yang benar (tabel dengan foreign key terlebih dahulu)
-        Schema::dropIfExists('sessions');
-        Schema::dropIfExists('password_reset_tokens');
+        // ✅ DISABLE foreign key checks to prevent constraint violations
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-        // Hapus foreign key terlebih dahulu jika ada
-        if (Schema::hasTable('users')) {
-            Schema::table('users', function (Blueprint $table) {
-                // Cek apakah foreign key constraint ada sebelum mencoba menghapusnya
-                if (Schema::hasColumn('users', 'witel_id')) {
-                    // Gunakan try-catch untuk menangani jika foreign key tidak ada
-                    try {
-                        $table->dropForeign(['witel_id']);
-                    } catch (\Exception $e) {
-                        // Foreign key tidak ada, lanjutkan
-                    }
-                }
-
-                // Hapus foreign key account_manager_id jika ada
-                if (Schema::hasColumn('users', 'account_manager_id')) {
-                    try {
-                        $table->dropForeign(['account_manager_id']);
-                    } catch (\Exception $e) {
-                        // Foreign key tidak ada, lanjutkan
-                    }
-                }
-            });
+        try {
+            // Drop tabel dengan urutan yang benar (tabel dengan foreign key terlebih dahulu)
+            Schema::dropIfExists('sessions');
+            Schema::dropIfExists('password_reset_tokens');
+            Schema::dropIfExists('users');
+        } finally {
+            // ✅ ALWAYS re-enable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
-
-        // Hapus tabel users
-        Schema::dropIfExists('users');
     }
 };

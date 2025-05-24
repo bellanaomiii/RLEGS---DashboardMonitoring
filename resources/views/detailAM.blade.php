@@ -575,7 +575,7 @@
                         <i class="fas fa-university me-2"></i>Government
                     </option>
                 </select>
-                <small class="text-muted">Filter ini mempengaruhi peringkat witel Anda</small>
+                <small class="text-muted">Filter ini mempengaruhi peringkat witel Anda (TOLONG HAPUS YA BELLL)</small>
             </div>
         </div>
     </div>

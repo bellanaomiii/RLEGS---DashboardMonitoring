@@ -118,6 +118,21 @@
         margin-left: 10px;
     }
 
+    /* === Divisi Badge Color Styling (Sesuai dengan Divisi Pill) === */
+    .divisi-badge.dss {
+        background: linear-gradient(135deg, #fef6f2 0%, #f8e4d8 100%);
+        color: #D29062;
+    }
+
+    .divisi-badge.dps {
+        background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+        color: #F4A300;
+    }
+
+    .divisi-badge.dgs {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffccbc 100%);
+        color: #D95A00;
+    }
     /* Display divisi list di profil - Perbaikan alignment horizontal */
     .meta-item {
         display: flex;
@@ -575,7 +590,7 @@
                         <i class="fas fa-university me-2"></i>Government
                     </option>
                 </select>
-                <small class="text-muted">Filter ini mempengaruhi peringkat witel Anda (TOLONG HAPUS YA BELLL)</small>
+                <small class="text-muted">Filter ini mempengaruhi peringkat witel Anda</small>
             </div>
         </div>
     </div>
@@ -772,8 +787,15 @@
                                     <img src="{{ asset('img/' . $divisiRankIcon) }}" alt="Peringkat" width="40" height="40">
                                 </div>
                                 <div class="ranking-info">
-                                    <div class="ranking-title">Peringkat Divisi <span class="divisi-badge">{{ $ranking['nama'] }}</span></div>
-                                    <div class="ranking-value">
+                                <div class="ranking-title">Peringkat Divisi 
+                                        <span class="divisi-badge {{ 
+                                            strpos(strtolower($ranking['nama'] ?? ''), 'dgs') !== false ? 'dgs' : 
+                                            (strpos(strtolower($ranking['nama'] ?? ''), 'dps') !== false ? 'dps' : 
+                                            (strpos(strtolower($ranking['nama'] ?? ''), 'dss') !== false ? 'dss' : '')) 
+                                        }}">
+                                            {{ $ranking['nama'] }}
+                                        </span>
+                                    </div>                                    <div class="ranking-value">
                                         {{ $ranking['position'] }} dari {{ $ranking['total'] }}
                                         @if ($divisionChange != 0 && is_numeric($ranking['position']))
                                             <span class="{{ $divisionChangeClass }} ml-2" style="font-size: 14px;">

@@ -1,3 +1,4 @@
+{{-- ini biar bisa commit --}}
 @extends('layouts.main')
 
 @section('title', 'Leaderboard AM')
@@ -565,16 +566,16 @@
         }
 
         .per-page-select {
-            padding: 6px 8px; 
+            padding: 6px 8px;
             border: 1px solid #007bff;
             border-radius: 4px;
             background-color: white;
             font-size: 14px;
             cursor: pointer;
-            min-width: 50px; 
-            max-width: 60px; 
-            width: auto; 
-            text-align: center; 
+            min-width: 50px;
+            max-width: 60px;
+            width: auto;
+            text-align: center;
         }
         .per-page-select:focus {
             outline: none;
@@ -759,7 +760,7 @@
     </div>
     @endif
 
-    
+
     <!-- Search & Filter Area -->
     <div class="search-filter-container">
         <div class="search-box">
@@ -949,7 +950,7 @@
         </div>
     </div>
 
-    
+
     <!-- Enhanced Leaderboard AM Cards -->
     @forelse($accountManagers as $index => $am)
         <div class="am-card" onclick="window.location.href='{{ route('account_manager.detail', $am->id) }}'">

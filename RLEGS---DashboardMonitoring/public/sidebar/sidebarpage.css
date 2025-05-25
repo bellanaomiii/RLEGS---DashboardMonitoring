@@ -1,0 +1,552 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+::after,
+::before {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    text-decoration: none;
+}
+
+li {
+    list-style: none;
+}
+
+h1 {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+body{
+    font-family: 'Poppins', sans-serif;
+}
+
+.wrapper {
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    background-color: #ffffff;
+}
+
+/* .main {
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    transition: all 0.35;
+    background-color: #ffff;
+    padding: 50px 10px 10px 10px;
+} */
+
+.main {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Agar otomatis menyesuaikan */
+    width: calc(100% - 2px);
+    margin-left: 10px !important;
+    overflow-x: hidden;
+    transition: all 0.3s ease-in-out;
+    background-color: #ffff;
+    padding: 50px 10px 10px 10px;
+}
+
+.container-leaderboard {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#sidebar.expand ~ .container-leaderboard {
+    left: 170px;
+    width: calc(90% - 65px);
+}
+
+.bg-custom {
+    background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298); /* Gradient Blue */
+    padding: 30px;
+    border-radius: 10px;
+}
+
+.card-body:hover {
+    transform: translateY(-5px);
+    transition: 0.3s ease-in-out;
+}
+
+h1, h2 {
+    text-shadow: 2px 2px 10px rgba(255, 255, 255, 0.2);
+}
+
+.card-body.align-items-center.gap-3:hover {
+    color: #fdfdfd;
+    background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298);
+    cursor: pointer;
+    transition: background 0.3s ease-in-out, transform 0.2s;
+    transform: scale(1.02);
+}
+
+.text-gold {
+    color: #FFD700; /* Warna emas */
+}
+
+.text-silver {
+    color: #c0c0c0; /* Warna perak */
+}
+
+.text-bronze {
+    color: #CD7F32; /* Warna perunggu */
+}
+
+/* Gradient untuk tombol "Go" */
+.gradient-btn {
+    background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    transition: 0.3s;
+}
+
+.gradient-btn:hover {
+    background: linear-gradient(135deg, #2a5298, #1e3c72);
+}
+
+/* Gradient untuk kotak filter */
+.gradient-box {
+    background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    transition: 0.3s;
+}
+
+/* Agar teks dalam select terlihat lebih jelas */
+.gradient-box option {
+    color: black;
+}
+
+
+#sidebar.expand + .main {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+}
+
+.navbar {
+    position: fixed;
+    top: 0;
+    margin-left: 60px; /* Tambahkan jarak dari kiri */
+    right: 250px;
+    width: calc(100% - 60px);
+    height: 60px;
+    background-color: #ffffff;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+}
+
+/* #sidebar.expand ~ .main {
+    left: 190px;
+    width: calc(90% - 85px);
+} */
+
+#sidebar.expand ~ .main .navbar {
+    left: 190px;
+    width: calc(90% - 85px);
+}
+
+#sidebar {
+    width: 70px;
+    min-width: 70px;
+    z-index: 1100;
+    transition: all .25s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    background-color: #0e223e;
+    position: fixed;
+    height: 100vh;
+}
+
+.sidebar-link {
+    text-decoration: none;
+}
+
+#sidebar.expand {
+    width: 260px;
+    min-width: 260px;
+}
+
+#toggle-btn {
+    background-color: transparent;
+    cursor: pointer;
+    border: 0;
+    padding: 1rem 1.5rem;
+}
+
+#toggle-btn i {
+    font-size: 1.5rem;
+    color: #ffff;
+}
+
+.sidebar-logo {
+    margin: auto 0;
+}
+
+.sidebar-logo a {
+    color: #ffff;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+#sidebar:not(expand) .sidebar-logo,
+#sidebar:not(expand) a.sidebar-link span {
+    display: none;
+}
+
+#sidebar:not(.expand) .sidebar-logo a {
+    display: none;
+}
+
+#sidebar.expand .sidebar-logo a {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible;
+    color: #ffffff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    transition: opacity 0.3s ease-in-out;
+    text-decoration: none;
+}
+
+#sidebar.expand .sidebar-logo {
+    display: block;
+    text-align: left;
+    padding-left: 15px;
+}
+
+#sidebar.expand a.sidebar-link span {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible;
+}
+
+
+.sidebar-nav {
+    padding: 2rem 0;
+    flex: 1 1 auto;
+}
+
+.sidebar-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-right: 2rem;
+}
+
+.sidebar-dropdown {
+    display: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+}
+
+a.sidebar-link {
+    padding: .625rem 1.625rem;
+    color: #ffff;
+    display: block;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-link i {
+    font-size: 1.1rem;
+    margin-right: .75rem;
+}
+
+a.sidebar-link:hover {
+    background-color: rgba(47, 68, 105, 0.75);
+    color: #ffff;
+    border-left: 3px solid #3b7ddd;
+}
+
+.sidebar-item {
+    position: relative;
+}
+
+#sidebar:not(.expand) .sidebar-item .sidebar-dropdown{
+    position: absolute;
+    top: 0;
+    left: 70px;
+    background-color: #0e2238;
+    padding: 0;
+    min-width: 15rem;
+    display: none;
+}
+.sidebar-item .sidebar-link.has-dropdown[aria-expanded="true"] + .sidebar-dropdown {
+    display: block;
+}
+
+#sidebar:not(expand) .sidebar-item:hover .has-dropdown+.sidebar-dropdown{
+    display: block;
+    max-height: 15em;
+    width: 100%;
+    opacity: 1;
+}
+
+#sidebar.expand .sidebar-item .sidebar-dropdown.show {
+    display: block;
+    max-height: 15em;
+    opacity: 1;
+}
+
+#sidebar:not(.expand) .sidebar-item:hover .sidebar-dropdown .sidebar-link span {
+    display: inline-block;
+    opacity: 1;
+    visibility: visible;
+}
+
+.sidebar-link.has-dropdown {
+    pointer-events: auto;
+}
+
+#sidebar.expand .sidebar-link.has-dropdown::after {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid white;
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.2s ease-out;
+    opacity: 1;
+    visibility: visible;
+}
+
+.left-btn, .right-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #153456; 
+    padding: 10px;
+    border-radius: 50%;
+    z-index: 10; 
+}
+
+.left-btn {
+    left: 0;
+}
+
+.right-btn {
+    right: 0;
+}
+
+.main-container {
+    position: relative;
+    margin-top: 80px;
+    margin-left: 50px;
+    margin-right: 50px;
+}
+
+.regions-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin: 65px 10px 40px 10px;
+}
+
+.region-box {
+    background: #0e223e;
+    color: #fdfdfd;
+    padding: 10px 15px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s ease;
+    width: calc(25% - 60px);
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.region-box:hover {
+    background-color: #1a3a66;
+}
+
+.region-box.active {
+    background: #3b7ddd;
+}
+
+.overview-box {
+    margin-top: 10px;
+    margin-left: 45px;
+    background: #ffff;
+    color: #1a3a66;
+    padding: 75px 85px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    width: calc(25% - 30px);
+    box-sizing: border-box;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    text-align: center;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    height: 200px; 
+}
+
+.chart-container {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+
+.form-check-input {
+    display: block !important;
+    visibility: visible !important;
+}
+
+
+/* Additional CSS to ensure filter dropdown displays correctly */
+.dropdown-menu.show {
+    display: block !important;
+}
+
+.tab-pane.fade.show.active {
+    display: block !important;
+}
+
+.nav-pills .nav-link {
+    cursor: pointer;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #3b7ddd;
+    color: white;
+}
+
+.form-check {
+    margin-bottom: 8px;
+}
+
+.form-check-input {
+    margin-right: 8px;
+    opacity: 1 !important;
+    position: relative !important;
+}
+
+.form-check-label {
+    font-size: 14px;
+}
+
+/* Make sure dropdowns stay in front of other elements */
+.dropdown-menu {
+    z-index: 1060;
+}
+
+#main-content {
+    margin-left: 20px; 
+    padding: 45px;
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 70px);
+}
+
+#sidebar.expand + #main-content {
+    margin-left: 30px; 
+    width: calc(100% - 90px);
+}
+
+
+/* Pastikan container relatif terhadap dropdown */
+.month-picker-container {
+    position: relative !important;
+    height: 280px;
+}
+
+/* Dropdown bulan-tahun */
+.month-picker {
+    display: none;
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    width: 100%; /* Sesuai dengan input box */
+    max-width: 300px; /* Batasan agar tidak terlalu besar */
+    z-index: 9999; /* Pastikan muncul di atas elemen lain */
+    top: 50px; /* Agar muncul tepat di bawah input */
+    left: 0;
+    overflow: visible; /* Hindari pemotongan elemen */
+}
+
+.filter-content {
+    overflow: visible !important; 
+    position: relative; 
+    z-index: 10;
+}
+
+.date-range-picker {
+    z-index: 99999;
+    margin-left: 120px;
+}
+
+/* Styling untuk select agar menjadi dropdown */
+#filterSelect2 {
+    /* Pastikan hanya menampilkan satu baris */
+    height: auto;
+    max-height: 38px;
+    overflow: hidden;
+    
+    /* Styling dasar */
+    background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298); /* Gradient Blue */
+    color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px 12px;
+    width: 100%;
+    
+    /* Tambahkan ikon dropdown */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 10px) center;
+    background-size: 12px;
+    
+    /* Behavior pada klik */
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+  
+  /* Styling untuk dropdown ketika dibuka */
+  #filterSelect2:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(30, 42, 74, 0.5);
+  }
+  
+  /* Styling untuk opsi */
+  #filterSelect2 option {
+    padding: 8px 12px;
+  }
+  
+  /* Styling untuk opsi terpilih */
+  #filterSelect2 option:checked,
+  #filterSelect2 option:selected {
+    color: white;
+  }
+
+  

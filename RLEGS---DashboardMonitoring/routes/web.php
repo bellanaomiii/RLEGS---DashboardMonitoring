@@ -1,0 +1,106 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\RevenueController;
+use App\Http\Controllers\AccountManagerController;
+use App\Http\Controllers\CorporateCustomerController;
+use App\Http\Controllers\AccountManagerExcelController;
+use App\Http\Controllers\CorporateCustomerExcelController;
+use App\Http\Controllers\RevenueExcelController;
+use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\DashboardController;
+
+Route::get('/', function () {
+    return view('auth.login');
+});
+
+Route::get('/logout', function () {
+    Auth::logout();
+    return redirect('/');
+})->name('logout');
+
+// Tambahan route search untuk register
+Route::get('/search-account-managers', [RegisteredUserController::class, 'searchAccountManagers'])
+    ->middleware('guest')
+    ->name('search.account-managers');
+
+// Menampilkan dashboard dengan data Witel dan Divisi
+Route::middleware(['auth', 'verified'])->group(function () {
+// Route untuk dashboard utama
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// Route baru untuk AJAX filter tahun
+Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
+
+    // Data Revenue - authorization dilakukan di controller
+    Route::get('/revenue_data', [RevenueController::class, 'index'])
+        ->name('revenue.data');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/update-image', [ProfileController::class, 'updateImage'])->name('profile.update-image');
+
+    // Revenue routes - authorization dilakukan di controller
+    Route::post('/revenue/store', [RevenueController::class, 'store'])->name('revenue.store');
+    Route::get('/revenue/{id}/edit', [RevenueController::class, 'edit'])->name('revenue.edit');
+    Route::put('/revenue/{id}', [RevenueController::class, 'update'])->name('revenue.update');
+    Route::delete('/revenue/{id}', [RevenueController::class, 'destroy'])->name('revenue.destroy');
+    // Tambahkan route ini
+    Route::get('/revenue', [RevenueController::class, 'index'])->name('revenue.index');
+    Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/settings', [UserController::class, 'settings'])->name('settings');
+    
+    // Revenue Excel routes
+    Route::post('/revenue/import', [RevenueExcelController::class, 'import'])->name('revenue.import');
+    Route::get('/revenue/template', [RevenueExcelController::class, 'downloadTemplate'])->name('revenue.template');
+
+    // Search routes - available for all authenticated users
+    Route::get('/search-am', [RevenueController::class, 'searchAccountManager'])->name('revenue.searchAccountManager');
+    Route::get('/search-customer', [RevenueController::class, 'searchCorporateCustomer'])->name('revenue.searchCorporateCustomer');
+
+    // Account Manager routes - authorization dilakukan di controller
+    Route::get('/account-manager', [AccountManagerController::class, 'index'])->name('account_manager.index');
+    Route::get('/account-manager/create', [AccountManagerController::class, 'create'])->name('account_manager.create');
+    Route::post('/account-manager/store', [AccountManagerController::class, 'store'])->name('account_manager.store');
+    Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account_manager.edit');
+    Route::put('/account-manager/{id}', [AccountManagerController::class, 'update'])->name('account_manager.update');
+    Route::delete('/account-manager/{id}', [AccountManagerController::class, 'destroy'])->name('account_manager.destroy');
+
+    // Account Manager Excel routes
+    Route::post('/account-manager/import', [AccountManagerExcelController::class, 'import'])->name('account_manager.import');
+    Route::get('/account-manager/template', [AccountManagerExcelController::class, 'downloadTemplate'])->name('account_manager.template');
+
+    // Corporate Customer routes
+    Route::get('/corporate-customer', [CorporateCustomerController::class, 'index'])->name('corporate_customer.index');
+    Route::get('/corporate-customer/create', [CorporateCustomerController::class, 'create'])->name('corporate_customer.create');
+    Route::post('/corporate-customer/store', [CorporateCustomerController::class, 'store'])->name('corporate_customer.store');
+    Route::get('/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'edit'])->name('corporate_customer.edit');
+    Route::put('/corporate-customer/{id}', [CorporateCustomerController::class, 'update'])->name('corporate_customer.update');
+    Route::delete('/corporate-customer/{id}', [CorporateCustomerController::class, 'destroy'])->name('corporate_customer.destroy');
+
+    // Corporate Customer Excel routes
+    Route::post('/corporate-customer/import', [CorporateCustomerExcelController::class, 'import'])->name('corporate_customer.import');
+    Route::get('/corporate-customer/template', [CorporateCustomerExcelController::class, 'downloadTemplate'])->name('corporate_customer.template');
+
+    // Leaderboard dan Witel Performance - dapat diakses semua user
+    Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
+    Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
+
+    // Sidebar route
+    Route::get('/sidebarpage', function () {
+        return view('layouts.sidebar');
+    });
+
+    Route::get('/PerformansiWitel', function () {
+        return view('witelPerform');
+    });
+});
+
+require __DIR__.'/auth.php';

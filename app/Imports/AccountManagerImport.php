@@ -40,25 +40,25 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     private $divisis = [];
     private $existingAccountManagers = [];
 
-    private $chunkSize = 100; // ✅ Add chunking support
+    private $chunkSize = 100;
 
-    // ✅ EXPANDED: Alternative column names dengan lebih banyak variasi
+    // ✅ EXPANDED: Alternative column names yang konsisten
     private $alternativeColumns = [
         'nik' => [
-            'nik', 'NIK', 'Nik', 'employee_id', 'emp_id', 'id_karyawan', 'Employee ID'
+            'nik', 'NIK', 'Nik', 'employee_id', 'emp_id', 'id_karyawan', 'Employee ID', 'ID Karyawan'
         ],
         'nama_am' => [
             'nama am', 'NAMA AM', 'nama_am', 'Nama AM', 'account_manager', 'Account Manager',
-            'ACCOUNT_MANAGER', 'AM Name', 'AM_Name', 'namaAM', 'Name'
+            'ACCOUNT_MANAGER', 'AM Name', 'AM_Name', 'namaAM', 'Name', 'Nama Account Manager'
         ],
         'witel_ho' => [
-            'witel ho', 'WITEL HO', 'witel_ho', 'Witel HO', 'witel', 'WITEL', 'Witel'
+            'witel ho', 'WITEL HO', 'witel_ho', 'Witel HO', 'witel', 'WITEL', 'Witel', 'Witel_HO'
         ],
         'regional' => [
-            'regional', 'REGIONAL', 'Regional', 'treg', 'TREG', 'Treg'
+            'regional', 'REGIONAL', 'Regional', 'treg', 'TREG', 'Treg', 'TREG Regional'
         ],
         'divisi' => [
-            'divisi', 'DIVISI', 'Divisi', 'division', 'Division', 'DIVISION'
+            'divisi', 'DIVISI', 'Divisi', 'division', 'Division', 'DIVISION', 'Nama Divisi'
         ]
     ];
 
@@ -77,28 +77,28 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     private function loadMasterData()
     {
         try {
-            // Load witel data dengan normalisasi
+            // ✅ FIXED: Load witel dengan nama tabel yang benar
             $witels = Witel::all();
             foreach ($witels as $witel) {
                 $this->witels['nama:' . $this->normalizeString($witel->nama)] = $witel;
                 $this->witels['id:' . $witel->id] = $witel;
             }
 
-            // Load regional data dengan normalisasi
+            // ✅ FIXED: Load regional dengan nama tabel yang benar
             $regionals = Regional::all();
             foreach ($regionals as $regional) {
                 $this->regionals['nama:' . $this->normalizeString($regional->nama)] = $regional;
                 $this->regionals['id:' . $regional->id] = $regional;
             }
 
-            // Load divisi data dengan normalisasi
+            // ✅ FIXED: Load divisi dengan nama tabel yang benar (divisi, bukan divisis)
             $divisis = Divisi::all();
             foreach ($divisis as $divisi) {
                 $this->divisis['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
                 $this->divisis['id:' . $divisi->id] = $divisi;
             }
 
-            // ✅ NEW: Load existing account managers
+            // Load existing account managers
             $existingAMs = AccountManager::with(['divisis'])->get();
             foreach ($existingAMs as $am) {
                 $this->existingAccountManagers['nik:' . trim($am->nik)] = $am;
@@ -148,7 +148,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             'columns_found' => array_keys($columnMap)
         ]);
 
-        // ✅ IMPROVED: Group data by NIK first, then process in chunks
+        // ✅ IMPROVED: Group data by NIK first, then process
         $accountManagerData = $this->groupDataByNIK($rows->slice(1), $columnMap);
 
         // Process grouped data
@@ -250,7 +250,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     }
 
     /**
-     * ✅ NEW: Extract and validate row data
+     * ✅ FIXED: Extract and validate row data dengan NIK validation 4-10 digit
      */
     private function extractRowData($row, $columnMap, $rowNumber)
     {
@@ -273,9 +273,9 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             return null;
         }
 
-        // ✅ Validate NIK format (assuming 5 digits)
-        if (!preg_match('/^\d{5}$/', $data['nik'])) {
-            $this->errorDetails[] = "❌ Baris {$rowNumber}: Format NIK tidak valid: '{$data['nik']}' (harus 5 digit)";
+        // ✅ FIXED: Validate NIK format (4-10 digits) - konsisten dengan controller
+        if (!preg_match('/^\d{4,10}$/', $data['nik'])) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Format NIK tidak valid: '{$data['nik']}' (harus 4-10 digit angka)";
             return null;
         }
 
@@ -372,7 +372,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     }
 
     /**
-     * ✅ IMPROVED: Find Witel dengan error reporting
+     * ✅ IMPROVED: Find Witel dengan error reporting dan fuzzy matching
      */
     private function findWitel($witelName, $rowNumber)
     {
@@ -388,10 +388,11 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             return $witel;
         }
 
-        // ✅ Fuzzy search
+        // ✅ Enhanced fuzzy search
         foreach ($this->witels as $key => $storedWitel) {
             if (strpos($key, 'nama:') === 0) {
                 $storedName = substr($key, 5); // Remove 'nama:' prefix
+                // Check for partial match in both directions
                 if (strpos($storedName, $this->normalizeString($witelName)) !== false ||
                     strpos($this->normalizeString($witelName), $storedName) !== false) {
                     $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Witel ditemukan dengan fuzzy search: '{$witelName}' → '{$storedWitel->nama}'";
@@ -400,7 +401,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             }
         }
 
-        // ✅ Database fallback
+        // ✅ Database fallback dengan caching
         $witel = Witel::where('nama', 'like', "%{$witelName}%")->first();
         if ($witel) {
             $this->witels['nama:' . $this->normalizeString($witel->nama)] = $witel;
@@ -413,7 +414,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     }
 
     /**
-     * ✅ IMPROVED: Find Regional dengan error reporting
+     * ✅ IMPROVED: Find Regional dengan error reporting dan fuzzy matching
      */
     private function findRegional($regionalName, $rowNumber)
     {
@@ -429,7 +430,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             return $regional;
         }
 
-        // ✅ Fuzzy search
+        // ✅ Enhanced fuzzy search
         foreach ($this->regionals as $key => $storedRegional) {
             if (strpos($key, 'nama:') === 0) {
                 $storedName = substr($key, 5);
@@ -441,7 +442,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             }
         }
 
-        // ✅ Database fallback
+        // ✅ Database fallback dengan caching
         $regional = Regional::where('nama', 'like', "%{$regionalName}%")->first();
         if ($regional) {
             $this->regionals['nama:' . $this->normalizeString($regional->nama)] = $regional;
@@ -454,7 +455,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
     }
 
     /**
-     * ✅ IMPROVED: Find Divisi dengan error reporting
+     * ✅ IMPROVED: Find Divisi dengan error reporting dan fuzzy matching
      */
     private function findDivisi($divisiName, $rowNumber)
     {
@@ -470,7 +471,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             return $divisi;
         }
 
-        // ✅ Fuzzy search
+        // ✅ Enhanced fuzzy search
         foreach ($this->divisis as $key => $storedDivisi) {
             if (strpos($key, 'nama:') === 0) {
                 $storedName = substr($key, 5);
@@ -482,7 +483,7 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
             }
         }
 
-        // ✅ Database fallback
+        // ✅ Database fallback dengan caching
         $divisi = Divisi::where('nama', 'like', "%{$divisiName}%")->first();
         if ($divisi) {
             $this->divisis['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
@@ -575,4 +576,3 @@ class AccountManagerImport implements ToCollection, WithHeadingRow, WithValidati
         ];
     }
 }
-

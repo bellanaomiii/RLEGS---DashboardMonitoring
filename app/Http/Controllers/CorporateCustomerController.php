@@ -2,519 +2,519 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\CorporateCustomer;
-use App\Models\Witel;
-use App\Models\Divisi;
-use App\Models\AccountManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class CorporateCustomerController extends Controller
 {
     /**
-     * ✅ IMPROVED: Index method untuk menampilkan data Corporate Customer
+     * ✅ ENHANCED: Display a listing of corporate customers with enhanced search
      */
-    public function index()
-    {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
-        }
-
-        try {
-            $corporateCustomers = CorporateCustomer::orderBy('nama')->paginate(10);
-            $accountManagers = AccountManager::with(['witel', 'divisis'])->paginate(10);
-            $witels = Witel::orderBy('nama')->get();
-            $divisi = Divisi::orderBy('nama')->get();
-
-            return view('corporate_customer.index', compact('corporateCustomers', 'accountManagers', 'witels', 'divisi'));
-        } catch (\Exception $e) {
-            Log::error('Error loading Corporate Customer index: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Gagal memuat data Corporate Customer: ' . $e->getMessage());
-        }
-    }
-
-    // Menampilkan form untuk menambah Corporate Customer
-    public function create()
+    public function index(Request $request)
     {
         try {
-            $corporateCustomers = CorporateCustomer::orderBy('nama')->paginate(10);
-            $accountManagers = AccountManager::with(['witel', 'divisis'])->paginate(10);
-            $witels = Witel::orderBy('nama')->get();
-            $divisi = Divisi::orderBy('nama')->get();
+            $query = CorporateCustomer::query();
 
-            return view('dashboard', compact('corporateCustomers', 'accountManagers', 'witels', 'divisi'));
+            // ✅ ENHANCED: Search functionality - partial word search
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = trim($request->search);
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('nipnas', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            $corporateCustomers = $query->orderBy('nama', 'asc')
+                                       ->paginate($request->get('per_page', 15));
+
+            return view('corporate-customers.index', compact('corporateCustomers'));
+
         } catch (\Exception $e) {
-            Log::error('Error loading create form: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Gagal memuat form: ' . $e->getMessage());
+            Log::error('Corporate Customer Index Error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memuat data Corporate Customer.');
         }
     }
 
     /**
-     * ✅ NEW: Import Corporate Customers dari Excel dengan detailed error handling
+     * ✅ FIXED: Store a newly created corporate customer with proper NIPNAS validation
      */
-    public function import(Request $request)
+    public function store(Request $request)
     {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengimpor data Corporate Customer.'
-            ], 403);
-        }
-
-        // Validasi file input
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|mimes:xlsx,xls,csv|max:10240', // 10MB max
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'File tidak valid',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            // ✅ Create import instance
-            $import = new \App\Imports\CorporateCustomerImport();
+            // ✅ FIXED: Enhanced NIPNAS validation to handle large numbers
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|string|max:255|min:3',
+                'nipnas' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:20',
+                    'regex:/^[0-9]+$/',
+                    'unique:corporate_customers,nipnas'
+                ],
+            ], [
+                'nama.required' => 'Nama Corporate Customer wajib diisi.',
+                'nama.min' => 'Nama Corporate Customer minimal 3 karakter.',
+                'nama.max' => 'Nama Corporate Customer maksimal 255 karakter.',
+                'nipnas.required' => 'NIPNAS wajib diisi.',
+                'nipnas.min' => 'NIPNAS minimal 3 digit.',
+                'nipnas.max' => 'NIPNAS maksimal 20 digit.',
+                'nipnas.regex' => 'NIPNAS harus berupa angka saja.',
+                'nipnas.unique' => 'NIPNAS sudah terdaftar, gunakan NIPNAS lain.',
+            ]);
 
-            // Set memory limit dan timeout untuk file besar
-            ini_set('memory_limit', '1024M');
-            set_time_limit(300); // 5 minutes
-
-            // Import file
-            Excel::import($import, $request->file('file'));
-
-            // ✅ Get detailed results
-            $results = $import->getImportResults();
-
-            // ✅ Build response berdasarkan hasil import
-            if ($results['errors'] > 0) {
-                // Ada error - return dengan detail error untuk popup
+            if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Import selesai dengan beberapa error',
-                    'data' => [
-                        'imported' => $results['imported'],
-                        'updated' => $results['updated'],
-                        'duplicates' => $results['duplicates'],
-                        'errors' => $results['errors'],
-                        'skipped' => $results['skipped'],
-                        'error_details' => $results['error_details'], // ✅ Detail baris yang error
-                        'warning_details' => $results['warning_details'],
-                        'success_details' => $results['success_details'],
-                        'summary' => $results['summary']
-                    ],
-                    'show_popup' => true, // ✅ Flag untuk popup
-                    'popup_type' => 'warning',
-                    'popup_title' => 'Import Corporate Customer - Ada Error',
-                    'require_manual_close' => true // ✅ Manual close popup
-                ]);
-            } else {
-                // Semua berhasil
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Data Corporate Customer berhasil diimpor semua!',
-                    'data' => [
-                        'imported' => $results['imported'],
-                        'updated' => $results['updated'],
-                        'duplicates' => $results['duplicates'],
-                        'errors' => 0,
-                        'success_details' => $results['success_details'],
-                        'summary' => $results['summary']
-                    ],
-                    'show_popup' => true,
-                    'popup_type' => 'success',
-                    'popup_title' => 'Import Corporate Customer Berhasil',
-                    'require_manual_close' => false // ✅ Auto close untuk success
-                ]);
+                    'message' => 'Validasi gagal: ' . $validator->errors()->first(),
+                    'errors' => $validator->errors()
+                ], 422);
             }
 
-        } catch (\Exception $e) {
-            Log::error('Error saat mengimpor Corporate Customer: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+            // ✅ ADDITIONAL: Validate NIPNAS numeric range
+            $nipnas = trim($request->nipnas);
+
+            // Check if NIPNAS is too small (less than 100)
+            if (bccomp($nipnas, '100', 0) < 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NIPNAS minimal 100 (3 digit).'
+                ], 422);
+            }
+
+            // Check if NIPNAS is too large (more than 20 digits)
+            if (strlen($nipnas) > 20) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NIPNAS maksimal 20 digit.'
+                ], 422);
+            }
+
+            // ✅ FIXED: Create Corporate Customer with proper validation
+            $corporateCustomer = CorporateCustomer::create([
+                'nama' => trim($request->nama),
+                'nipnas' => $nipnas,
             ]);
 
             return response()->json([
+                'success' => true,
+                'message' => 'Corporate Customer berhasil ditambahkan.',
+                'data' => $corporateCustomer
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Corporate Customer Store Error: ' . $e->getMessage());
+
+            // ✅ ENHANCED: Better error handling for database constraints
+            $errorMessage = $e->getMessage();
+
+            if (strpos($errorMessage, 'Duplicate entry') !== false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NIPNAS sudah terdaftar dalam sistem.'
+                ], 422);
+            }
+
+            if (strpos($errorMessage, 'Data too long') !== false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data terlalu panjang untuk disimpan.'
+                ], 422);
+            }
+
+            if (strpos($errorMessage, 'Out of range') !== false || strpos($errorMessage, '22003') !== false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NIPNAS terlalu besar. Gunakan NIPNAS dengan maksimal 20 digit.'
+                ], 422);
+            }
+
+            return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengimpor data: ' . $e->getMessage(),
-                'show_popup' => true,
-                'popup_type' => 'error',
-                'popup_title' => 'Import Corporate Customer Gagal',
-                'require_manual_close' => true
+                'message' => 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * ✅ NEW: Export Corporate Customer data
+     * Show the form for editing the specified corporate customer
      */
-    public function export()
+    public function edit($id)
     {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->back()->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengekspor data Corporate Customer.');
-        }
-
         try {
-            return Excel::download(new \App\Exports\CorporateCustomerExport, 'corporate-customers-' . date('Y-m-d') . '.xlsx');
+            $corporateCustomer = CorporateCustomer::findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $corporateCustomer
+            ]);
+
         } catch (\Exception $e) {
-            Log::error('Error saat export Corporate Customer: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Gagal mengekspor data: ' . $e->getMessage());
+            Log::error('Corporate Customer Edit Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Corporate Customer tidak ditemukan.'
+            ], 404);
         }
     }
 
     /**
-     * ✅ NEW: Download template Excel untuk import
+     * ✅ FIXED: Update the specified corporate customer with proper NIPNAS validation
      */
-    public function template()
+    public function update(Request $request, $id)
     {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->back()->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengunduh template.');
-        }
-
         try {
-            return Excel::download(new \App\Exports\CorporateCustomerTemplateExport, 'corporate-customer-template.xlsx');
-        } catch (\Exception $e) {
-            Log::error('Error saat download template: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Gagal mengunduh template: ' . $e->getMessage());
-        }
-    }
+            $corporateCustomer = CorporateCustomer::findOrFail($id);
 
-    // Menyimpan Corporate Customer baru
-    public function store(Request $request)
-    {
-        // ✅ IMPROVED: Add admin check
-        if (Auth::user()->role !== 'admin') {
-            if ($request->ajax()) {
+            // ✅ FIXED: Enhanced NIPNAS validation for update
+            $validator = Validator::make($request->all(), [
+                'nama' => 'required|string|max:255|min:3',
+                'nipnas' => [
+                    'required',
+                    'string',
+                    'min:3',
+                    'max:20',
+                    'regex:/^[0-9]+$/',
+                    'unique:corporate_customers,nipnas,' . $id
+                ],
+            ], [
+                'nama.required' => 'Nama Corporate Customer wajib diisi.',
+                'nama.min' => 'Nama Corporate Customer minimal 3 karakter.',
+                'nama.max' => 'Nama Corporate Customer maksimal 255 karakter.',
+                'nipnas.required' => 'NIPNAS wajib diisi.',
+                'nipnas.min' => 'NIPNAS minimal 3 digit.',
+                'nipnas.max' => 'NIPNAS maksimal 20 digit.',
+                'nipnas.regex' => 'NIPNAS harus berupa angka saja.',
+                'nipnas.unique' => 'NIPNAS sudah terdaftar, gunakan NIPNAS lain.',
+            ]);
+
+            if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan Corporate Customer.'
-                ], 403);
-            }
-            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menambahkan Corporate Customer.');
-        }
-
-        // Validasi data input
-        $validator = Validator::make($request->all(), [
-            'nama' => 'required|string|unique:corporate_customers,nama',
-            'nipnas' => 'required|numeric|unique:corporate_customers,nipnas|min:1|max:9999999'
-        ]);
-
-        if ($validator->fails()) {
-            Log::warning('Corporate Customer validation failed:', $validator->errors()->toArray());
-
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validasi gagal',
+                    'message' => 'Validasi gagal: ' . $validator->errors()->first(),
                     'errors' => $validator->errors()
                 ], 422);
             }
 
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
+            // ✅ ADDITIONAL: Validate NIPNAS numeric range
+            $nipnas = trim($request->nipnas);
 
-        try {
-            // Membuat Corporate Customer baru
-            $corporateCustomer = CorporateCustomer::create([
-                'nama' => $request->nama,
-                'nipnas' => $request->nipnas
-            ]);
-
-            Log::info('Corporate Customer created successfully:', [
-                'id' => $corporateCustomer->id,
-                'nama' => $corporateCustomer->nama,
-                'nipnas' => $corporateCustomer->nipnas
-            ]);
-
-            // Return JSON response untuk AJAX request
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Corporate Customer berhasil ditambahkan!'
-                ]);
-            }
-
-            // Mengembalikan response dengan status sukses
-            return redirect()->route('dashboard')->with('success', 'Corporate Customer berhasil ditambahkan!');
-        } catch (\Exception $e) {
-            Log::error('Error creating Corporate Customer: ' . $e->getMessage(), [
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-
-            if ($request->ajax()) {
+            if (bccomp($nipnas, '100', 0) < 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal menambahkan Corporate Customer: ' . $e->getMessage()
-                ], 500);
+                    'message' => 'NIPNAS minimal 100 (3 digit).'
+                ], 422);
             }
 
-            return redirect()->back()->with('error', 'Gagal menambahkan Corporate Customer: ' . $e->getMessage())->withInput();
-        }
-    }
-
-    // Edit Corporate Customer
-    public function edit($id)
-    {
-        // ✅ IMPROVED: Add admin check
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk mengedit Corporate Customer.');
-        }
-
-        try {
-            $corporateCustomer = CorporateCustomer::findOrFail($id);
-            return view('corporate_customer.edit', compact('corporateCustomer'));
-        } catch (\Exception $e) {
-            Log::error('Error loading edit form: ' . $e->getMessage());
-            return redirect()->route('dashboard')->with('error', 'Gagal memuat data Corporate Customer: ' . $e->getMessage());
-        }
-    }
-
-    // Update Corporate Customer
-    public function update(Request $request, $id)
-    {
-        // ✅ IMPROVED: Add admin check
-        if (Auth::user()->role !== 'admin') {
-            if ($request->ajax()) {
+            if (strlen($nipnas) > 20) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui Corporate Customer.'
-                ], 403);
-            }
-            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui Corporate Customer.');
-        }
-
-        try {
-            $corporateCustomer = CorporateCustomer::findOrFail($id);
-
-            // Validasi data input
-            $validator = Validator::make($request->all(), [
-                'nama' => 'required|string|unique:corporate_customers,nama,' . $id,
-                'nipnas' => 'required|numeric|unique:corporate_customers,nipnas,' . $id . '|min:1|max:9999999'
-            ]);
-
-            if ($validator->fails()) {
-                Log::warning('Corporate Customer update validation failed:', $validator->errors()->toArray());
-
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Validasi gagal',
-                        'errors' => $validator->errors()
-                    ], 422);
-                }
-
-                return redirect()->back()->withErrors($validator)->withInput();
+                    'message' => 'NIPNAS maksimal 20 digit.'
+                ], 422);
             }
 
+            // Update Corporate Customer
             $corporateCustomer->update([
-                'nama' => $request->nama,
-                'nipnas' => $request->nipnas
+                'nama' => trim($request->nama),
+                'nipnas' => $nipnas,
             ]);
 
-            Log::info('Corporate Customer updated successfully:', [
-                'id' => $corporateCustomer->id,
-                'nama' => $corporateCustomer->nama,
-                'nipnas' => $corporateCustomer->nipnas
+            return response()->json([
+                'success' => true,
+                'message' => 'Corporate Customer berhasil diperbarui.',
+                'data' => $corporateCustomer
             ]);
 
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Corporate Customer berhasil diperbarui!'
-                ]);
-            }
-
-            return redirect()->route('dashboard')->with('success', 'Corporate Customer berhasil diperbarui!');
         } catch (\Exception $e) {
-            Log::error('Error updating Corporate Customer: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            Log::error('Corporate Customer Update Error: ' . $e->getMessage());
 
-            if ($request->ajax()) {
+            // ✅ ENHANCED: Better error handling for database constraints
+            $errorMessage = $e->getMessage();
+
+            if (strpos($errorMessage, 'Duplicate entry') !== false) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal memperbarui Corporate Customer: ' . $e->getMessage()
-                ], 500);
+                    'message' => 'NIPNAS sudah terdaftar dalam sistem.'
+                ], 422);
             }
 
-            return redirect()->back()->with('error', 'Gagal memperbarui Corporate Customer: ' . $e->getMessage())->withInput();
+            if (strpos($errorMessage, 'Out of range') !== false || strpos($errorMessage, '22003') !== false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'NIPNAS terlalu besar. Gunakan NIPNAS dengan maksimal 20 digit.'
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage()
+            ], 500);
         }
     }
 
-    // Hapus Corporate Customer
+    /**
+     * Remove the specified corporate customer
+     */
     public function destroy($id)
     {
-        // ✅ IMPROVED: Add admin check
-        if (Auth::user()->role !== 'admin') {
-            return redirect()->route('dashboard')->with('error', 'Akses ditolak. Anda tidak memiliki izin untuk menghapus Corporate Customer.');
-        }
-
         try {
+            DB::beginTransaction();
+
             $corporateCustomer = CorporateCustomer::findOrFail($id);
+
+            // Check if Corporate Customer has related revenue data
+            if ($corporateCustomer->revenues()->exists()) {
+                return back()->with('error', 'Corporate Customer tidak dapat dihapus karena masih memiliki data revenue terkait.');
+            }
+
+            // Delete the corporate customer
             $corporateCustomer->delete();
 
-            Log::info('Corporate Customer deleted successfully:', [
-                'id' => $id,
-                'nama' => $corporateCustomer->nama
-            ]);
+            DB::commit();
 
-            return redirect()->route('dashboard')->with('success', 'Corporate Customer berhasil dihapus!');
+            return back()->with('success', 'Corporate Customer berhasil dihapus.');
+
         } catch (\Exception $e) {
-            Log::error('Error deleting Corporate Customer: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            DB::rollBack();
+            Log::error('Corporate Customer Delete Error: ' . $e->getMessage());
 
-            return redirect()->route('dashboard')->with('error', 'Gagal menghapus Corporate Customer: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat menghapus Corporate Customer.');
         }
     }
 
-    // Fungsi pencarian Corporate Customer untuk autocomplete
+    /**
+     * ✅ ENHANCED: Search Corporate Customers for autocomplete with partial word support
+     */
     public function search(Request $request)
     {
         try {
-            $search = $request->get('search');
-            $corporateCustomers = CorporateCustomer::where('nama', 'like', "%{$search}%")
-                               ->orWhere('nipnas', 'like', "%{$search}%")
-                               ->orderBy('nama')
-                               ->limit(10)
-                               ->get();
+            $searchTerm = trim($request->get('search', ''));
+
+            if (strlen($searchTerm) < 2) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+
+            $corporateCustomers = CorporateCustomer::where('nama', 'LIKE', "%{$searchTerm}%")
+                                               ->orWhere('nipnas', 'LIKE', "%{$searchTerm}%")
+                                               ->limit(10)
+                                               ->get(['id', 'nama', 'nipnas']);
 
             return response()->json([
                 'success' => true,
                 'data' => $corporateCustomers
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Error searching Corporate Customer: ' . $e->getMessage());
+            Log::error('Corporate Customer Search Error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mencari Corporate Customer'
-            ], 500);
+                'message' => 'Terjadi kesalahan saat pencarian.',
+                'data' => []
+            ]);
         }
     }
 
     /**
-     * Mendapatkan data Corporate Customer untuk edit via AJAX
+     * Get statistics for dashboard
      */
-    public function getCorporateCustomerData($id)
+    public function getStatistics()
     {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk mengakses data ini.'
-            ], 403);
-        }
-
         try {
-            // Ambil data corporate customer
-            $corporateCustomer = CorporateCustomer::findOrFail($id);
-
-            // Format data untuk response
-            $data = [
-                'id' => $corporateCustomer->id,
-                'nama' => $corporateCustomer->nama,
-                'nipnas' => $corporateCustomer->nipnas,
-                'created_at' => $corporateCustomer->created_at ? $corporateCustomer->created_at->format('Y-m-d H:i:s') : null,
-                'updated_at' => $corporateCustomer->updated_at ? $corporateCustomer->updated_at->format('Y-m-d H:i:s') : null
-            ];
-
-            Log::info('Corporate Customer data fetched for edit:', [
-                'id' => $id,
-                'nama' => $corporateCustomer->nama
-            ]);
+            $totalCustomers = CorporateCustomer::count();
+            $recentCustomers = CorporateCustomer::where('created_at', '>=', now()->subDays(30))->count();
+            $activeCustomers = CorporateCustomer::whereHas('revenues')->distinct()->count();
 
             return response()->json([
                 'success' => true,
-                'data' => $data
+                'data' => [
+                    'total_customers' => $totalCustomers,
+                    'recent_customers' => $recentCustomers,
+                    'active_customers' => $activeCustomers,
+                    'inactive_customers' => $totalCustomers - $activeCustomers
+                ]
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Error fetching Corporate Customer data: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            Log::error('Corporate Customer Statistics Error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal mengambil data Corporate Customer: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Terjadi kesalahan saat mengambil statistik.',
+                'data' => []
+            ]);
         }
     }
 
     /**
-     * Update Corporate Customer via AJAX
+     * ✅ ENHANCED: Bulk delete corporate customers
      */
-    public function updateCorporateCustomer(Request $request, $id)
+    public function bulkDelete(Request $request)
     {
-        // Cek apakah user adalah admin
-        if (Auth::user()->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak. Anda tidak memiliki izin untuk memperbarui data ini.'
-            ], 403);
-        }
-
         try {
-            $corporateCustomer = CorporateCustomer::findOrFail($id);
-
-            // Validasi data input
             $validator = Validator::make($request->all(), [
-                'nama' => 'required|string|unique:corporate_customers,nama,' . $id,
-                'nipnas' => 'required|numeric|unique:corporate_customers,nipnas,' . $id . '|min:1|max:9999999'
+                'ids' => 'required|array|min:1',
+                'ids.*' => 'exists:corporate_customers,id'
+            ], [
+                'ids.required' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
+                'ids.array' => 'Format data tidak valid.',
+                'ids.min' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
+                'ids.*.exists' => 'Corporate Customer tidak ditemukan.'
             ]);
 
             if ($validator->fails()) {
-                Log::warning('Corporate Customer update validation failed via AJAX:', $validator->errors()->toArray());
-
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validasi gagal',
-                    'errors' => $validator->errors()
+                    'message' => $validator->errors()->first()
                 ], 422);
             }
 
-            // Update corporate customer
-            $corporateCustomer->update([
-                'nama' => $request->nama,
-                'nipnas' => $request->nipnas
-            ]);
+            DB::beginTransaction();
 
-            Log::info('Corporate Customer updated via AJAX:', [
-                'id' => $id,
-                'nama' => $corporateCustomer->nama,
-                'nipnas' => $corporateCustomer->nipnas
-            ]);
+            $ids = $request->ids;
+            $deleted = 0;
+            $errors = [];
+
+            foreach ($ids as $id) {
+                try {
+                    $corporateCustomer = CorporateCustomer::findOrFail($id);
+
+                    // Check if has related revenue data
+                    if ($corporateCustomer->revenues()->exists()) {
+                        $errors[] = "Corporate Customer '{$corporateCustomer->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
+                        continue;
+                    }
+
+                    $corporateCustomer->delete();
+                    $deleted++;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error menghapus Corporate Customer ID {$id}: " . $e->getMessage();
+                }
+            }
+
+            DB::commit();
+
+            $message = "Berhasil menghapus {$deleted} Corporate Customer.";
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " data gagal dihapus.";
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Corporate Customer berhasil diperbarui!'
+                'message' => $message,
+                'data' => [
+                    'deleted' => $deleted,
+                    'errors' => $errors
+                ]
             ]);
+
         } catch (\Exception $e) {
-            Log::error('Error updating Corporate Customer via AJAX: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
+            DB::rollBack();
+            Log::error('Corporate Customer Bulk Delete Error: ' . $e->getMessage());
 
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memperbarui Corporate Customer: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan saat menghapus data Corporate Customer.'
             ], 500);
         }
+    }
+
+    /**
+     * ✅ EXISTING: Validate NIPNAS without saving (for real-time validation)
+     */
+    public function validateNipnas(Request $request)
+    {
+        try {
+            $nipnas = trim($request->get('nipnas', ''));
+            $currentId = $request->get('current_id', null);
+
+            if (empty($nipnas)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS tidak boleh kosong.'
+                ]);
+            }
+
+            // Check format
+            if (!preg_match('/^[0-9]+$/', $nipnas)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS harus berupa angka saja.'
+                ]);
+            }
+
+            // Check length
+            if (strlen($nipnas) < 3) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS minimal 3 digit.'
+                ]);
+            }
+
+            if (strlen($nipnas) > 20) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS maksimal 20 digit.'
+                ]);
+            }
+
+            // Check range
+            if (bccomp($nipnas, '100', 0) < 0) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS minimal 100.'
+                ]);
+            }
+
+            // Check uniqueness
+            $query = CorporateCustomer::where('nipnas', $nipnas);
+            if ($currentId) {
+                $query->where('id', '!=', $currentId);
+            }
+
+            if ($query->exists()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'NIPNAS sudah terdaftar dalam sistem.'
+                ]);
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => 'NIPNAS valid.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('NIPNAS Validation Error: ' . $e->getMessage());
+
+            return response()->json([
+                'valid' => false,
+                'message' => 'Terjadi kesalahan saat validasi NIPNAS.'
+            ]);
+        }
+    }
+
+    /**
+     * ✅ NEW: Get Corporate Customer data for API (alias untuk edit)
+     */
+    public function getCorporateCustomerData($id)
+    {
+        return $this->edit($id);
+    }
+
+    /**
+     * ✅ NEW: Update Corporate Customer via API (alias untuk update)
+     */
+    public function updateCorporateCustomer(Request $request, $id)
+    {
+        return $this->update($request, $id);
     }
 }

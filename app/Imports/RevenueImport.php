@@ -26,6 +26,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     use SkipsErrors, SkipsFailures, RemembersRowNumber;
 
     private $importedCount = 0;
+    private $updatedCount = 0;
     private $duplicateCount = 0;
     private $errorCount = 0;
     private $skippedCount = 0;
@@ -41,51 +42,71 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     private $regionalList = [];
 
     private $year;
-    private $chunkSize = 100; // ✅ Increased chunk size
+    private $chunkSize = 50; // ✅ REDUCED: Smaller chunks for better memory management
     private $processedRows = 0;
 
-    // ✅ IMPROVED: Column mapping dengan lebih fleksibel
-    private $realRevenueColumns = [
-        'Real_Jan', 'Real_Feb', 'Real_Mar', 'Real_Apr', 'Real_Mei', 'Real_Jun',
-        'Real_Jul', 'Real_Agu', 'Real_Sep', 'Real_Okt', 'Real_Nov', 'Real_Des'
-    ];
-
-    private $targetRevenueColumns = [
-        'Target_Jan', 'Target_Feb', 'Target_Mar', 'Target_Apr', 'Target_Mei', 'Target_Jun',
-        'Target_Jul', 'Target_Ags', 'Target_Sep', 'Target_Okt', 'Target_Nov', 'Target_Des'
-    ];
+    // ✅ IMPROVED: Monthly pairs dengan better tracking
+    private $monthlyPairs = [];
+    private $detectedColumns = [];
 
     // ✅ EXPANDED: Alternative column names dengan lebih banyak variasi
     private $alternativeColumns = [
         'nama_am' => [
             'nama am', 'nama_am', 'account_manager', 'account manager', 'NAMA AM',
-            'Nama AM', 'Name AM', 'AM Name', 'am_name', 'namaAM'
+            'Nama AM', 'Name AM', 'AM Name', 'am_name', 'namaAM', 'nama account manager',
+            'account_manager_name', 'AM_NAME', 'nama_account_manager'
         ],
         'nik' => [
-            'nik', 'NIK', 'Nik', 'employee_id', 'emp_id', 'id_karyawan'
+            'nik', 'NIK', 'Nik', 'employee_id', 'emp_id', 'id_karyawan', 'NIK_AM',
+            'nik_am', 'employee_number', 'emp_number'
         ],
         'standard_name' => [
             'standard_name', 'standard name', 'STANDARD NAME', 'Standard Name',
             'nama customer', 'nama_customer', 'corporate customer', 'corporate_customer',
-            'customer_name', 'Customer Name', 'CUSTOMER NAME', 'nama_corporate'
+            'customer_name', 'Customer Name', 'CUSTOMER NAME', 'nama_corporate',
+            'nama', 'NAMA', 'Nama', 'name', 'Name', 'NAME', 'company_name',
+            'Company Name', 'COMPANY NAME', 'company', 'Company', 'COMPANY',
+            'customer', 'Customer', 'CUSTOMER'
         ],
         'nipnas' => [
-            'nipnas', 'NIPNAS', 'Nipnas', 'customer_id', 'cust_id', 'id_customer'
+            'nipnas', 'NIPNAS', 'Nipnas', 'customer_id', 'cust_id', 'id_customer',
+            'CUSTOMER_ID', 'CUST_ID', 'ID_CUSTOMER', 'customer code', 'CUSTOMER CODE',
+            'customer_code', 'code', 'Code', 'CODE', 'CUSTOMER_CODE'
         ],
         'divisi' => [
-            'divisi', 'DIVISI', 'Divisi', 'divisi_id', 'division', 'Division', 'DIVISION'
+            'divisi', 'DIVISI', 'Divisi', 'divisi_id', 'division', 'Division', 'DIVISION',
+            'nama_divisi', 'NAMA_DIVISI', 'nama divisi', 'NAMA DIVISI'
         ],
         'witel' => [
-            'witel', 'WITEL', 'Witel', 'witel_ho', 'WITEL HO', 'Witel HO'
+            'witel', 'WITEL', 'Witel', 'witel_ho', 'WITEL HO', 'Witel HO',
+            'witel_name', 'WITEL_NAME', 'nama_witel', 'NAMA_WITEL'
         ],
         'regional' => [
-            'regional', 'REGIONAL', 'Regional', 'treg', 'TREG', 'Treg'
+            'regional', 'REGIONAL', 'Regional', 'treg', 'TREG', 'Treg',
+            'nama_regional', 'NAMA_REGIONAL', 'regional_name', 'REGIONAL_NAME'
         ]
     ];
 
+    /**
+     * ✅ ENHANCED: Constructor dengan better year handling
+     */
     public function __construct($year = null)
     {
-        $this->year = $year ?: date('Y');
+        // ✅ IMPROVED: Smart year detection
+        if ($year) {
+            // Validate year format
+            if (is_numeric($year) && $year >= 2020 && $year <= 2030) {
+                $this->year = (int)$year;
+            } else {
+                Log::warning("Invalid year provided: {$year}, using current year");
+                $this->year = (int)date('Y');
+            }
+        } else {
+            $this->year = (int)date('Y');
+        }
+
+        Log::info("RevenueImport initialized for year: {$this->year}");
+
         $this->loadMasterData();
 
         // ✅ Set memory dan timeout untuk file besar
@@ -102,38 +123,48 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             // Load Account Managers dengan semua relasi
             $accountManagers = AccountManager::with(['divisis', 'witel', 'regional'])->get();
             foreach ($accountManagers as $am) {
-                $this->accountManagers['nama:' . $this->normalizeString($am->nama)] = $am;
+                $normalizedName = $this->normalizeString($am->nama);
+                $this->accountManagers['nama:' . $normalizedName] = $am;
                 $this->accountManagers['nik:' . trim($am->nik)] = $am;
+                $this->accountManagers['id:' . $am->id] = $am;
             }
 
             // Load Corporate Customers
             $corporateCustomers = CorporateCustomer::all();
             foreach ($corporateCustomers as $cc) {
-                $this->corporateCustomers['nama:' . $this->normalizeString($cc->nama)] = $cc;
+                $normalizedName = $this->normalizeString($cc->nama);
+                $this->corporateCustomers['nama:' . $normalizedName] = $cc;
                 if (!empty($cc->nipnas)) {
                     $this->corporateCustomers['nipnas:' . trim($cc->nipnas)] = $cc;
                 }
+                $this->corporateCustomers['id:' . $cc->id] = $cc;
             }
 
             // Load Divisi
             $divisiList = Divisi::all();
             foreach ($divisiList as $divisi) {
-                $this->divisiList['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
+                $normalizedName = $this->normalizeString($divisi->nama);
+                $this->divisiList['nama:' . $normalizedName] = $divisi;
                 $this->divisiList['id:' . $divisi->id] = $divisi;
             }
 
-            // ✅ NEW: Load Witel dan Regional untuk validasi
+            // Load Witel dan Regional untuk validasi
             $witelList = Witel::all();
             foreach ($witelList as $witel) {
-                $this->witelList['nama:' . $this->normalizeString($witel->nama)] = $witel;
+                $normalizedName = $this->normalizeString($witel->nama);
+                $this->witelList['nama:' . $normalizedName] = $witel;
+                $this->witelList['id:' . $witel->id] = $witel;
             }
 
             $regionalList = Regional::all();
             foreach ($regionalList as $regional) {
-                $this->regionalList['nama:' . $this->normalizeString($regional->nama)] = $regional;
+                $normalizedName = $this->normalizeString($regional->nama);
+                $this->regionalList['nama:' . $normalizedName] = $regional;
+                $this->regionalList['id:' . $regional->id] = $regional;
             }
 
-            Log::info('✅ Master data loaded successfully', [
+            Log::info('✅ Master data loaded successfully for Revenue Import', [
+                'year' => $this->year,
                 'account_managers' => count($accountManagers),
                 'corporate_customers' => count($corporateCustomers),
                 'divisi' => count($divisiList),
@@ -148,11 +179,19 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ NEW: Normalize string untuk konsistensi pencarian
+     * ✅ IMPROVED: Normalize string untuk konsistensi pencarian
      */
     private function normalizeString($string)
     {
-        return strtolower(trim($string));
+        if (empty($string)) return '';
+
+        $normalized = strtolower(trim($string));
+        // Remove extra spaces
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+        // Remove special characters that might cause issues
+        $normalized = preg_replace('/[^\w\s-]/', '', $normalized);
+
+        return $normalized;
     }
 
     /**
@@ -162,38 +201,169 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     {
         if ($rows->isEmpty()) {
             $this->errorDetails[] = "❌ File Excel kosong atau tidak memiliki data";
+            $this->errorCount++;
             return;
         }
 
-        // ✅ IMPROVED: Column identification dengan validasi
-        $firstRow = $rows->first();
-        $columnMap = $this->identifyColumns($firstRow);
+        try {
+            // ✅ IMPROVED: Column identification dengan validasi
+            $firstRow = $rows->first();
+            $this->detectedColumns = array_keys($firstRow->toArray());
+            $columnMap = $this->identifyColumns($firstRow);
 
-        // ✅ NEW: Validate required columns
-        $this->validateRequiredColumns($columnMap);
+            // ✅ ENHANCED: Detect monthly column pairs dengan better logic
+            $this->monthlyPairs = $this->detectMonthlyColumns($this->detectedColumns);
 
-        Log::info('📊 Starting import process', [
-            'total_rows' => $rows->count(),
-            'year' => $this->year,
-            'columns_found' => array_keys($columnMap)
-        ]);
+            // ✅ NEW: Validate required columns
+            $this->validateRequiredColumns($columnMap);
 
-        // Process data dengan chunking
-        $rows->slice(1)->chunk($this->chunkSize)->each(function ($chunk, $chunkIndex) use ($columnMap) {
-            $this->processChunk($chunk, $chunkIndex, $columnMap);
-        });
+            Log::info('📊 Starting Revenue import process', [
+                'total_rows' => $rows->count(),
+                'year' => $this->year,
+                'columns_found' => array_keys($columnMap),
+                'detected_columns' => $this->detectedColumns,
+                'monthly_pairs' => count($this->monthlyPairs)
+            ]);
 
-        Log::info('✅ Import process completed', [
-            'imported' => $this->importedCount,
-            'duplicates' => $this->duplicateCount,
-            'errors' => $this->errorCount,
-            'skipped' => $this->skippedCount,
-            'processed_rows' => $this->processedRows
-        ]);
+            // ✅ IMPROVED: Process data dengan chunking yang lebih smart
+            $dataRows = $rows->slice(1); // Skip header row
+
+            if ($dataRows->isEmpty()) {
+                $this->warningDetails[] = "⚠️ File hanya berisi header, tidak ada data untuk diproses";
+                return;
+            }
+
+            $dataRows->chunk($this->chunkSize)->each(function ($chunk, $chunkIndex) use ($columnMap) {
+                $this->processChunk($chunk, $chunkIndex, $columnMap);
+            });
+
+            Log::info('✅ Revenue import process completed', [
+                'year' => $this->year,
+                'imported' => $this->importedCount,
+                'updated' => $this->updatedCount,
+                'duplicates' => $this->duplicateCount,
+                'errors' => $this->errorCount,
+                'skipped' => $this->skippedCount,
+                'processed_rows' => $this->processedRows
+            ]);
+
+        } catch (\Exception $e) {
+            $this->errorCount++;
+            $this->errorDetails[] = "❌ Error processing file: " . $e->getMessage();
+            Log::error('Revenue Import Processing Error: ' . $e->getMessage());
+        }
     }
 
     /**
-     * ✅ NEW: Validate required columns ada di Excel
+     * ✅ ENHANCED: Detect monthly column pairs dengan lebih fleksibel
+     */
+    private function detectMonthlyColumns($headers)
+    {
+        $monthlyPairs = [];
+
+        // ✅ EXPANDED: Month variations yang bisa muncul di Excel (Indonesia + English)
+        $monthVariations = [
+            1 => ['JAN', 'JANUARI', 'JANUARY', '01', 'JANUARY', 'Jan'],
+            2 => ['FEB', 'FEBRUARI', 'FEBRUARY', '02', 'Feb'],
+            3 => ['MAR', 'MARET', 'MARCH', '03', 'Mar'],
+            4 => ['APR', 'APRIL', '04', 'Apr'],
+            5 => ['MEI', 'MAY', '05', 'Mei'],
+            6 => ['JUN', 'JUNI', 'JUNE', '06', 'Jun'],
+            7 => ['JUL', 'JULI', 'JULY', '07', 'Jul'],
+            8 => ['AGU', 'AGS', 'AGUSTUS', 'AUGUST', '08', 'Aug'],
+            9 => ['SEP', 'SEPTEMBER', '09', 'Sep'],
+            10 => ['OKT', 'OKTOBER', 'OCTOBER', '10', 'Oct'],
+            11 => ['NOV', 'NOVEMBER', '11', 'Nov'],
+            12 => ['DES', 'DESEMBER', 'DECEMBER', 'DEC', '12', 'Dec']
+        ];
+
+        // ✅ ENHANCED: Look for Real-Target pairs dengan pattern yang lebih fleksibel
+        foreach ($monthVariations as $monthNum => $monthNames) {
+            $realColumn = null;
+            $targetColumn = null;
+
+            // ✅ IMPROVED: Try multiple patterns untuk Real dan Target
+            foreach ($headers as $header) {
+                $normalizedHeader = strtoupper(trim($header));
+
+                foreach ($monthNames as $monthName) {
+                    // Pattern untuk Real columns
+                    $realPatterns = [
+                        '/^REAL[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*REAL$/i',
+                        '/^REVENUE[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*REVENUE$/i',
+                        '/^ACTUAL[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*ACTUAL$/i'
+                    ];
+
+                    // Pattern untuk Target columns
+                    $targetPatterns = [
+                        '/^TARGET[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*TARGET$/i',
+                        '/^BUDGET[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*BUDGET$/i',
+                        '/^PLAN[_\s]*' . $monthName . '$/i',
+                        '/^' . $monthName . '[_\s]*PLAN$/i'
+                    ];
+
+                    // Check Real patterns
+                    foreach ($realPatterns as $pattern) {
+                        if (preg_match($pattern, $normalizedHeader)) {
+                            $realColumn = $header;
+                            break 2;
+                        }
+                    }
+
+                    // Check Target patterns
+                    foreach ($targetPatterns as $pattern) {
+                        if (preg_match($pattern, $normalizedHeader)) {
+                            $targetColumn = $header;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            // ✅ FLEXIBLE: Add pair even if only one column found (with warning)
+            if ($realColumn !== null || $targetColumn !== null) {
+                $monthlyPairs[] = [
+                    'month' => $monthNum,
+                    'month_name' => $monthNames[0],
+                    'real_column' => $realColumn,
+                    'target_column' => $targetColumn
+                ];
+
+                // ✅ WARNING: Log if only one column found
+                if ($realColumn === null) {
+                    $this->warningDetails[] = "⚠️ Bulan {$monthNames[0]}: Hanya ditemukan kolom Target, kolom Real tidak ada";
+                }
+                if ($targetColumn === null) {
+                    $this->warningDetails[] = "⚠️ Bulan {$monthNames[0]}: Hanya ditemukan kolom Real, kolom Target tidak ada";
+                }
+            }
+        }
+
+        // ✅ Sort by month number
+        usort($monthlyPairs, function($a, $b) {
+            return $a['month'] - $b['month'];
+        });
+
+        Log::info('📅 Monthly column pairs detected', [
+            'year' => $this->year,
+            'pairs_found' => count($monthlyPairs),
+            'pairs' => array_map(function($pair) {
+                $real = $pair['real_column'] ?? 'N/A';
+                $target = $pair['target_column'] ?? 'N/A';
+                return $pair['month_name'] . ': Real=' . $real . ', Target=' . $target;
+            }, $monthlyPairs)
+        ]);
+
+        return $monthlyPairs;
+    }
+
+    /**
+     * ✅ ENHANCED: Validate required columns ada di Excel
      */
     private function validateRequiredColumns($columnMap)
     {
@@ -207,25 +377,28 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         }
 
         if (!empty($missingColumns)) {
-            $this->errorDetails[] = "❌ Kolom wajib tidak ditemukan: " . implode(', ', $missingColumns);
-            throw new \Exception('Kolom wajib tidak ditemukan: ' . implode(', ', $missingColumns));
+            $error = "❌ Kolom wajib tidak ditemukan: " . implode(', ', $missingColumns);
+            $this->errorDetails[] = $error;
+            $this->errorCount++;
+            throw new \Exception($error);
         }
 
-        // ✅ Check monthly columns
-        $monthlyFound = 0;
-        foreach (array_merge($this->realRevenueColumns, $this->targetRevenueColumns) as $monthCol) {
-            if (isset($columnMap[$monthCol])) {
-                $monthlyFound++;
-            }
+        // ✅ ENHANCED: Check monthly pairs dengan warning yang lebih informatif
+        if (empty($this->monthlyPairs)) {
+            $warning = "⚠️ Tidak ditemukan pasangan kolom Real-Target bulanan yang valid";
+            $this->warningDetails[] = $warning;
+            $this->warningDetails[] = sprintf("Kolom yang terdeteksi: %s", implode(', ', $this->detectedColumns));
+            $this->warningDetails[] = "Format yang diharapkan: Real_Jan + Target_Jan, Real_February + Target_February, dll.";
+            throw new \Exception('Tidak ada pasangan Real-Target bulanan ditemukan. Periksa format kolom bulan dalam file Excel.');
         }
 
-        if ($monthlyFound === 0) {
-            $this->warningDetails[] = "⚠️ Tidak ada kolom revenue bulanan yang ditemukan";
-        }
+        // ✅ INFO: Log successful validation
+        $this->successDetails[] = sprintf("✅ Validasi berhasil: %d kolom wajib dan %d pasangan bulan ditemukan",
+            count($requiredColumns), count($this->monthlyPairs));
     }
 
     /**
-     * ✅ IMPROVED: Process chunk dengan better transaction handling
+     * ✅ IMPROVED: Process chunk dengan better transaction handling dan error recovery
      */
     private function processChunk($chunk, $chunkIndex, $columnMap)
     {
@@ -246,8 +419,9 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             DB::commit();
 
             // ✅ Memory cleanup setiap chunk
-            if ($chunkIndex % 10 === 0) {
+            if ($chunkIndex % 5 === 0) {
                 gc_collect_cycles();
+                Log::info("Memory cleanup after chunk {$chunkIndex}, processed rows: {$this->processedRows}");
             }
 
         } catch (\Exception $e) {
@@ -282,8 +456,14 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $divisi = $this->findAndValidateDivisi($rowData['divisi_name'], $accountManager, $rowNumber);
             if (!$divisi) return;
 
-            // ✅ Process monthly revenue
-            $this->processMonthlyRevenue($row, $columnMap, $accountManager->id, $divisi->id, $corporateCustomer->id, $rowNumber);
+            // ✅ Process monthly revenue dengan flexible pairs
+            $processedMonths = $this->processMonthlyRevenue($row, $accountManager->id, $divisi->id, $corporateCustomer->id, $rowNumber);
+
+            if ($processedMonths > 0) {
+                $this->successDetails[] = "✅ Baris {$rowNumber}: Berhasil memproses {$processedMonths} bulan untuk '{$accountManager->nama}' - '{$corporateCustomer->nama}'";
+            } else {
+                $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Tidak ada data revenue bulanan yang diproses";
+            }
 
         } catch (\Exception $e) {
             $this->errorCount++;
@@ -294,7 +474,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ NEW: Extract row data dengan validation
+     * ✅ ENHANCED: Extract row data dengan validation yang lebih ketat
      */
     private function extractRowData($row, $columnMap, $rowNumber)
     {
@@ -308,50 +488,97 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             'regional_name' => $this->extractValue($row, $columnMap, 'regional')
         ];
 
-        // ✅ Validate minimal required data
-        if (empty($data['am_name']) && empty($data['nik'])) {
+        // ✅ ENHANCED: Validate minimal required data dengan prioritas
+        $hasAM = !empty($data['am_name']) || !empty($data['nik']);
+        $hasCC = !empty($data['cc_name']) || !empty($data['nipnas']);
+
+        if (!$hasAM && !$hasCC) {
+            $this->errorDetails[] = "❌ Baris {$rowNumber}: Data kosong - minimal harus ada Account Manager dan Corporate Customer";
+            return null;
+        }
+
+        if (!$hasAM) {
             $this->errorDetails[] = "❌ Baris {$rowNumber}: Account Manager kosong (nama dan NIK)";
             return null;
         }
 
-        if (empty($data['cc_name']) && empty($data['nipnas'])) {
+        if (!$hasCC) {
             $this->errorDetails[] = "❌ Baris {$rowNumber}: Corporate Customer kosong (nama dan NIPNAS)";
             return null;
+        }
+
+        // ✅ Clean data
+        foreach ($data as $key => $value) {
+            $data[$key] = trim($value);
         }
 
         return $data;
     }
 
     /**
-     * ✅ IMPROVED: Find Account Manager dengan better error messaging
+     * ✅ IMPROVED: Find Account Manager dengan better error messaging dan fuzzy matching
      */
     private function findAccountManager($name, $nik, $rowNumber)
     {
         $accountManager = null;
 
-        // Try by name first
-        if (!empty($name)) {
-            $nameKey = 'nama:' . $this->normalizeString($name);
-            $accountManager = $this->accountManagers[$nameKey] ?? null;
-        }
-
-        // Try by NIK if name not found
-        if (!$accountManager && !empty($nik)) {
+        // Try by NIK first (most reliable)
+        if (!empty($nik)) {
             $nikKey = 'nik:' . trim($nik);
             $accountManager = $this->accountManagers[$nikKey] ?? null;
         }
 
-        // ✅ Fallback to database dengan fuzzy matching
+        // Try by name if NIK not found
         if (!$accountManager && !empty($name)) {
-            $accountManager = AccountManager::with(['divisis', 'witel', 'regional'])
-                ->where('nama', 'like', "%{$name}%")
-                ->first();
+            $nameKey = 'nama:' . $this->normalizeString($name);
+            $accountManager = $this->accountManagers[$nameKey] ?? null;
+        }
+
+        // ✅ ENHANCED: Fuzzy matching untuk nama yang mirip
+        if (!$accountManager && !empty($name)) {
+            $normalizedSearchName = $this->normalizeString($name);
+
+            foreach ($this->accountManagers as $key => $am) {
+                if (strpos($key, 'nama:') === 0) {
+                    $existingNormalized = substr($key, 5);
+
+                    // Check for partial match
+                    if (strpos($existingNormalized, $normalizedSearchName) !== false ||
+                        strpos($normalizedSearchName, $existingNormalized) !== false) {
+                        $accountManager = $am;
+                        $this->warningDetails[] = "⚠️ Baris {$rowNumber}: AM ditemukan dengan fuzzy search: '{$name}' → '{$am->nama}'";
+                        break;
+                    }
+
+                    // Check similarity percentage
+                    $similarity = 0;
+                    similar_text($existingNormalized, $normalizedSearchName, $similarity);
+                    if ($similarity > 80) {
+                        $accountManager = $am;
+                        $this->warningDetails[] = "⚠️ Baris {$rowNumber}: AM ditemukan dengan similarity {$similarity}%: '{$name}' → '{$am->nama}'";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ✅ FALLBACK: Database search
+        if (!$accountManager && (!empty($name) || !empty($nik))) {
+            $query = AccountManager::with(['divisis', 'witel', 'regional']);
+
+            if (!empty($nik)) {
+                $query->where('nik', $nik);
+            } elseif (!empty($name)) {
+                $query->where('nama', 'like', "%{$name}%");
+            }
+
+            $accountManager = $query->first();
 
             if ($accountManager) {
-                // Add to cache
+                // Add to cache untuk subsequent lookups
                 $this->accountManagers['nama:' . $this->normalizeString($accountManager->nama)] = $accountManager;
                 $this->accountManagers['nik:' . trim($accountManager->nik)] = $accountManager;
-                $this->warningDetails[] = "⚠️ Baris {$rowNumber}: AM ditemukan dengan fuzzy search: '{$name}' → '{$accountManager->nama}'";
+                $this->warningDetails[] = "⚠️ Baris {$rowNumber}: AM ditemukan di database: '{$accountManager->nama}'";
             }
         }
 
@@ -365,27 +592,63 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ IMPROVED: Find Corporate Customer dengan better error messaging
+     * ✅ IMPROVED: Find Corporate Customer dengan better error messaging dan fuzzy matching
      */
     private function findCorporateCustomer($name, $nipnas, $rowNumber)
     {
         $corporateCustomer = null;
 
-        // Try by name first
-        if (!empty($name)) {
-            $nameKey = 'nama:' . $this->normalizeString($name);
-            $corporateCustomer = $this->corporateCustomers[$nameKey] ?? null;
-        }
-
-        // Try by NIPNAS if name not found
-        if (!$corporateCustomer && !empty($nipnas)) {
+        // Try by NIPNAS first (most reliable)
+        if (!empty($nipnas)) {
             $nipnasKey = 'nipnas:' . trim($nipnas);
             $corporateCustomer = $this->corporateCustomers[$nipnasKey] ?? null;
         }
 
-        // ✅ Fallback to database dengan fuzzy matching
+        // Try by name if NIPNAS not found
         if (!$corporateCustomer && !empty($name)) {
-            $corporateCustomer = CorporateCustomer::where('nama', 'like', "%{$name}%")->first();
+            $nameKey = 'nama:' . $this->normalizeString($name);
+            $corporateCustomer = $this->corporateCustomers[$nameKey] ?? null;
+        }
+
+        // ✅ ENHANCED: Fuzzy matching untuk nama yang mirip
+        if (!$corporateCustomer && !empty($name)) {
+            $normalizedSearchName = $this->normalizeString($name);
+
+            foreach ($this->corporateCustomers as $key => $cc) {
+                if (strpos($key, 'nama:') === 0) {
+                    $existingNormalized = substr($key, 5);
+
+                    // Check for partial match
+                    if (strpos($existingNormalized, $normalizedSearchName) !== false ||
+                        strpos($normalizedSearchName, $existingNormalized) !== false) {
+                        $corporateCustomer = $cc;
+                        $this->warningDetails[] = "⚠️ Baris {$rowNumber}: CC ditemukan dengan fuzzy search: '{$name}' → '{$cc->nama}'";
+                        break;
+                    }
+
+                    // Check similarity percentage
+                    $similarity = 0;
+                    similar_text($existingNormalized, $normalizedSearchName, $similarity);
+                    if ($similarity > 80) {
+                        $corporateCustomer = $cc;
+                        $this->warningDetails[] = "⚠️ Baris {$rowNumber}: CC ditemukan dengan similarity {$similarity}%: '{$name}' → '{$cc->nama}'";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ✅ FALLBACK: Database search
+        if (!$corporateCustomer && (!empty($name) || !empty($nipnas))) {
+            $query = CorporateCustomer::query();
+
+            if (!empty($nipnas)) {
+                $query->where('nipnas', $nipnas);
+            } elseif (!empty($name)) {
+                $query->where('nama', 'like', "%{$name}%");
+            }
+
+            $corporateCustomer = $query->first();
 
             if ($corporateCustomer) {
                 // Add to cache
@@ -393,7 +656,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 if (!empty($corporateCustomer->nipnas)) {
                     $this->corporateCustomers['nipnas:' . trim($corporateCustomer->nipnas)] = $corporateCustomer;
                 }
-                $this->warningDetails[] = "⚠️ Baris {$rowNumber}: CC ditemukan dengan fuzzy search: '{$name}' → '{$corporateCustomer->nama}'";
+                $this->warningDetails[] = "⚠️ Baris {$rowNumber}: CC ditemukan di database: '{$corporateCustomer->nama}'";
             }
         }
 
@@ -418,12 +681,27 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $divisiKey = 'nama:' . $this->normalizeString($divisiName);
             $divisi = $this->divisiList[$divisiKey] ?? null;
 
-            // ✅ Fallback fuzzy search
+            // ✅ ENHANCED: Fuzzy search untuk divisi
+            if (!$divisi) {
+                foreach ($this->divisiList as $key => $storedDivisi) {
+                    if (strpos($key, 'nama:') === 0) {
+                        $storedName = substr($key, 5);
+                        if (strpos($storedName, $this->normalizeString($divisiName)) !== false ||
+                            strpos($this->normalizeString($divisiName), $storedName) !== false) {
+                            $divisi = $storedDivisi;
+                            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Divisi ditemukan dengan fuzzy search: '{$divisiName}' → '{$storedDivisi->nama}'";
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // ✅ Database fallback
             if (!$divisi) {
                 $divisi = Divisi::where('nama', 'like', "%{$divisiName}%")->first();
                 if ($divisi) {
                     $this->divisiList['nama:' . $this->normalizeString($divisi->nama)] = $divisi;
-                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Divisi ditemukan dengan fuzzy search: '{$divisiName}' → '{$divisi->nama}'";
+                    $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Divisi ditemukan di database: '{$divisiName}' → '{$divisi->nama}'";
                 }
             }
 
@@ -455,107 +733,114 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ IMPROVED: Process monthly revenue dengan better validation
+     * ✅ ENHANCED: Process monthly revenue dengan flexible pairs dan better error handling
      */
-    private function processMonthlyRevenue($row, $columnMap, $accountManagerId, $divisiId, $corporateCustomerId, $rowNumber)
+    private function processMonthlyRevenue($row, $accountManagerId, $divisiId, $corporateCustomerId, $rowNumber)
     {
-        $monthMapping = [
-            1 => ['real' => 'Real_Jan', 'target' => 'Target_Jan'],
-            2 => ['real' => 'Real_Feb', 'target' => 'Target_Feb'],
-            3 => ['real' => 'Real_Mar', 'target' => 'Target_Mar'],
-            4 => ['real' => 'Real_Apr', 'target' => 'Target_Apr'],
-            5 => ['real' => 'Real_Mei', 'target' => 'Target_Mei'],
-            6 => ['real' => 'Real_Jun', 'target' => 'Target_Jun'],
-            7 => ['real' => 'Real_Jul', 'target' => 'Target_Jul'],
-            8 => ['real' => 'Real_Agu', 'target' => 'Target_Ags'],
-            9 => ['real' => 'Real_Sep', 'target' => 'Target_Sep'],
-            10 => ['real' => 'Real_Okt', 'target' => 'Target_Okt'],
-            11 => ['real' => 'Real_Nov', 'target' => 'Target_Nov'],
-            12 => ['real' => 'Real_Des', 'target' => 'Target_Des'],
-        ];
+        $monthlyDataFound = 0;
+        $processedMonths = 0;
 
-        $monthlyDataFound = false;
+        // ✅ Process hanya bulan yang memiliki pasangan Real-Target atau salah satunya
+        foreach ($this->monthlyPairs as $monthPair) {
+            $month = $monthPair['month'];
+            $realColumn = $monthPair['real_column'];
+            $targetColumn = $monthPair['target_column'];
 
-        for ($month = 1; $month <= 12; $month++) {
-            $monthFormatted = str_pad($month, 2, '0', STR_PAD_LEFT);
-            $bulan = $this->year . '-' . $monthFormatted . '-01';
+            // Extract values dari row
+            $realRevenue = $realColumn ? $this->parseNumericValue($row[$realColumn] ?? 0) : 0;
+            $targetRevenue = $targetColumn ? $this->parseNumericValue($row[$targetColumn] ?? 0) : 0;
 
-            $realColumn = $monthMapping[$month]['real'];
-            $targetColumn = $monthMapping[$month]['target'];
-
-            $realRevenue = 0;
-            $targetRevenue = 0;
-
-            // Extract values
-            if (isset($columnMap[$realColumn])) {
-                $realRevenue = $this->parseNumericValue($row[$columnMap[$realColumn]] ?? 0);
-            }
-
-            if (isset($columnMap[$targetColumn])) {
-                $targetRevenue = $this->parseNumericValue($row[$columnMap[$targetColumn]] ?? 0);
-            }
-
-            // Skip jika kedua nilai kosong
+            // ✅ FLEXIBLE: Process even if only one value is provided
             if ($realRevenue == 0 && $targetRevenue == 0) {
-                continue;
+                continue; // Skip completely empty data
             }
 
-            $monthlyDataFound = true;
+            $monthlyDataFound++;
+            $bulan = sprintf('%s-%02d-01', $this->year, $month); // Format: Y-m-d
 
             try {
-                $revenue = Revenue::updateOrCreate(
-                    [
-                        'account_manager_id' => $accountManagerId,
-                        'divisi_id' => $divisiId,
-                        'corporate_customer_id' => $corporateCustomerId,
-                        'bulan' => $bulan
-                    ],
-                    [
-                        'target_revenue' => $targetRevenue,
-                        'real_revenue' => $realRevenue
-                    ]
-                );
+                // ✅ Check for existing revenue record
+                $existingRevenue = Revenue::where([
+                    'account_manager_id' => $accountManagerId,
+                    'corporate_customer_id' => $corporateCustomerId,
+                    'divisi_id' => $divisiId,
+                    'bulan' => $bulan,
+                ])->first();
 
-                if ($revenue->wasRecentlyCreated) {
-                    $this->importedCount++;
+                if ($existingRevenue) {
+                    // Update if different
+                    $needsUpdate = false;
+                    $changes = [];
+
+                    if ($existingRevenue->target_revenue != $targetRevenue) {
+                        $changes[] = "Target: " . number_format($existingRevenue->target_revenue) . " → " . number_format($targetRevenue);
+                        $needsUpdate = true;
+                    }
+
+                    if ($existingRevenue->real_revenue != $realRevenue) {
+                        $changes[] = "Real: " . number_format($existingRevenue->real_revenue) . " → " . number_format($realRevenue);
+                        $needsUpdate = true;
+                    }
+
+                    if ($needsUpdate) {
+                        $existingRevenue->update([
+                            'target_revenue' => $targetRevenue,
+                            'real_revenue' => $realRevenue,
+                        ]);
+                        $this->updatedCount++;
+                        $this->successDetails[] = "✅ Baris {$rowNumber}, {$monthPair['month_name']}: Updated - " . implode(', ', $changes);
+                    } else {
+                        $this->duplicateCount++;
+                    }
                 } else {
-                    $this->duplicateCount++;
+                    // Create new revenue record
+                    Revenue::create([
+                        'account_manager_id' => $accountManagerId,
+                        'corporate_customer_id' => $corporateCustomerId,
+                        'divisi_id' => $divisiId,
+                        'target_revenue' => $targetRevenue,
+                        'real_revenue' => $realRevenue,
+                        'bulan' => $bulan,
+                    ]);
+                    $this->importedCount++;
                 }
+
+                $processedMonths++;
 
             } catch (\Exception $e) {
                 $this->errorCount++;
-                $this->errorDetails[] = "❌ Baris {$rowNumber}, Bulan {$month}: Gagal menyimpan revenue - " . $e->getMessage();
+                $this->errorDetails[] = "❌ Baris {$rowNumber}, Bulan {$monthPair['month_name']}: Gagal menyimpan revenue - " . $e->getMessage();
+                Log::error("Revenue save error", [
+                    'row' => $rowNumber,
+                    'month' => $monthPair['month_name'],
+                    'error' => $e->getMessage()
+                ]);
                 throw $e;
             }
         }
 
         // ✅ Log jika tidak ada data monthly ditemukan
-        if (!$monthlyDataFound) {
+        if ($monthlyDataFound === 0) {
             $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Tidak ada data revenue bulanan ditemukan";
         }
+
+        return $processedMonths;
     }
 
     /**
-     * ✅ IMPROVED: Column identification dengan better matching
+     * ✅ IMPROVED: Column identification dengan better matching dan logging
      */
     private function identifyColumns($firstRow)
     {
         $map = [];
         $excelColumns = array_keys($firstRow->toArray());
 
-        // ✅ Exact match untuk revenue columns
-        foreach (array_merge($this->realRevenueColumns, $this->targetRevenueColumns) as $monthCol) {
-            if (in_array($monthCol, $excelColumns)) {
-                $map[$monthCol] = $monthCol;
-            }
-        }
-
-        // ✅ Flexible matching untuk kolom lainnya
+        // ✅ Flexible matching untuk kolom basic
         foreach ($this->alternativeColumns as $standardKey => $alternatives) {
             foreach ($alternatives as $altName) {
-                // Case-insensitive matching
+                // Case-insensitive matching dengan trim
                 $foundColumn = collect($excelColumns)->first(function ($col) use ($altName) {
-                    return strtolower(trim($col)) === strtolower(trim($altName));
+                    return $this->normalizeString($col) === $this->normalizeString($altName);
                 });
 
                 if ($foundColumn) {
@@ -565,7 +850,12 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             }
         }
 
-        Log::info('📋 Column mapping result', $map);
+        Log::info('📋 Revenue column mapping result', [
+            'mapped_columns' => $map,
+            'available_columns' => $excelColumns,
+            'year' => $this->year
+        ]);
+
         return $map;
     }
 
@@ -595,14 +885,14 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ IMPROVED: Parse numeric value dengan better format handling
+     * ✅ ENHANCED: Parse numeric value dengan better format handling dan validation
      */
     private function parseNumericValue($value)
     {
         if (empty($value) || $value === null) return 0;
 
         if (is_numeric($value)) {
-            return (float)$value;
+            return max(0, (float)$value); // Ensure non-negative
         }
 
         // ✅ Handle berbagai format angka Indonesia/International
@@ -610,14 +900,28 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
         // Handle comma as thousand separator vs decimal separator
         if (substr_count($cleaned, ',') == 1 && substr_count($cleaned, '.') == 0) {
-            // Likely decimal comma (European format)
-            $cleaned = str_replace(',', '.', $cleaned);
+            // Check if it's likely decimal comma (less than 3 digits after comma)
+            $parts = explode(',', $cleaned);
+            if (strlen($parts[1]) <= 2) {
+                // Likely decimal comma (European format)
+                $cleaned = str_replace(',', '.', $cleaned);
+            } else {
+                // Likely thousand separator
+                $cleaned = str_replace(',', '', $cleaned);
+            }
         } else {
             // Remove comma as thousand separator
             $cleaned = str_replace(',', '', $cleaned);
         }
 
-        return is_numeric($cleaned) ? (float)$cleaned : 0;
+        $result = is_numeric($cleaned) ? max(0, (float)$cleaned) : 0;
+
+        // ✅ Validation for unreasonably large values
+        if ($result > 999999999999) { // 1 trillion limit
+            Log::warning("Very large revenue value detected: " . $result);
+        }
+
+        return $result;
     }
 
     /**
@@ -629,23 +933,40 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ IMPROVED: Get comprehensive import results
+     * ✅ ENHANCED: Get comprehensive import results dengan detailed summary
      */
     public function getImportResults()
     {
+        $totalProcessed = $this->processedRows;
+        $successfullyProcessed = $this->importedCount + $this->updatedCount;
+        $failedProcessed = $this->errorCount;
+
         return [
             'imported' => $this->importedCount,
+            'updated' => $this->updatedCount,
             'duplicates' => $this->duplicateCount,
             'errors' => $this->errorCount,
             'skipped' => $this->skippedCount,
-            'processed' => $this->processedRows,
+            'processed' => $totalProcessed,
+            'year' => $this->year,
             'error_details' => $this->errorDetails,
             'warning_details' => $this->warningDetails,
             'success_details' => $this->successDetails,
+            'monthly_pairs_found' => count($this->monthlyPairs),
+            'monthly_pairs' => $this->monthlyPairs,
+            'detected_columns' => $this->detectedColumns,
             'summary' => [
-                'total_processed' => $this->processedRows,
-                'success_rate' => $this->processedRows > 0 ? round(($this->importedCount + $this->duplicateCount) / $this->processedRows * 100, 2) : 0,
-                'error_rate' => $this->processedRows > 0 ? round($this->errorCount / $this->processedRows * 100, 2) : 0
+                'total_processed' => $totalProcessed,
+                'successfully_processed' => $successfullyProcessed,
+                'failed_processed' => $failedProcessed,
+                'success_rate' => $totalProcessed > 0 ? round(($successfullyProcessed / $totalProcessed) * 100, 2) : 0,
+                'error_rate' => $totalProcessed > 0 ? round(($failedProcessed / $totalProcessed) * 100, 2) : 0,
+                'duplicate_rate' => $totalProcessed > 0 ? round(($this->duplicateCount / $totalProcessed) * 100, 2) : 0,
+                'has_warnings' => count($this->warningDetails) > 0,
+                'has_errors' => $this->errorCount > 0,
+                'import_year' => $this->year,
+                'columns_detected' => count($this->detectedColumns),
+                'monthly_columns_detected' => count($this->monthlyPairs)
             ]
         ];
     }

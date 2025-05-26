@@ -7,6 +7,8 @@ use App\Models\Witel;
 use App\Models\Regional;
 use App\Models\Divisi;
 use App\Imports\AccountManagerImport;
+use App\Exports\AccountManagerExport;
+use App\Exports\AccountManagerTemplateExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -375,7 +377,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ COMPLETELY REWRITTEN: Import Account Managers using dedicated Import class
+     * ✅ ENHANCED: Import Account Managers dengan master data context
      */
     public function import(Request $request)
     {
@@ -396,7 +398,8 @@ class AccountManagerController extends Controller
                     'updated' => 0,
                     'duplicates' => 0,
                     'errors' => 1,
-                    'error_details' => [$validator->errors()->first()]
+                    'error_details' => [$validator->errors()->first()],
+                    'master_data_available' => $this->getMasterDataSummary()
                 ]
             ], 422);
         }
@@ -408,6 +411,10 @@ class AccountManagerController extends Controller
 
             // ✅ Get detailed results from Import class
             $results = $import->getImportResults();
+
+            // ✅ ENHANCED: Add master data context to results
+            $results['master_data_available'] = $this->getMasterDataSummary();
+            $results['helper_info'] = $this->getImportHelperInfo();
 
             // ✅ Generate appropriate message
             $message = $this->generateImportMessage(
@@ -442,10 +449,95 @@ class AccountManagerController extends Controller
                     'error_details' => [
                         'Error sistem: ' . $e->getMessage(),
                         'Pastikan file Excel dalam format yang benar dan tidak corrupt.'
-                    ]
+                    ],
+                    'master_data_available' => $this->getMasterDataSummary(),
+                    'helper_info' => $this->getImportHelperInfo()
                 ]
             ], 500);
         }
+    }
+
+    /**
+     * ✅ NEW: Download template Excel (menggunakan AccountManagerTemplateExport)
+     */
+    public function downloadTemplate()
+    {
+        try {
+            $filename = 'template_account_manager_' . date('Y-m-d_His') . '.xlsx';
+
+            return Excel::download(new AccountManagerTemplateExport(), $filename);
+
+        } catch (\Exception $e) {
+            Log::error('Download Template Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mendownload template: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ✅ NEW: Export Account Manager data (menggunakan AccountManagerExport)
+     */
+    public function export(Request $request)
+    {
+        try {
+            $filename = 'account_managers_' . date('Y-m-d_His') . '.xlsx';
+
+            return Excel::download(new AccountManagerExport(), $filename);
+
+        } catch (\Exception $e) {
+            Log::error('Export Account Manager Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal export data Account Manager: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ✅ NEW: Get master data summary untuk error context
+     */
+    public function getMasterDataSummary()
+    {
+        try {
+            return [
+                'witels' => [
+                    'count' => Witel::count(),
+                    'sample' => Witel::orderBy('nama')->limit(5)->pluck('nama')->toArray()
+                ],
+                'regionals' => [
+                    'count' => Regional::count(),
+                    'sample' => Regional::orderBy('nama')->limit(5)->pluck('nama')->toArray()
+                ],
+                'divisis' => [
+                    'count' => Divisi::count(),
+                    'sample' => Divisi::orderBy('nama')->limit(5)->pluck('nama')->toArray()
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error('Get Master Data Summary Error: ' . $e->getMessage());
+            return [
+                'witels' => ['count' => 0, 'sample' => []],
+                'regionals' => ['count' => 0, 'sample' => []],
+                'divisis' => ['count' => 0, 'sample' => []]
+            ];
+        }
+    }
+
+    /**
+     * ✅ NEW: Get import helper info
+     */
+    private function getImportHelperInfo()
+    {
+        return [
+            'template_available' => true,
+            'master_data_sheets' => [
+                'Master Witel' => 'Berisi daftar semua Witel yang valid',
+                'Master Regional' => 'Berisi daftar semua Regional yang valid',
+                'Master Divisi' => 'Berisi daftar semua Divisi yang valid'
+            ],
+            'tips' => [
+                '💡 Download template untuk melihat format yang benar',
+                '💡 Periksa sheet "Master Data" untuk data yang valid',
+                '💡 Gunakan export existing data sebagai referensi',
+                '💡 Satu NIK bisa memiliki multiple divisi (buat baris terpisah)'
+            ]
+        ];
     }
 
     /**

@@ -970,4 +970,99 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             ]
         ];
     }
+
+    /**
+     * ✅ NEW: Compatibility method for RevenueController
+     * Maps getImportResults() to the format expected by controller
+     */
+    public function getImportSummary()
+    {
+        $results = $this->getImportResults();
+
+        // Prepare missing data arrays in the format expected by controller
+        $missingAccountManagers = [];
+        $missingCorporateCustomers = [];
+        $missingDivisi = [];
+        $validationErrors = [];
+        $duplicates = [];
+
+        // Extract error details and categorize them
+        foreach ($this->errorDetails as $error) {
+            if (strpos($error, 'Account Manager tidak ditemukan') !== false) {
+                $missingAccountManagers[] = [
+                    'error' => $error,
+                    'nama' => $this->extractNameFromError($error, 'Nama:')
+                ];
+            } elseif (strpos($error, 'Corporate Customer tidak ditemukan') !== false) {
+                $missingCorporateCustomers[] = [
+                    'error' => $error,
+                    'nama' => $this->extractNameFromError($error, 'Nama:')
+                ];
+            } elseif (strpos($error, 'tidak memiliki divisi') !== false) {
+                $missingDivisi[] = [
+                    'error' => $error
+                ];
+            } else {
+                $validationErrors[] = [
+                    'error' => $error
+                ];
+            }
+        }
+
+        // Extract duplicate info from success details
+        foreach ($this->successDetails as $success) {
+            if (strpos($success, 'Updated') !== false) {
+                $duplicates[] = [
+                    'message' => $success
+                ];
+            }
+        }
+
+        return [
+            'total_rows' => $results['processed'],
+            'success_rows' => $results['imported'] + $results['updated'],
+            'failed_rows' => $results['errors'],
+            'missing_account_managers' => $missingAccountManagers,
+            'missing_corporate_customers' => $missingCorporateCustomers,
+            'missing_divisi' => $missingDivisi,
+            'validation_errors' => $validationErrors,
+            'duplicates' => $duplicates,
+            'error_details' => [
+                'missing_account_managers_count' => count($missingAccountManagers),
+                'missing_corporate_customers_count' => count($missingCorporateCustomers),
+                'missing_divisi_count' => count($missingDivisi),
+                'validation_errors_count' => count($validationErrors),
+                'duplicates_count' => count($duplicates),
+                'total_errors' => $results['errors']
+            ],
+            'success_percentage' => $results['summary']['success_rate'],
+            'year' => $this->year,
+            'monthly_pairs_found' => count($this->monthlyPairs),
+            'detected_columns' => $this->detectedColumns,
+
+            // Additional detailed info
+            'detailed_results' => $results,
+            'warning_details' => $this->warningDetails,
+            'success_details' => $this->successDetails,
+            'all_error_details' => $this->errorDetails
+        ];
+    }
+
+    /**
+     * Helper method to extract name from error message
+     */
+    private function extractNameFromError($errorMessage, $marker)
+    {
+        $pos = strpos($errorMessage, $marker);
+        if ($pos !== false) {
+            $nameStartPos = $pos + strlen($marker);
+            $nameEndPos = strpos($errorMessage, ',', $nameStartPos);
+            if ($nameEndPos === false) {
+                $nameEndPos = strlen($errorMessage);
+            }
+            $name = substr($errorMessage, $nameStartPos, $nameEndPos - $nameStartPos);
+            return trim(str_replace("'", "", $name));
+        }
+        return '';
+    }
 }

@@ -51,7 +51,7 @@
             Data Revenue Account Manager <span class="ms-2">📊</span>
         </h1>
         <p class="header-subtitle">
-            Kelola dan monitoring data pendapatan Account Manager Telkom
+            Kelola dan monitoring data revenue Account Manager RLEGS
         </p>
     </div>
 

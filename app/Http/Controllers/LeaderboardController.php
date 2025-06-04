@@ -27,7 +27,7 @@ class LeaderboardController extends Controller
         $baseQuery = AccountManager::with(['witel', 'divisis'])
             ->select('account_managers.*');
 
-        // Subquery untuk menghitung total pendapatan dan target
+        // Subquery untuk menghitung total revenue dan target
         $revenueSubquery = function ($query) use ($period, $divisiFilter) {
             $query->from('revenues')
                 ->whereColumn('revenues.account_manager_id', 'account_managers.id');
@@ -56,7 +56,7 @@ class LeaderboardController extends Controller
             $revenueSubquery($query);
         }, 'total_target_revenue');
 
-        // Menambahkan subquery untuk persentase pencapaian (achievement)
+        // Menambahkan subquery untuk persentase achievement
         $baseQuery->selectSub(function ($query) use ($revenueSubquery) {
             $query->selectRaw('CASE
                                 WHEN COALESCE(SUM(revenues.target_revenue), 0) > 0

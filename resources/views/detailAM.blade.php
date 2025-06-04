@@ -118,21 +118,22 @@
         margin-left: 10px;
     }
 
-    /* === Divisi Badge Color Styling (Sesuai dengan Divisi Pill) === */
+    /* === Divisi Badge Color Styling (Disesuaikan dengan warna summary-card) === */
     .divisi-badge.dss {
-        background: linear-gradient(135deg, #fef6f2 0%, #f8e4d8 100%);
-        color: #D29062;
+        background: linear-gradient(135deg, #001F4D 0%, #003366 100%); /* gradasi biru tua */
+        color: #FFFFFF; /* teks putih agar kontras */
     }
 
     .divisi-badge.dps {
-        background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-        color: #F4A300;
+        background: linear-gradient(135deg, #66B2FF 0%, #3399FF 100%); /* gradasi biru muda */
+        color: #FFFFFF; /* teks putih agar kontras */
     }
 
     .divisi-badge.dgs {
-        background: linear-gradient(135deg, #fff3e0 0%, #ffccbc 100%);
-        color: #D95A00;
+        background: linear-gradient(135deg, #FFB84D 0%, #FF8C00 100%); /* gradasi dark orange */
+        color: #FFFFFF; /* teks putih agar kontras */
     }
+
     /* Display divisi list di profil - Perbaikan alignment horizontal */
     .meta-item {
         display: flex;
@@ -178,22 +179,21 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.12);
     }
 
-    /* === Divisi Pill Color Styling === */
+    /* === Divisi Pill Color Styling (Disesuaikan dengan warna summary-card) === */
     .divisi-pill.dss {
-        background: linear-gradient(135deg, #fef6f2 0%, #f8e4d8 100%);
-        color: #D29062;
+        background: linear-gradient(135deg, #00264D 0%, #003366 100%); /* gradasi biru tua */
+        color: #FFFFFF; /* putih agar kontras */
     }
 
     .divisi-pill.dps {
-        background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-        color: #F4A300;
+        background: linear-gradient(135deg, #66B2FF 0%, #3399FF 100%); /* gradasi biru muda */
+        color: #FFFFFF; /* putih agar kontras */
     }
 
     .divisi-pill.dgs {
-        background: linear-gradient(135deg, #fff3e0 0%, #ffccbc 100%);
-        color: #D95A00;
+        background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%); /* gradasi dark orange */
+        color: #FFFFFF; /* putih agar kontras */
     }
-
 
     /* Improved profile meta layout - horizontal layout */
     .profile-meta {
@@ -871,8 +871,8 @@
                     <div class="filter-group">
                         <select id="filterCustomer" class="selectpicker" title="Filter">
                             <option value="all">Semua</option>
-                            <option value="highest_achievement">Pencapaian Tertinggi</option>
-                            <option value="highest_revenue">Pendapatan Tertinggi</option>
+                            <option value="highest_achievement">Achievement Tertinggi</option>
+                            <option value="highest_revenue">Revenue Tertinggi</option>
                         </select>
                     </div>
 
@@ -908,7 +908,7 @@
                                     <th>Divisi</th>
                                     <th>Target Revenue</th>
                                     <th>Real Revenue</th>
-                                    <th>Pencapaian</th>
+                                    <th>Achievement</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -979,7 +979,7 @@
                                         <th>NIPNAS</th>
                                         <th>Target Revenue</th>
                                         <th>Real Revenue</th>
-                                        <th>Pencapaian</th>
+                                        <th>Achievement</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1064,7 +1064,7 @@
                         <i class="fas fa-money-bill-wave"></i>
                     </div>
                     <div class="revenue-content">
-                        <div class="revenue-label">Total Pendapatan Sepanjang Waktu</div>
+                        <div class="revenue-label">Total Revenue Sepanjang Waktu</div>
                         <div class="revenue-value">
                             @php
                                 $totalAllTimeRevenue = $accountManager->revenues->sum('real_revenue');
@@ -1091,8 +1091,8 @@
                         <p>{{ $insights['message'] }}</p>
 
                         <p>Berdasarkan analisis data selama {{ $selectedYear }}, Account Manager <strong>{{ $accountManager->nama }}</strong>
-                        menunjukkan pencapaian yang {{ $insights['avg_achievement'] >= 90 ? 'sangat baik' : ($insights['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
-                        Dengan rata-rata pencapaian <strong>{{ number_format($insights['avg_achievement'], 2) }}%</strong> dan
+                        menunjukkan achievement yang {{ $insights['avg_achievement'] >= 90 ? 'sangat baik' : ($insights['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
+                        Dengan rata-rata achievement <strong>{{ number_format($insights['avg_achievement'], 2) }}%</strong> dan
                         tren performa yang {{ $insights['trend'] == 'up' ? 'meningkat' : ($insights['trend'] == 'down' ? 'menurun' : 'stabil') }}.</p>
                     </div>
                 </div>
@@ -1103,7 +1103,7 @@
                             <i class="fas fa-chart-line"></i>
                         </div>
                         <div class="metric-content">
-                            <div class="metric-label">Pencapaian Tertinggi</div>
+                            <div class="metric-label">Achievement Tertinggi</div>
                             <div class="metric-value">{{ $insights['best_achievement_month'] ? number_format($insights['best_achievement_month']['achievement'], 2) . '%' : 'N/A' }}</div>
                             <div class="metric-period">
                                 @if($insights['best_achievement_month'])
@@ -1121,7 +1121,7 @@
                             <i class="fas fa-money-bill-wave"></i>
                         </div>
                         <div class="metric-content">
-                            <div class="metric-label">Pendapatan Tertinggi</div>
+                            <div class="metric-label">Revenue Tertinggi</div>
                             <div class="metric-value">
                                 @if($insights['best_revenue_month'])
                                     @php
@@ -1154,7 +1154,7 @@
                             <i class="fas fa-bullseye"></i>
                         </div>
                         <div class="metric-content">
-                            <div class="metric-label">Rata-rata Pencapaian</div>
+                            <div class="metric-label">Rata-rata Achievement</div>
                             <div class="metric-value">{{ number_format($insights['avg_achievement'], 2) }}%</div>
                             <div class="metric-period">Sepanjang {{ $selectedYear }}</div>
                         </div>
@@ -1207,7 +1207,7 @@
                                 <select id="chartType" class="selectpicker" title="Tipe Tampilan">
                                     <option value="combined" selected>Kombinasi</option>
                                     <option value="revenue">Revenue</option>
-                                    <option value="achievement">Pencapaian</option>
+                                    <option value="achievement">Achievement</option>
                                 </select>
                             </div>
                         </div>
@@ -1227,7 +1227,7 @@
                             <i class="fas fa-money-bill-wave"></i>
                         </div>
                         <div class="revenue-content">
-                            <div class="revenue-label">Total Pendapatan {{ $divisi->nama }} Sepanjang Waktu</div>
+                            <div class="revenue-label">Total Revenue {{ $divisi->nama }} Sepanjang Waktu</div>
                             <div class="revenue-value">
                                 @php
                                     $totalDivisiRevenue = $accountManager->revenues->where('divisi_id', $divisi->id)->sum('real_revenue');
@@ -1255,9 +1255,9 @@
                                 <p>{{ $insightsByDivisi[$divisi->id]['message'] }}</p>
 
                                 <p>Berdasarkan analisis data selama {{ $selectedYear }}, Account Manager <strong>{{ $accountManager->nama }}</strong>
-                                untuk divisi <strong>{{ $divisi->nama }}</strong> menunjukkan pencapaian yang
+                                untuk divisi <strong>{{ $divisi->nama }}</strong> menunjukkan achievment yang
                                 {{ $insightsByDivisi[$divisi->id]['avg_achievement'] >= 90 ? 'sangat baik' : ($insightsByDivisi[$divisi->id]['avg_achievement'] >= 80 ? 'baik' : 'perlu ditingkatkan') }}.
-                                Dengan rata-rata pencapaian <strong>{{ number_format($insightsByDivisi[$divisi->id]['avg_achievement'], 2) }}%</strong> dan
+                                Dengan rata-rata Achievment <strong>{{ number_format($insightsByDivisi[$divisi->id]['avg_achievement'], 2) }}%</strong> dan
                                 tren performa yang {{ $insightsByDivisi[$divisi->id]['trend'] == 'up' ? 'meningkat' : ($insightsByDivisi[$divisi->id]['trend'] == 'down' ? 'menurun' : 'stabil') }}.</p>
                             </div>
                         </div>
@@ -1268,7 +1268,7 @@
                                     <i class="fas fa-chart-line"></i>
                                 </div>
                                 <div class="metric-content">
-                                    <div class="metric-label">Pencapaian Tertinggi</div>
+                                    <div class="metric-label">Achievement Tertinggi</div>
                                     <div class="metric-value">{{ $insightsByDivisi[$divisi->id]['best_achievement_month'] ? number_format($insightsByDivisi[$divisi->id]['best_achievement_month']['achievement'], 2) . '%' : 'N/A' }}</div>
                                     <div class="metric-period">
                                         @if($insightsByDivisi[$divisi->id]['best_achievement_month'])
@@ -1286,7 +1286,7 @@
                                     <i class="fas fa-money-bill-wave"></i>
                                 </div>
                                 <div class="metric-content">
-                                    <div class="metric-label">Pendapatan Tertinggi</div>
+                                    <div class="metric-label">Revenue Tertinggi</div>
                                     <div class="metric-value">
                                         @if($insightsByDivisi[$divisi->id]['best_revenue_month'])
                                             @php
@@ -1319,7 +1319,7 @@
                                     <i class="fas fa-bullseye"></i>
                                 </div>
                                 <div class="metric-content">
-                                    <div class="metric-label">Rata-rata Pencapaian</div>
+                                    <div class="metric-label">Rata-rata Achievement</div>
                                     <div class="metric-value">{{ number_format($insightsByDivisi[$divisi->id]['avg_achievement'], 2) }}%</div>
                                     <div class="metric-period">Sepanjang {{ $selectedYear }}</div>
                                 </div>
@@ -1391,7 +1391,7 @@
                                             title="Tipe Tampilan">
                                         <option value="combined" selected>Kombinasi</option>
                                         <option value="revenue">Revenue</option>
-                                        <option value="achievement">Pencapaian</option>
+                                        <option value="achievement">Achievement</option>
                                     </select>
                                 </div>
                             </div>
@@ -1717,7 +1717,7 @@ $(document).ready(function() {
 
         if (type === 'combined' || type === 'achievement') {
             datasets.push({
-                label: 'Pencapaian (%)',
+                label: 'Achievment (%)',
                 data: achievementData,
                 type: 'line',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -1771,7 +1771,7 @@ $(document).ready(function() {
                 position: 'right',
                 title: {
                     display: true,
-                    text: 'Pencapaian (%)',
+                    text: 'Achievment (%)',
                     font: {
                         weight: 'bold'
                     }
@@ -1942,7 +1942,7 @@ $(document).ready(function() {
 
         if (type === 'combined' || type === 'achievement') {
             datasets.push({
-                label: 'Pencapaian (%)',
+                label: 'Achievment (%)',
                 data: achievementData,
                 type: 'line',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -1996,7 +1996,7 @@ $(document).ready(function() {
                 position: 'right',
                 title: {
                     display: true,
-                    text: 'Pencapaian (%)',
+                    text: 'Achievment (%)',
                     font: {
                         weight: 'bold'
                     }

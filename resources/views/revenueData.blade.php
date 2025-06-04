@@ -924,7 +924,7 @@
                 Data Revenue Account Manager
             </h1>
             <p class="header-subtitle">
-                Kelola dan Monitoring Data Pendapatan Account Manager RLEGS
+                Kelola dan Monitoring Data Revenue Account Manager RLEGS
             </p>
         </div>
 

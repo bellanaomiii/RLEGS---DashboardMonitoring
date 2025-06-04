@@ -283,7 +283,7 @@
             Peringkat Performa Account Manager⭐
         </h1>
         <p class="header-subtitle">
-            Dashboard performa pendapatan Account Manager berdasarkan pendapatan nyata dan pencapaian target
+            Dashboard performansi revenue Account Manager berdasarkan revenue total dan achievment target
         </p>
     </div>
 
@@ -319,10 +319,10 @@
                     <form id="filterForm" action="{{ route('leaderboard') }}" method="GET">
                         <select class="selectpicker" id="filterSelect" name="filter_by[]" multiple data-live-search="true" data-dropup-auto="false" title="Pilih Kriteria" data-width="100%">
                             <option value="Revenue Realisasi Tertinggi" {{ in_array('Revenue Realisasi Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
-                                Pendapatan Tertinggi
+                                Revenue Tertinggi
                             </option>
                             <option value="Achievement Tertinggi" {{ in_array('Achievement Tertinggi', request('filter_by', [])) ? 'selected' : '' }}>
-                                Pencapaian Tertinggi
+                                Achievement Tertinggi
                             </option>
                         </select>
                         @if(!empty(request('search')))
@@ -378,12 +378,12 @@
 
                 <div class="am-stats">
                     <div class="revenue-stat">
-                        <div class="revenue-label">Pendapatan</div>
+                        <div class="revenue-label">Revenue</div>
                         <div class="revenue-value">Rp {{ number_format($am->total_real_revenue, 0, ',', '.') }}</div>
                     </div>
 
                     <div class="achievement-stat">
-                        <div class="achievement-label">Pencapaian</div>
+                        <div class="achievement-label">Achievement</div>
                         <div class="achievement-value {{ $am->achievement_percentage < 100 ? 'text-danger' : 'text-success' }}">
                             <div class="achievement-icon">
                                 <i class="lni {{ $am->achievement_percentage < 100 ? 'lni-trend-down' : 'lni-trend-up-1' }}"></i>

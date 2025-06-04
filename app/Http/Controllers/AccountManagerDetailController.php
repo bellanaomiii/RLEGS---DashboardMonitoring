@@ -634,10 +634,10 @@ class AccountManagerDetailController extends Controller
         }
 
         // Generate insight message
-        $message = "Performance Account Manager menunjukkan pencapaian tertinggi pada bulan " .
+        $message = "Performance Account Manager menunjukkan achievment tertinggi pada bulan " .
                   ($bestAchievementMonth ? $bestAchievementMonth['month_name'] : "-") .
                   " dengan nilai " . number_format($maxAchievement, 2) . "% dari target. " .
-                  "Pendapatan tertinggi dicapai pada bulan " .
+                  "Revenue tertinggi dicapai pada bulan " .
                   ($bestRevenueMonth ? $bestRevenueMonth['month_name'] : "-") .
                   " dengan Rp " . number_format($maxRevenue, 0, ',', '.') . ".";
 

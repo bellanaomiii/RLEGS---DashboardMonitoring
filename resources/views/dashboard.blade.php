@@ -14,7 +14,7 @@
             Dashboard Performansi
         </h1>
         <p class="header-subtitle">
-            Monitoring dan Analisis Performa Pendapatan Account Manager
+            Monitoring dan Analisis Performa Revenue Account Manager
         </p>
     </div>
 
@@ -95,7 +95,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="card-title">Top 10 Account Managers</h5>
-                    <p class="text-muted small mb-0">Berdasarkan total pendapatan seluruh periode</p>
+                    <p class="text-muted small mb-0">Berdasarkan total revenue seluruh periode</p>
                 </div>
                 <div class="dropdown">
                     <button class="btn btn-sm btn-light" type="button" id="topAmOptions" data-bs-toggle="dropdown" aria-expanded="false">

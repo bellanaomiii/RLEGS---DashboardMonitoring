@@ -248,27 +248,39 @@
         .summary-card.rlegs .summary-icon {
             background-color: #C62828;
         }
-
         .summary-card.dss {
-            border-left: 6px solid #D29062;
+            border-left: 6px solid #003366; /* Biru Tua */
         }
         .summary-card.dss .summary-icon {
-            background-color: #D29062;
+            background-color: #003366;
         }
 
+        /* DSS - Biru Tua */
+        .summary-card.dss {
+            border-left: 6px solid #003366; /* Biru Tua */
+        }
+        .summary-card.dss .summary-icon {
+            background-color: #003366;
+        }
+
+        /* DPS - Biru Muda (lebih kontras, tidak terlalu terang) */
         .summary-card.dps {
-            border-left: 6px solid #F4A300;
+            border-left: 6px solid #3399FF; /* Medium Sky Blue */
         }
         .summary-card.dps .summary-icon {
-            background-color: #F4A300;
+            background-color: #3399FF;
         }
 
+
+        /* DGS - Dark Orange (selaras dengan JavaScript) */
         .summary-card.dgs {
-            border-left: 6px solid #D95A00;
+            border-left: 6px solid #FF8C00; /* Dark Orange */
         }
         .summary-card.dgs .summary-icon {
-            background-color: #D95A00;
+            background-color: #FF8C00;
         }
+
+
 
         /* Chart container enhancements */
         .chart-container {
@@ -499,7 +511,7 @@
                 Data Performanasi RLEGS
             </h1>
             <p class="header-subtitle">
-                Monitoring Pendapatan Witel dan Divisi berdasarkan Periode
+                Monitoring Revenue Witel dan Divisi berdasarkan Periode
             </p>
         </div>
 
@@ -726,7 +738,7 @@
                                     <select id="chartType" class="selectpicker" data-style="btn-outline-primary">
                                         <option value="combined" selected>Kombinasi</option>
                                         <option value="revenue">Revenue</option>
-                                        <option value="achievement">Pencapaian</option>
+                                        <option value="achievement">Achievement</option>
                                     </select>
                                 </div>
                             </div>
@@ -746,8 +758,8 @@
                 <div class="chart-card">
                     <div class="chart-header">
                         <div>
-                            <h5 class="chart-title">Pendapatan Divisi RLEGS</h5>
-                            <p class="chart-subtitle">Distribusi Pendapatan DSS, DPS, DGS berdasarkan Witel yang Anda pilih</p>
+                            <h5 class="chart-title">Data Revenue Divisi RLEGS</h5>
+                            <p class="chart-subtitle">Distribusi Revenue DSS, DPS, DGS berdasarkan Witel yang Anda pilih</p>
                         </div>
                     </div>
                     <div class="chart-body">
@@ -1215,7 +1227,7 @@
 
                 if (type === 'combined' || type === 'achievement') {
                     datasets.push({
-                        label: 'Pencapaian (%)',
+                        label: 'Achievment (%)',
                         data: achievementData,
                         type: 'line',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -1265,7 +1277,7 @@
                         position: 'right',
                         title: {
                             display: true,
-                            text: 'Pencapaian (%)',
+                            text: 'Achievment (%)',
                             font: { weight: 'bold', size: 14 }
                         },
                         grid: {
@@ -1368,28 +1380,26 @@
 
                     switch (dataset.label) {
                         case 'DSS':
-                            // Terracotta – hangat, natural, profesional
-                            backgroundColor = 'rgba(210, 144, 98, 0.9)';
-                            borderColor = '#D29062';
-                            hoverBackgroundColor = 'rgba(195, 130, 85, 1)';
+                            backgroundColor = 'rgba(0, 51, 102, 0.9)';
+                            borderColor = '#003366';
+                            hoverBackgroundColor = 'rgba(0, 41, 82, 1)';
                             break;
                         case 'DPS':
-                            // Amber Gold – terang dan tegas
-                            backgroundColor = 'rgba(244, 163, 0, 0.9)';
-                            borderColor = '#F4A300';
-                            hoverBackgroundColor = 'rgba(230, 150, 0, 1)';
+                            backgroundColor = 'rgba(51, 153, 255, 0.9)';       
+                            borderColor = '#3399FF';                            
+                            hoverBackgroundColor = 'rgba(51, 153, 255, 1)';    
                             break;
                         case 'DGS':
-                            // Burnt Orange – kontras kuat dan profesional
-                            backgroundColor = 'rgba(217, 90, 0, 0.9)';
-                            borderColor = '#D95A00';
-                            hoverBackgroundColor = 'rgba(200, 80, 0, 1)';
-                            break;
+                        backgroundColor = 'rgba(255, 140, 0, 0.9)';    
+                        borderColor = '#FF8C00';                        
+                        hoverBackgroundColor = 'rgba(230, 120, 0, 1)';  
+                        break;
                         default:
                             backgroundColor = dataset.backgroundColor;
                             borderColor = dataset.borderColor;
                             hoverBackgroundColor = dataset.backgroundColor;
                     }
+
 
                     return {
                         ...dataset,

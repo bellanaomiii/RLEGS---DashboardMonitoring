@@ -16,7 +16,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class CorporateCustomerController extends Controller
 {
     /**
-     * ✅ ENHANCED: Display a listing of corporate customers with enhanced search
+     * ✅ EXISTING: Display a listing of corporate customers with enhanced search
      */
     public function index(Request $request)
     {
@@ -44,7 +44,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ FIXED: Store a newly created corporate customer with proper NIPNAS validation
+     * ✅ EXISTING: Store a newly created corporate customer with proper NIPNAS validation
      */
     public function store(Request $request)
     {
@@ -145,7 +145,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * Show the form for editing the specified corporate customer
+     * ✅ EXISTING: Show the form for editing the specified corporate customer
      */
     public function edit($id)
     {
@@ -168,7 +168,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ FIXED: Update the specified corporate customer with proper NIPNAS validation
+     * ✅ EXISTING: Update the specified corporate customer with proper NIPNAS validation
      */
     public function update(Request $request, $id)
     {
@@ -262,7 +262,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * Remove the specified corporate customer
+     * ✅ EXISTING: Remove the specified corporate customer
      */
     public function destroy($id)
     {
@@ -292,7 +292,99 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Import Corporate Customers dengan detailed error context
+     * ✅ NEW: Bulk delete corporate customers
+     */
+    public function bulkDelete(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'ids' => 'required|array|min:1',
+                'ids.*' => 'exists:corporate_customers,id'
+            ], [
+                'ids.required' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
+                'ids.array' => 'Format data tidak valid.',
+                'ids.min' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
+                'ids.*.exists' => 'Corporate Customer tidak ditemukan.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $ids = $request->ids;
+            $deleted = 0;
+            $errors = [];
+            $deletedDetails = [];
+
+            foreach ($ids as $id) {
+                try {
+                    $corporateCustomer = CorporateCustomer::findOrFail($id);
+
+                    // Check if has related revenue data
+                    if ($corporateCustomer->revenues()->exists()) {
+                        $errors[] = "Corporate Customer '{$corporateCustomer->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
+                        continue;
+                    }
+
+                    $corporateCustomerInfo = [
+                        'id' => $corporateCustomer->id,
+                        'nama' => $corporateCustomer->nama,
+                        'nipnas' => $corporateCustomer->nipnas,
+                        'created_at' => $corporateCustomer->created_at
+                    ];
+
+                    $corporateCustomer->delete();
+                    $deleted++;
+                    $deletedDetails[] = $corporateCustomerInfo;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error menghapus Corporate Customer ID {$id}: " . $e->getMessage();
+                }
+            }
+
+            DB::commit();
+
+            $message = "Berhasil menghapus {$deleted} Corporate Customer.";
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " data gagal dihapus.";
+            }
+
+            // ✅ LOG BULK DELETE ACTIVITY
+            Log::info('Bulk Delete Corporate Customer Activity', [
+                'deleted_count' => $deleted,
+                'error_count' => count($errors),
+                'user_ip' => $request->ip(),
+                'deleted_details' => $deletedDetails
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'deleted' => $deleted,
+                    'errors' => $errors,
+                    'deleted_details' => $deletedDetails
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Corporate Customer Bulk Delete Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus data Corporate Customer.'
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ EXISTING: Import Corporate Customers dengan detailed error context
      */
     public function import(Request $request)
     {
@@ -375,7 +467,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Download template Excel (menggunakan CorporateCustomerTemplateExport)
+     * ✅ EXISTING: Download template Excel (menggunakan CorporateCustomerTemplateExport)
      */
     public function downloadTemplate()
     {
@@ -391,7 +483,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Export Corporate Customer data (menggunakan CorporateCustomerExport)
+     * ✅ EXISTING: Export Corporate Customer data (menggunakan CorporateCustomerExport)
      */
     public function export(Request $request)
     {
@@ -407,7 +499,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ COMPLETELY FIXED: Search Corporate Customers untuk autocomplete dengan debugging comprehensive
+     * ✅ EXISTING: Search Corporate Customers untuk autocomplete dengan debugging comprehensive
      */
     public function search(Request $request)
     {
@@ -507,7 +599,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Test method untuk debugging database connection dan data
+     * ✅ EXISTING: Test method untuk debugging database connection dan data
      */
     public function testSearch()
     {
@@ -558,7 +650,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get import helper info untuk user guidance
+     * ✅ EXISTING: Get import helper info untuk user guidance
      */
     private function getImportHelperInfo()
     {
@@ -586,7 +678,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get validation rules untuk reference
+     * ✅ EXISTING: Get validation rules untuk reference
      */
     private function getValidationRules()
     {
@@ -614,7 +706,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get sample existing data untuk reference
+     * ✅ EXISTING: Get sample existing data untuk reference
      */
     private function getExistingDataSample()
     {
@@ -644,7 +736,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Generate import message based on results
+     * ✅ EXISTING: Generate import message based on results
      */
     private function generateImportMessage($imported, $updated, $errors)
     {
@@ -678,7 +770,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * Get statistics for dashboard
+     * ✅ EXISTING: Get statistics for dashboard
      */
     public function getStatistics()
     {
@@ -705,80 +797,6 @@ class CorporateCustomerController extends Controller
                 'message' => 'Terjadi kesalahan saat mengambil statistik.',
                 'data' => []
             ]);
-        }
-    }
-
-    /**
-     * ✅ ENHANCED: Bulk delete corporate customers
-     */
-    public function bulkDelete(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'ids' => 'required|array|min:1',
-                'ids.*' => 'exists:corporate_customers,id'
-            ], [
-                'ids.required' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
-                'ids.array' => 'Format data tidak valid.',
-                'ids.min' => 'Pilih minimal satu Corporate Customer untuk dihapus.',
-                'ids.*.exists' => 'Corporate Customer tidak ditemukan.'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $validator->errors()->first()
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            $ids = $request->ids;
-            $deleted = 0;
-            $errors = [];
-
-            foreach ($ids as $id) {
-                try {
-                    $corporateCustomer = CorporateCustomer::findOrFail($id);
-
-                    // Check if has related revenue data
-                    if ($corporateCustomer->revenues()->exists()) {
-                        $errors[] = "Corporate Customer '{$corporateCustomer->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
-                        continue;
-                    }
-
-                    $corporateCustomer->delete();
-                    $deleted++;
-
-                } catch (\Exception $e) {
-                    $errors[] = "Error menghapus Corporate Customer ID {$id}: " . $e->getMessage();
-                }
-            }
-
-            DB::commit();
-
-            $message = "Berhasil menghapus {$deleted} Corporate Customer.";
-            if (!empty($errors)) {
-                $message .= " " . count($errors) . " data gagal dihapus.";
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'data' => [
-                    'deleted' => $deleted,
-                    'errors' => $errors
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Corporate Customer Bulk Delete Error: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan saat menghapus data Corporate Customer.'
-            ], 500);
         }
     }
 
@@ -858,7 +876,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get Corporate Customer data for API (alias untuk edit)
+     * ✅ EXISTING: Get Corporate Customer data for API (alias untuk edit)
      */
     public function getCorporateCustomerData($id)
     {
@@ -866,7 +884,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ NEW: Update Corporate Customer via API (alias untuk update)
+     * ✅ EXISTING: Update Corporate Customer via API (alias untuk update)
      */
     public function updateCorporateCustomer(Request $request, $id)
     {

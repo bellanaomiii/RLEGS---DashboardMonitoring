@@ -30,9 +30,12 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     private $duplicateCount = 0;
     private $errorCount = 0;
     private $skippedCount = 0;
+    private $conflictCount = 0; // ✅ NEW: Track conflicts
+
     private $errorDetails = [];
     private $warningDetails = [];
     private $successDetails = [];
+    private $conflictDetails = []; // ✅ NEW: Track conflict details
 
     // ✅ IMPROVED: Master data caching dengan lebih efisien
     private $accountManagers = [];
@@ -42,12 +45,16 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     private $regionalList = [];
 
     private $year;
-    private $chunkSize = 50; // ✅ REDUCED: Smaller chunks for better memory management
+    private $overwriteMode; // ✅ NEW: Overwrite mode (update, skip, ask)
+    private $chunkSize = 50;
     private $processedRows = 0;
 
     // ✅ IMPROVED: Monthly pairs dengan better tracking
     private $monthlyPairs = [];
     private $detectedColumns = [];
+
+    // ✅ NEW: Conflict tracking
+    private $existingDataCache = []; // Cache untuk mengetahui data yang sudah ada
 
     // ✅ EXPANDED: Alternative column names dengan lebih banyak variasi
     private $alternativeColumns = [
@@ -88,13 +95,12 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     ];
 
     /**
-     * ✅ ENHANCED: Constructor dengan better year handling
+     * ✅ ENHANCED: Constructor dengan overwrite mode support
      */
-    public function __construct($year = null)
+    public function __construct($year = null, $overwriteMode = 'update')
     {
         // ✅ IMPROVED: Smart year detection
         if ($year) {
-            // Validate year format
             if (is_numeric($year) && $year >= 2020 && $year <= 2030) {
                 $this->year = (int)$year;
             } else {
@@ -105,13 +111,62 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $this->year = (int)date('Y');
         }
 
-        Log::info("RevenueImport initialized for year: {$this->year}");
+        // ✅ NEW: Set overwrite mode
+        $this->overwriteMode = in_array($overwriteMode, ['update', 'skip', 'ask']) ? $overwriteMode : 'update';
+
+        Log::info("RevenueImport initialized", [
+            'year' => $this->year,
+            'overwrite_mode' => $this->overwriteMode
+        ]);
 
         $this->loadMasterData();
+        $this->loadExistingDataCache(); // ✅ NEW: Load existing data for conflict detection
 
         // ✅ Set memory dan timeout untuk file besar
         ini_set('memory_limit', '2048M');
         set_time_limit(600); // 10 minutes
+    }
+
+    /**
+     * ✅ NEW: Load existing revenue data for conflict detection
+     */
+    private function loadExistingDataCache()
+    {
+        try {
+            // Load existing revenue data untuk year ini
+            $existingRevenues = Revenue::whereYear('bulan', $this->year)
+                ->with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->get();
+
+            foreach ($existingRevenues as $revenue) {
+                $key = sprintf('%d_%d_%d_%s',
+                    $revenue->account_manager_id,
+                    $revenue->corporate_customer_id,
+                    $revenue->divisi_id,
+                    $revenue->bulan
+                );
+
+                $this->existingDataCache[$key] = [
+                    'id' => $revenue->id,
+                    'target_revenue' => $revenue->target_revenue,
+                    'real_revenue' => $revenue->real_revenue,
+                    'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                    'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                    'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                    'bulan' => $revenue->bulan,
+                    'created_at' => $revenue->created_at
+                ];
+            }
+
+            Log::info('✅ Existing revenue data cache loaded', [
+                'year' => $this->year,
+                'existing_records' => count($existingRevenues)
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Error loading existing data cache: ' . $e->getMessage());
+            $this->existingDataCache = [];
+        }
     }
 
     /**
@@ -220,6 +275,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             Log::info('📊 Starting Revenue import process', [
                 'total_rows' => $rows->count(),
                 'year' => $this->year,
+                'overwrite_mode' => $this->overwriteMode,
                 'columns_found' => array_keys($columnMap),
                 'detected_columns' => $this->detectedColumns,
                 'monthly_pairs' => count($this->monthlyPairs)
@@ -239,9 +295,11 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
             Log::info('✅ Revenue import process completed', [
                 'year' => $this->year,
+                'overwrite_mode' => $this->overwriteMode,
                 'imported' => $this->importedCount,
                 'updated' => $this->updatedCount,
                 'duplicates' => $this->duplicateCount,
+                'conflicts' => $this->conflictCount,
                 'errors' => $this->errorCount,
                 'skipped' => $this->skippedCount,
                 'processed_rows' => $this->processedRows
@@ -456,7 +514,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $divisi = $this->findAndValidateDivisi($rowData['divisi_name'], $accountManager, $rowNumber);
             if (!$divisi) return;
 
-            // ✅ Process monthly revenue dengan flexible pairs
+            // ✅ Process monthly revenue dengan flexible pairs dan conflict resolution
             $processedMonths = $this->processMonthlyRevenue($row, $accountManager->id, $divisi->id, $corporateCustomer->id, $rowNumber);
 
             if ($processedMonths > 0) {
@@ -470,6 +528,230 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $errorMsg = "❌ Baris {$rowNumber}: " . $e->getMessage();
             $this->errorDetails[] = $errorMsg;
             Log::error($errorMsg, ['exception' => $e]);
+        }
+    }
+
+    /**
+     * ✅ ENHANCED: Process monthly revenue dengan advanced conflict handling
+     */
+    private function processMonthlyRevenue($row, $accountManagerId, $divisiId, $corporateCustomerId, $rowNumber)
+    {
+        $monthlyDataFound = 0;
+        $processedMonths = 0;
+
+        // ✅ Process hanya bulan yang memiliki pasangan Real-Target atau salah satunya
+        foreach ($this->monthlyPairs as $monthPair) {
+            $month = $monthPair['month'];
+            $realColumn = $monthPair['real_column'];
+            $targetColumn = $monthPair['target_column'];
+
+            // Extract values dari row
+            $realRevenue = $realColumn ? $this->parseNumericValue($row[$realColumn] ?? 0) : 0;
+            $targetRevenue = $targetColumn ? $this->parseNumericValue($row[$targetColumn] ?? 0) : 0;
+
+            // ✅ FLEXIBLE: Process even if only one value is provided
+            if ($realRevenue == 0 && $targetRevenue == 0) {
+                continue; // Skip completely empty data
+            }
+
+            $monthlyDataFound++;
+            $bulan = sprintf('%s-%02d-01', $this->year, $month); // Format: Y-m-d
+
+            try {
+                // ✅ ENHANCED: Check existing data dengan cache first
+                $cacheKey = sprintf('%d_%d_%d_%s', $accountManagerId, $corporateCustomerId, $divisiId, $bulan);
+                $existingData = $this->existingDataCache[$cacheKey] ?? null;
+
+                if ($existingData) {
+                    // ✅ CONFLICT DETECTED: Handle berdasarkan overwrite mode
+                    $conflictResult = $this->handleExistingDataConflict(
+                        $existingData,
+                        $targetRevenue,
+                        $realRevenue,
+                        $monthPair['month_name'],
+                        $rowNumber
+                    );
+
+                    if ($conflictResult['action'] === 'updated') {
+                        $this->updatedCount++;
+                        $processedMonths++;
+                    } elseif ($conflictResult['action'] === 'skipped') {
+                        $this->skippedCount++;
+                    } elseif ($conflictResult['action'] === 'duplicate') {
+                        $this->duplicateCount++;
+                    }
+
+                } else {
+                    // ✅ Create new revenue record
+                    Revenue::create([
+                        'account_manager_id' => $accountManagerId,
+                        'corporate_customer_id' => $corporateCustomerId,
+                        'divisi_id' => $divisiId,
+                        'target_revenue' => $targetRevenue,
+                        'real_revenue' => $realRevenue,
+                        'bulan' => $bulan,
+                    ]);
+
+                    // ✅ ADD to cache untuk subsequent lookups
+                    $this->existingDataCache[$cacheKey] = [
+                        'target_revenue' => $targetRevenue,
+                        'real_revenue' => $realRevenue,
+                        'bulan' => $bulan
+                    ];
+
+                    $this->importedCount++;
+                    $processedMonths++;
+                    $this->successDetails[] = "✅ Baris {$rowNumber}, {$monthPair['month_name']}: Data baru dibuat - Target: " . number_format($targetRevenue) . ", Real: " . number_format($realRevenue);
+                }
+
+            } catch (\Exception $e) {
+                $this->errorCount++;
+                $this->errorDetails[] = "❌ Baris {$rowNumber}, Bulan {$monthPair['month_name']}: Gagal menyimpan revenue - " . $e->getMessage();
+                Log::error("Revenue save error", [
+                    'row' => $rowNumber,
+                    'month' => $monthPair['month_name'],
+                    'error' => $e->getMessage()
+                ]);
+                throw $e;
+            }
+        }
+
+        // ✅ Log jika tidak ada data monthly ditemukan
+        if ($monthlyDataFound === 0) {
+            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Tidak ada data revenue bulanan ditemukan";
+        }
+
+        return $processedMonths;
+    }
+
+    /**
+     * ✅ NEW: Handle existing data conflict berdasarkan overwrite mode
+     */
+    private function handleExistingDataConflict($existingData, $newTargetRevenue, $newRealRevenue, $monthName, $rowNumber)
+    {
+        $hasChanges = false;
+        $changes = [];
+
+        // ✅ CHECK for actual changes
+        if ($existingData['target_revenue'] != $newTargetRevenue) {
+            $changes[] = "Target: " . number_format($existingData['target_revenue']) . " → " . number_format($newTargetRevenue);
+            $hasChanges = true;
+        }
+
+        if ($existingData['real_revenue'] != $newRealRevenue) {
+            $changes[] = "Real: " . number_format($existingData['real_revenue']) . " → " . number_format($newRealRevenue);
+            $hasChanges = true;
+        }
+
+        // ✅ NO CHANGES: Data identical
+        if (!$hasChanges) {
+            $this->warningDetails[] = "⚠️ Baris {$rowNumber}, {$monthName}: Data sama, tidak ada perubahan";
+            return ['action' => 'duplicate', 'changes' => []];
+        }
+
+        // ✅ CONFLICT RESOLUTION berdasarkan mode
+        switch ($this->overwriteMode) {
+            case 'skip':
+                // Skip existing data, don't update
+                $this->conflictCount++;
+                $this->conflictDetails[] = [
+                    'row' => $rowNumber,
+                    'month' => $monthName,
+                    'action' => 'skipped',
+                    'reason' => 'Data sudah ada (mode: skip)',
+                    'existing' => [
+                        'target' => $existingData['target_revenue'],
+                        'real' => $existingData['real_revenue']
+                    ],
+                    'new' => [
+                        'target' => $newTargetRevenue,
+                        'real' => $newRealRevenue
+                    ],
+                    'changes' => $changes
+                ];
+
+                $this->warningDetails[] = "⚠️ Baris {$rowNumber}, {$monthName}: Dilewati (mode skip) - " . implode(', ', $changes);
+                return ['action' => 'skipped', 'changes' => $changes];
+
+            case 'ask':
+                // For 'ask' mode, we'll still update but mark as needing confirmation
+                $this->conflictCount++;
+                $this->conflictDetails[] = [
+                    'row' => $rowNumber,
+                    'month' => $monthName,
+                    'action' => 'needs_confirmation',
+                    'reason' => 'Data sudah ada (butuh konfirmasi)',
+                    'existing' => [
+                        'target' => $existingData['target_revenue'],
+                        'real' => $existingData['real_revenue'],
+                        'created_at' => $existingData['created_at'] ?? null
+                    ],
+                    'new' => [
+                        'target' => $newTargetRevenue,
+                        'real' => $newRealRevenue
+                    ],
+                    'changes' => $changes
+                ];
+
+                // Update data anyway, but mark as conflict
+                $this->updateExistingRevenue($existingData['id'], $newTargetRevenue, $newRealRevenue);
+                $this->warningDetails[] = "🔄 Baris {$rowNumber}, {$monthName}: Diperbarui (butuh konfirmasi) - " . implode(', ', $changes);
+                return ['action' => 'updated', 'changes' => $changes];
+
+            case 'update':
+            default:
+                // Update existing data
+                $this->conflictCount++;
+                $this->conflictDetails[] = [
+                    'row' => $rowNumber,
+                    'month' => $monthName,
+                    'action' => 'updated',
+                    'reason' => 'Data diperbarui otomatis',
+                    'existing' => [
+                        'target' => $existingData['target_revenue'],
+                        'real' => $existingData['real_revenue']
+                    ],
+                    'new' => [
+                        'target' => $newTargetRevenue,
+                        'real' => $newRealRevenue
+                    ],
+                    'changes' => $changes
+                ];
+
+                $this->updateExistingRevenue($existingData['id'], $newTargetRevenue, $newRealRevenue);
+                $this->successDetails[] = "✅ Baris {$rowNumber}, {$monthName}: Diperbarui - " . implode(', ', $changes);
+                return ['action' => 'updated', 'changes' => $changes];
+        }
+    }
+
+    /**
+     * ✅ NEW: Update existing revenue record
+     */
+    private function updateExistingRevenue($revenueId, $targetRevenue, $realRevenue)
+    {
+        try {
+            $revenue = Revenue::findOrFail($revenueId);
+            $revenue->update([
+                'target_revenue' => $targetRevenue,
+                'real_revenue' => $realRevenue,
+            ]);
+
+            // ✅ UPDATE cache
+            foreach ($this->existingDataCache as $key => &$cached) {
+                if ($cached['id'] == $revenueId) {
+                    $cached['target_revenue'] = $targetRevenue;
+                    $cached['real_revenue'] = $realRevenue;
+                    break;
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Failed to update existing revenue: " . $e->getMessage(), [
+                'revenue_id' => $revenueId,
+                'target' => $targetRevenue,
+                'real' => $realRevenue
+            ]);
+            throw $e;
         }
     }
 
@@ -733,101 +1015,6 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ ENHANCED: Process monthly revenue dengan flexible pairs dan better error handling
-     */
-    private function processMonthlyRevenue($row, $accountManagerId, $divisiId, $corporateCustomerId, $rowNumber)
-    {
-        $monthlyDataFound = 0;
-        $processedMonths = 0;
-
-        // ✅ Process hanya bulan yang memiliki pasangan Real-Target atau salah satunya
-        foreach ($this->monthlyPairs as $monthPair) {
-            $month = $monthPair['month'];
-            $realColumn = $monthPair['real_column'];
-            $targetColumn = $monthPair['target_column'];
-
-            // Extract values dari row
-            $realRevenue = $realColumn ? $this->parseNumericValue($row[$realColumn] ?? 0) : 0;
-            $targetRevenue = $targetColumn ? $this->parseNumericValue($row[$targetColumn] ?? 0) : 0;
-
-            // ✅ FLEXIBLE: Process even if only one value is provided
-            if ($realRevenue == 0 && $targetRevenue == 0) {
-                continue; // Skip completely empty data
-            }
-
-            $monthlyDataFound++;
-            $bulan = sprintf('%s-%02d-01', $this->year, $month); // Format: Y-m-d
-
-            try {
-                // ✅ Check for existing revenue record
-                $existingRevenue = Revenue::where([
-                    'account_manager_id' => $accountManagerId,
-                    'corporate_customer_id' => $corporateCustomerId,
-                    'divisi_id' => $divisiId,
-                    'bulan' => $bulan,
-                ])->first();
-
-                if ($existingRevenue) {
-                    // Update if different
-                    $needsUpdate = false;
-                    $changes = [];
-
-                    if ($existingRevenue->target_revenue != $targetRevenue) {
-                        $changes[] = "Target: " . number_format($existingRevenue->target_revenue) . " → " . number_format($targetRevenue);
-                        $needsUpdate = true;
-                    }
-
-                    if ($existingRevenue->real_revenue != $realRevenue) {
-                        $changes[] = "Real: " . number_format($existingRevenue->real_revenue) . " → " . number_format($realRevenue);
-                        $needsUpdate = true;
-                    }
-
-                    if ($needsUpdate) {
-                        $existingRevenue->update([
-                            'target_revenue' => $targetRevenue,
-                            'real_revenue' => $realRevenue,
-                        ]);
-                        $this->updatedCount++;
-                        $this->successDetails[] = "✅ Baris {$rowNumber}, {$monthPair['month_name']}: Updated - " . implode(', ', $changes);
-                    } else {
-                        $this->duplicateCount++;
-                    }
-                } else {
-                    // Create new revenue record
-                    Revenue::create([
-                        'account_manager_id' => $accountManagerId,
-                        'corporate_customer_id' => $corporateCustomerId,
-                        'divisi_id' => $divisiId,
-                        'target_revenue' => $targetRevenue,
-                        'real_revenue' => $realRevenue,
-                        'bulan' => $bulan,
-                    ]);
-                    $this->importedCount++;
-                }
-
-                $processedMonths++;
-
-            } catch (\Exception $e) {
-                $this->errorCount++;
-                $this->errorDetails[] = "❌ Baris {$rowNumber}, Bulan {$monthPair['month_name']}: Gagal menyimpan revenue - " . $e->getMessage();
-                Log::error("Revenue save error", [
-                    'row' => $rowNumber,
-                    'month' => $monthPair['month_name'],
-                    'error' => $e->getMessage()
-                ]);
-                throw $e;
-            }
-        }
-
-        // ✅ Log jika tidak ada data monthly ditemukan
-        if ($monthlyDataFound === 0) {
-            $this->warningDetails[] = "⚠️ Baris {$rowNumber}: Tidak ada data revenue bulanan ditemukan";
-        }
-
-        return $processedMonths;
-    }
-
-    /**
      * ✅ IMPROVED: Column identification dengan better matching dan logging
      */
     private function identifyColumns($firstRow)
@@ -933,37 +1120,39 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ ENHANCED: Get comprehensive import results dengan detailed summary
+     * ✅ ENHANCED: Get comprehensive import results dengan conflict details
      */
     public function getImportResults()
     {
-        $totalProcessed = $this->processedRows;
-        $successfullyProcessed = $this->importedCount + $this->updatedCount;
-        $failedProcessed = $this->errorCount;
-
         return [
             'imported' => $this->importedCount,
             'updated' => $this->updatedCount,
             'duplicates' => $this->duplicateCount,
             'errors' => $this->errorCount,
             'skipped' => $this->skippedCount,
-            'processed' => $totalProcessed,
+            'conflicts' => $this->conflictCount, // ✅ NEW
+            'processed' => $this->processedRows,
             'year' => $this->year,
+            'overwrite_mode' => $this->overwriteMode, // ✅ NEW
             'error_details' => $this->errorDetails,
             'warning_details' => $this->warningDetails,
             'success_details' => $this->successDetails,
+            'conflict_details' => $this->conflictDetails, // ✅ NEW
             'monthly_pairs_found' => count($this->monthlyPairs),
             'monthly_pairs' => $this->monthlyPairs,
             'detected_columns' => $this->detectedColumns,
+            'existing_data_found' => count($this->existingDataCache), // ✅ NEW
             'summary' => [
-                'total_processed' => $totalProcessed,
-                'successfully_processed' => $successfullyProcessed,
-                'failed_processed' => $failedProcessed,
-                'success_rate' => $totalProcessed > 0 ? round(($successfullyProcessed / $totalProcessed) * 100, 2) : 0,
-                'error_rate' => $totalProcessed > 0 ? round(($failedProcessed / $totalProcessed) * 100, 2) : 0,
-                'duplicate_rate' => $totalProcessed > 0 ? round(($this->duplicateCount / $totalProcessed) * 100, 2) : 0,
+                'total_processed' => $this->processedRows,
+                'successfully_processed' => $this->importedCount + $this->updatedCount,
+                'failed_processed' => $this->errorCount,
+                'success_rate' => $this->processedRows > 0 ? round((($this->importedCount + $this->updatedCount) / $this->processedRows) * 100, 2) : 0,
+                'error_rate' => $this->processedRows > 0 ? round(($this->errorCount / $this->processedRows) * 100, 2) : 0,
+                'duplicate_rate' => $this->processedRows > 0 ? round(($this->duplicateCount / $this->processedRows) * 100, 2) : 0,
+                'conflict_rate' => $this->processedRows > 0 ? round(($this->conflictCount / $this->processedRows) * 100, 2) : 0, // ✅ NEW
                 'has_warnings' => count($this->warningDetails) > 0,
                 'has_errors' => $this->errorCount > 0,
+                'has_conflicts' => $this->conflictCount > 0, // ✅ NEW
                 'import_year' => $this->year,
                 'columns_detected' => count($this->detectedColumns),
                 'monthly_columns_detected' => count($this->monthlyPairs)
@@ -972,8 +1161,7 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     }
 
     /**
-     * ✅ NEW: Compatibility method for RevenueController
-     * Maps getImportResults() to the format expected by controller
+     * ✅ ENHANCED: Compatibility method dengan conflict information
      */
     public function getImportSummary()
     {
@@ -1011,11 +1199,35 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
 
         // Extract duplicate info from success details
         foreach ($this->successDetails as $success) {
-            if (strpos($success, 'Updated') !== false) {
+            if (strpos($success, 'Updated') !== false || strpos($success, 'Diperbarui') !== false) {
                 $duplicates[] = [
                     'message' => $success
                 ];
             }
+        }
+
+        // ✅ ADD conflict information
+        $conflicts = [
+            'total_conflicts' => $this->conflictCount,
+            'conflicts_by_action' => [],
+            'conflicts_by_month' => [],
+            'conflict_details' => $this->conflictDetails
+        ];
+
+        // Categorize conflicts by action
+        foreach ($this->conflictDetails as $conflict) {
+            $action = $conflict['action'];
+            if (!isset($conflicts['conflicts_by_action'][$action])) {
+                $conflicts['conflicts_by_action'][$action] = 0;
+            }
+            $conflicts['conflicts_by_action'][$action]++;
+
+            // Group by month
+            $month = $conflict['month'];
+            if (!isset($conflicts['conflicts_by_month'][$month])) {
+                $conflicts['conflicts_by_month'][$month] = 0;
+            }
+            $conflicts['conflicts_by_month'][$month]++;
         }
 
         return [
@@ -1027,25 +1239,66 @@ class RevenueImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             'missing_divisi' => $missingDivisi,
             'validation_errors' => $validationErrors,
             'duplicates' => $duplicates,
+            'conflicts' => $conflicts, // ✅ NEW
             'error_details' => [
                 'missing_account_managers_count' => count($missingAccountManagers),
                 'missing_corporate_customers_count' => count($missingCorporateCustomers),
                 'missing_divisi_count' => count($missingDivisi),
                 'validation_errors_count' => count($validationErrors),
                 'duplicates_count' => count($duplicates),
+                'conflicts_count' => $this->conflictCount, // ✅ NEW
                 'total_errors' => $results['errors']
             ],
             'success_percentage' => $results['summary']['success_rate'],
             'year' => $this->year,
+            'overwrite_mode' => $this->overwriteMode, // ✅ NEW
             'monthly_pairs_found' => count($this->monthlyPairs),
             'detected_columns' => $this->detectedColumns,
+            'existing_data_found' => count($this->existingDataCache), // ✅ NEW
 
             // Additional detailed info
             'detailed_results' => $results,
             'warning_details' => $this->warningDetails,
             'success_details' => $this->successDetails,
-            'all_error_details' => $this->errorDetails
+            'all_error_details' => $this->errorDetails,
+            'conflict_summary' => [
+                'total' => $this->conflictCount,
+                'by_action' => $conflicts['conflicts_by_action'],
+                'by_month' => $conflicts['conflicts_by_month'],
+                'recommendations' => $this->generateConflictRecommendations()
+            ]
         ];
+    }
+
+    /**
+     * ✅ NEW: Generate recommendations based on conflicts
+     */
+    private function generateConflictRecommendations()
+    {
+        $recommendations = [];
+
+        if ($this->conflictCount > 0) {
+            $recommendations[] = "💡 Ditemukan {$this->conflictCount} konflik data yang sudah ada";
+
+            if ($this->overwriteMode === 'update') {
+                $recommendations[] = "✅ Mode 'update': Data yang sudah ada telah diperbarui otomatis";
+                $recommendations[] = "💡 Gunakan mode 'skip' jika ingin melewati data yang sudah ada";
+            } elseif ($this->overwriteMode === 'skip') {
+                $recommendations[] = "⚠️ Mode 'skip': Data yang sudah ada dilewati";
+                $recommendations[] = "💡 Gunakan mode 'update' jika ingin memperbarui data yang sudah ada";
+            } elseif ($this->overwriteMode === 'ask') {
+                $recommendations[] = "❓ Mode 'ask': Data diperbarui tapi butuh konfirmasi manual";
+                $recommendations[] = "💡 Periksa detail konflik untuk memutuskan tindakan selanjutnya";
+            }
+
+            $recommendations[] = "📊 Periksa 'conflict_details' untuk melihat perubahan spesifik per baris";
+        }
+
+        if ($this->duplicateCount > 0) {
+            $recommendations[] = "ℹ️ {$this->duplicateCount} data identik ditemukan (tidak ada perubahan)";
+        }
+
+        return $recommendations;
     }
 
     /**

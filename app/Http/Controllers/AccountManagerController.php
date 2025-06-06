@@ -18,7 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class AccountManagerController extends Controller
 {
     /**
-     * ✅ ENHANCED: Display a listing of account managers with comprehensive search
+     * ✅ EXISTING: Display a listing of account managers with comprehensive search
      */
     public function index(Request $request)
     {
@@ -86,7 +86,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Show add modal (called from routes)
+     * ✅ EXISTING: Show add modal (called from routes)
      */
     public function showAddModal()
     {
@@ -114,7 +114,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get form data for dropdowns (called from routes)
+     * ✅ EXISTING: Get form data for dropdowns (called from routes)
      */
     public function getFormData()
     {
@@ -143,7 +143,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Store a newly created account manager with better validation
+     * ✅ EXISTING: Store a newly created account manager with better validation
      */
     public function store(Request $request)
     {
@@ -231,7 +231,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * Show the form for editing the specified account manager
+     * ✅ EXISTING: Show the form for editing the specified account manager
      */
     public function edit($id)
     {
@@ -254,7 +254,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Update the specified account manager
+     * ✅ EXISTING: Update the specified account manager
      */
     public function update(Request $request, $id)
     {
@@ -344,7 +344,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * Remove the specified account manager
+     * ✅ EXISTING: Remove the specified account manager
      */
     public function destroy($id)
     {
@@ -377,7 +377,105 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Import Account Managers dengan master data context
+     * ✅ NEW: Bulk delete account managers
+     */
+    public function bulkDelete(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'ids' => 'required|array|min:1',
+                'ids.*' => 'exists:account_managers,id'
+            ], [
+                'ids.required' => 'Pilih minimal satu Account Manager untuk dihapus.',
+                'ids.array' => 'Format data tidak valid.',
+                'ids.min' => 'Pilih minimal satu Account Manager untuk dihapus.',
+                'ids.*.exists' => 'Account Manager tidak ditemukan.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $ids = $request->ids;
+            $deleted = 0;
+            $errors = [];
+            $deletedDetails = [];
+
+            foreach ($ids as $id) {
+                try {
+                    $accountManager = AccountManager::findOrFail($id);
+
+                    // Check if has related revenue data
+                    if ($accountManager->revenues()->exists()) {
+                        $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
+                        continue;
+                    }
+
+                    $accountManagerInfo = [
+                        'id' => $accountManager->id,
+                        'nama' => $accountManager->nama,
+                        'nik' => $accountManager->nik,
+                        'witel' => $accountManager->witel->nama ?? 'Unknown',
+                        'regional' => $accountManager->regional->nama ?? 'Unknown',
+                        'divisis' => $accountManager->divisis->pluck('nama')->implode(', ')
+                    ];
+
+                    // Detach divisions first
+                    $accountManager->divisis()->detach();
+
+                    // Delete account manager
+                    $accountManager->delete();
+                    $deleted++;
+                    $deletedDetails[] = $accountManagerInfo;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error menghapus Account Manager ID {$id}: " . $e->getMessage();
+                }
+            }
+
+            DB::commit();
+
+            $message = "Berhasil menghapus {$deleted} Account Manager.";
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " data gagal dihapus.";
+            }
+
+            // ✅ LOG BULK DELETE ACTIVITY
+            Log::info('Bulk Delete Account Manager Activity', [
+                'deleted_count' => $deleted,
+                'error_count' => count($errors),
+                'user_ip' => $request->ip(),
+                'deleted_details' => $deletedDetails
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'deleted' => $deleted,
+                    'errors' => $errors,
+                    'deleted_details' => $deletedDetails
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Account Manager Bulk Delete Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus data Account Manager.'
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ EXISTING: Import Account Managers dengan master data context
      */
     public function import(Request $request)
     {
@@ -458,7 +556,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Download template Excel (menggunakan AccountManagerTemplateExport)
+     * ✅ EXISTING: Download template Excel (menggunakan AccountManagerTemplateExport)
      */
     public function downloadTemplate()
     {
@@ -474,7 +572,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Export Account Manager data (menggunakan AccountManagerExport)
+     * ✅ EXISTING: Export Account Manager data (menggunakan AccountManagerExport)
      */
     public function export(Request $request)
     {
@@ -490,7 +588,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get master data summary untuk error context
+     * ✅ EXISTING: Get master data summary untuk error context
      */
     public function getMasterDataSummary()
     {
@@ -520,7 +618,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get import helper info
+     * ✅ EXISTING: Get import helper info
      */
     private function getImportHelperInfo()
     {
@@ -541,7 +639,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Generate import message based on results
+     * ✅ EXISTING: Generate import message based on results
      */
     private function generateImportMessage($imported, $updated, $errors)
     {
@@ -575,7 +673,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Search Account Managers for autocomplete with comprehensive search
+     * ✅ EXISTING: Search Account Managers for autocomplete with comprehensive search
      */
     public function search(Request $request)
     {
@@ -624,7 +722,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * Get Account Manager divisions for dropdown
+     * ✅ EXISTING: Get Account Manager divisions for dropdown
      */
     public function getDivisions($id)
     {
@@ -648,7 +746,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get dropdown data for forms
+     * ✅ EXISTING: Get dropdown data for forms
      */
     public function getDivisi()
     {
@@ -671,7 +769,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get regional data for forms
+     * ✅ EXISTING: Get regional data for forms
      */
     public function getRegional()
     {
@@ -694,7 +792,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get statistics for dashboard
+     * ✅ EXISTING: Get statistics for dashboard
      */
     public function getStatistics()
     {
@@ -744,85 +842,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Bulk delete account managers
-     */
-    public function bulkDelete(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'ids' => 'required|array|min:1',
-                'ids.*' => 'exists:account_managers,id'
-            ], [
-                'ids.required' => 'Pilih minimal satu Account Manager untuk dihapus.',
-                'ids.array' => 'Format data tidak valid.',
-                'ids.min' => 'Pilih minimal satu Account Manager untuk dihapus.',
-                'ids.*.exists' => 'Account Manager tidak ditemukan.'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $validator->errors()->first()
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            $ids = $request->ids;
-            $deleted = 0;
-            $errors = [];
-
-            foreach ($ids as $id) {
-                try {
-                    $accountManager = AccountManager::findOrFail($id);
-
-                    // Check if has related revenue data
-                    if ($accountManager->revenues()->exists()) {
-                        $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
-                        continue;
-                    }
-
-                    // Detach divisions first
-                    $accountManager->divisis()->detach();
-
-                    // Delete account manager
-                    $accountManager->delete();
-                    $deleted++;
-
-                } catch (\Exception $e) {
-                    $errors[] = "Error menghapus Account Manager ID {$id}: " . $e->getMessage();
-                }
-            }
-
-            DB::commit();
-
-            $message = "Berhasil menghapus {$deleted} Account Manager.";
-            if (!empty($errors)) {
-                $message .= " " . count($errors) . " data gagal dihapus.";
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'data' => [
-                    'deleted' => $deleted,
-                    'errors' => $errors
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Account Manager Bulk Delete Error: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan saat menghapus data Account Manager.'
-            ], 500);
-        }
-    }
-
-    /**
-     * ✅ NEW: Validate NIK in real-time
+     * ✅ EXISTING: Validate NIK in real-time
      */
     public function validateNik(Request $request)
     {
@@ -874,7 +894,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get Account Manager data for API (alias untuk edit)
+     * ✅ EXISTING: Get Account Manager data for API (alias untuk edit)
      */
     public function getAccountManagerData($id)
     {
@@ -882,7 +902,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Update Account Manager via API (alias untuk update)
+     * ✅ EXISTING: Update Account Manager via API (alias untuk update)
      */
     public function updateAccountManager(Request $request, $id)
     {

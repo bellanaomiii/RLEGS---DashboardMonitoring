@@ -298,29 +298,25 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get corporate customers untuk account manager dengan informasi divisi
+     * ✅ FIXED: Get corporate customers untuk account manager (tanpa divisi_id dari pivot)
      */
     private function getCorporateCustomersForAM($accountManager)
     {
-        return $accountManager->corporateCustomers()
-            ->withPivot('divisi_id')
+        // Ambil corporate customers tanpa mencoba akses divisi_id dari pivot table yang salah
+        $corporateCustomers = $accountManager->corporateCustomers()
             ->with(['accountManagers' => function($query) use ($accountManager) {
                 $query->where('account_managers.id', $accountManager->id);
             }])
-            ->get()
-            ->map(function($customer) use ($accountManager) {
-                // Ambil pivot data dari relationship account_manager_customer
-                $pivotData = DB::table('account_manager_customer')
-                    ->where('account_manager_id', $accountManager->id)
-                    ->where('corporate_customer_id', $customer->id)
-                    ->first();
+            ->get();
 
-                if ($pivotData) {
-                    $customer->pivot_divisi_id = $pivotData->divisi_id ?? null;
-                }
+        // Jika butuh informasi divisi, ambil dari account manager (bukan dari pivot customer)
+        $accountManagerDivisis = $accountManager->divisis; // Relasi yang benar
 
-                return $customer;
-            });
+        return $corporateCustomers->map(function($customer) use ($accountManagerDivisis) {
+            // Attach divisi info dari account manager ke setiap customer
+            $customer->account_manager_divisis = $accountManagerDivisis;
+            return $customer;
+        });
     }
 
     /**

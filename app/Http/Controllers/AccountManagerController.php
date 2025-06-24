@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountManager;
+use App\Models\User;
 use App\Models\Witel;
 use App\Models\Regional;
 use App\Models\Divisi;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AccountManagerController extends Controller
@@ -23,7 +25,7 @@ class AccountManagerController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = AccountManager::with(['witel', 'regional', 'divisis']);
+            $query = AccountManager::with(['witel', 'regional', 'divisis', 'user']);
 
             // ✅ ENHANCED: Search functionality - partial word search
             if ($request->has('search') && !empty($request->search)) {
@@ -58,6 +60,15 @@ class AccountManagerController extends Controller
                 $query->whereHas('divisis', function($subQuery) use ($request) {
                     $subQuery->where('divisi.id', $request->divisi);
                 });
+            }
+
+            // ✅ NEW: Filter by user registration status
+            if ($request->has('user_status')) {
+                if ($request->user_status === 'registered') {
+                    $query->whereHas('user');
+                } elseif ($request->user_status === 'not_registered') {
+                    $query->whereDoesntHave('user');
+                }
             }
 
             $accountManagers = $query->orderBy('nama', 'asc')
@@ -216,7 +227,7 @@ class AccountManagerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Account Manager berhasil ditambahkan dengan ' . count($validDivisiIds) . ' divisi.',
-                'data' => $accountManager->load(['witel', 'regional', 'divisis'])
+                'data' => $accountManager->load(['witel', 'regional', 'divisis', 'user'])
             ]);
 
         } catch (\Exception $e) {
@@ -236,7 +247,7 @@ class AccountManagerController extends Controller
     public function edit($id)
     {
         try {
-            $accountManager = AccountManager::with(['witel', 'regional', 'divisis'])->findOrFail($id);
+            $accountManager = AccountManager::with(['witel', 'regional', 'divisis', 'user'])->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -329,7 +340,7 @@ class AccountManagerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Account Manager berhasil diperbarui dengan ' . count($validDivisiIds) . ' divisi.',
-                'data' => $accountManager->load(['witel', 'regional', 'divisis'])
+                'data' => $accountManager->load(['witel', 'regional', 'divisis', 'user'])
             ]);
 
         } catch (\Exception $e) {
@@ -358,6 +369,11 @@ class AccountManagerController extends Controller
                 return back()->with('error', 'Account Manager tidak dapat dihapus karena masih memiliki data revenue terkait.');
             }
 
+            // ✅ NEW: Check if Account Manager has user account
+            if ($accountManager->user) {
+                return back()->with('error', 'Account Manager tidak dapat dihapus karena memiliki akun user terdaftar. Hapus akun user terlebih dahulu.');
+            }
+
             // Detach divisions first
             $accountManager->divisis()->detach();
 
@@ -373,6 +389,192 @@ class AccountManagerController extends Controller
             Log::error('Account Manager Delete Error: ' . $e->getMessage());
 
             return back()->with('error', 'Terjadi kesalahan saat menghapus Account Manager.');
+        }
+    }
+
+    /**
+     * ✅ NEW: Check if Account Manager has registered user account
+     */
+    public function checkUserStatus($id)
+    {
+        try {
+            $accountManager = AccountManager::with('user')->findOrFail($id);
+            $hasUser = $accountManager->user ? true : false;
+
+            $userData = null;
+            if ($hasUser) {
+                $userData = [
+                    'id' => $accountManager->user->id,
+                    'name' => $accountManager->user->name,
+                    'email' => $accountManager->user->email,
+                    'role' => $accountManager->user->role,
+                    'created_at' => $accountManager->user->created_at,
+                    'profile_image_url' => $accountManager->user->getProfileImageUrl()
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'account_manager' => [
+                    'id' => $accountManager->id,
+                    'nama' => $accountManager->nama,
+                    'nik' => $accountManager->nik
+                ],
+                'has_user' => $hasUser,
+                'user_data' => $userData
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Check User Status Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Account Manager tidak ditemukan.'
+            ], 404);
+        }
+    }
+
+    /**
+     * ✅ NEW: Change password for Account Manager's user account
+     */
+    public function changePassword(Request $request, $id)
+    {
+        try {
+            $accountManager = AccountManager::with('user')->findOrFail($id);
+
+            if (!$accountManager->user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Account Manager belum memiliki akun user terdaftar.'
+                ], 422);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'new_password' => 'required|min:8|confirmed',
+                'new_password_confirmation' => 'required'
+            ], [
+                'new_password.required' => 'Password baru wajib diisi.',
+                'new_password.min' => 'Password minimal 8 karakter.',
+                'new_password.confirmed' => 'Konfirmasi password tidak cocok.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal: ' . $validator->errors()->first(),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Update password
+            $accountManager->user->update([
+                'password' => Hash::make($request->new_password)
+            ]);
+
+            DB::commit();
+
+            // Log password change activity
+            Log::info('Password changed for Account Manager', [
+                'account_manager_id' => $accountManager->id,
+                'account_manager_name' => $accountManager->nama,
+                'user_id' => $accountManager->user->id,
+                'admin_ip' => $request->ip(),
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password berhasil diubah untuk ' . $accountManager->nama . ' (' . $accountManager->user->email . ')'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Change Password Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mengubah password: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ NEW: Get Account Manager user status for password change feature (alternative endpoint)
+     */
+    public function getUserStatus($id)
+    {
+        try {
+            $accountManager = AccountManager::with('user')->findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'account_manager' => [
+                    'id' => $accountManager->id,
+                    'nama' => $accountManager->nama,
+                    'nik' => $accountManager->nik,
+                    'witel' => $accountManager->witel->nama ?? null,
+                    'regional' => $accountManager->regional->nama ?? null
+                ],
+                'has_user_account' => $accountManager->user ? true : false,
+                'user_email' => $accountManager->user ? $accountManager->user->email : null,
+                'user_created_at' => $accountManager->user ? $accountManager->user->created_at->format('d M Y H:i') : null,
+                'can_change_password' => $accountManager->user ? true : false
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get User Status Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Account Manager tidak ditemukan.'
+            ], 404);
+        }
+    }
+
+    /**
+     * ✅ NEW: Reset/Delete user account for Account Manager
+     */
+    public function resetUserAccount($id)
+    {
+        try {
+            $accountManager = AccountManager::with('user')->findOrFail($id);
+
+            if (!$accountManager->user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Account Manager tidak memiliki akun user yang terdaftar.'
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $userEmail = $accountManager->user->email;
+
+            // Delete user account
+            $accountManager->user->delete();
+
+            DB::commit();
+
+            // Log account deletion
+            Log::info('User account deleted for Account Manager', [
+                'account_manager_id' => $accountManager->id,
+                'account_manager_name' => $accountManager->nama,
+                'deleted_email' => $userEmail,
+                'admin_ip' => request()->ip(),
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Akun user berhasil dihapus untuk ' . $accountManager->nama . ' (' . $userEmail . ')'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Reset User Account Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus akun user: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -408,11 +610,17 @@ class AccountManagerController extends Controller
 
             foreach ($ids as $id) {
                 try {
-                    $accountManager = AccountManager::findOrFail($id);
+                    $accountManager = AccountManager::with('user')->findOrFail($id);
 
                     // Check if has related revenue data
                     if ($accountManager->revenues()->exists()) {
                         $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
+                        continue;
+                    }
+
+                    // ✅ NEW: Check if has user account
+                    if ($accountManager->user) {
+                        $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki akun user terdaftar.";
                         continue;
                     }
 
@@ -700,7 +908,7 @@ class AccountManagerController extends Controller
                           $subQuery->where('nama', 'LIKE', "%{$searchTerm}%");
                       });
             })
-            ->with(['divisis', 'witel', 'regional'])
+            ->with(['divisis', 'witel', 'regional', 'user'])
             ->orderBy('nama')
             ->limit(10)
             ->get(['id', 'nama', 'nik']);
@@ -792,7 +1000,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Get statistics for dashboard
+     * ✅ ENHANCED: Get statistics for dashboard with user account information
      */
     public function getStatistics()
     {
@@ -800,6 +1008,10 @@ class AccountManagerController extends Controller
             $totalAccountManagers = AccountManager::count();
             $recentAccountManagers = AccountManager::where('created_at', '>=', now()->subDays(30))->count();
             $activeAccountManagers = AccountManager::whereHas('revenues')->distinct()->count();
+
+            // ✅ NEW: Count Account Managers with and without user accounts
+            $accountManagersWithUsers = AccountManager::whereHas('user')->count();
+            $accountManagersWithoutUsers = $totalAccountManagers - $accountManagersWithUsers;
 
             // Count by divisi
             $divisiStats = DB::table('account_manager_divisi')
@@ -818,13 +1030,26 @@ class AccountManagerController extends Controller
                 })
                 ->sortDesc();
 
+            // ✅ NEW: User registration statistics
+            $userRegistrationStats = [
+                'total_with_accounts' => $accountManagersWithUsers,
+                'total_without_accounts' => $accountManagersWithoutUsers,
+                'registration_percentage' => $totalAccountManagers > 0 ? round(($accountManagersWithUsers / $totalAccountManagers) * 100, 2) : 0,
+                'recent_registrations' => AccountManager::whereHas('user', function($query) {
+                    $query->where('created_at', '>=', now()->subDays(30));
+                })->count()
+            ];
+
             return [
                 'total_account_managers' => $totalAccountManagers,
                 'recent_account_managers' => $recentAccountManagers,
                 'active_account_managers' => $activeAccountManagers,
                 'inactive_account_managers' => $totalAccountManagers - $activeAccountManagers,
                 'divisi_stats' => $divisiStats,
-                'regional_stats' => $regionalStats
+                'regional_stats' => $regionalStats,
+                'user_registration_stats' => $userRegistrationStats, // ✅ NEW
+                'accounts_with_users' => $accountManagersWithUsers, // ✅ NEW
+                'accounts_without_users' => $accountManagersWithoutUsers // ✅ NEW
             ];
 
         } catch (\Exception $e) {
@@ -836,7 +1061,15 @@ class AccountManagerController extends Controller
                 'active_account_managers' => 0,
                 'inactive_account_managers' => 0,
                 'divisi_stats' => collect(),
-                'regional_stats' => collect()
+                'regional_stats' => collect(),
+                'user_registration_stats' => [
+                    'total_with_accounts' => 0,
+                    'total_without_accounts' => 0,
+                    'registration_percentage' => 0,
+                    'recent_registrations' => 0
+                ],
+                'accounts_with_users' => 0,
+                'accounts_without_users' => 0
             ];
         }
     }
@@ -890,6 +1123,167 @@ class AccountManagerController extends Controller
                 'valid' => false,
                 'message' => 'Terjadi kesalahan saat validasi NIK.'
             ]);
+        }
+    }
+
+    /**
+     * ✅ NEW: Get all Account Managers with user status for admin panel
+     */
+    public function getAccountManagersWithUserStatus(Request $request)
+    {
+        try {
+            $query = AccountManager::with(['witel', 'regional', 'divisis', 'user']);
+
+            // Search functionality
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = trim($request->search);
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('nik', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            // Filter by user status
+            if ($request->has('user_status')) {
+                if ($request->user_status === 'registered') {
+                    $query->whereHas('user');
+                } elseif ($request->user_status === 'not_registered') {
+                    $query->whereDoesntHave('user');
+                }
+            }
+
+            $accountManagers = $query->orderBy('nama')
+                                   ->paginate($request->get('per_page', 15));
+
+            // Transform data to include user status
+            $accountManagers->getCollection()->transform(function ($am) {
+                return [
+                    'id' => $am->id,
+                    'nama' => $am->nama,
+                    'nik' => $am->nik,
+                    'witel' => $am->witel->nama ?? null,
+                    'regional' => $am->regional->nama ?? null,
+                    'divisis' => $am->divisis->pluck('nama')->implode(', '),
+                    'has_user_account' => $am->user ? true : false,
+                    'user_email' => $am->user ? $am->user->email : null,
+                    'user_created_at' => $am->user ? $am->user->created_at->format('d M Y H:i') : null,
+                    'user_last_login' => $am->user && $am->user->last_login_at ? $am->user->last_login_at->format('d M Y H:i') : null,
+                    'can_change_password' => $am->user ? true : false
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $accountManagers
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get Account Managers With User Status Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mengambil data Account Manager.',
+                'data' => []
+            ]);
+        }
+    }
+
+    /**
+     * ✅ NEW: Bulk password reset for multiple Account Managers
+     */
+    public function bulkPasswordReset(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'account_manager_ids' => 'required|array|min:1',
+                'account_manager_ids.*' => 'exists:account_managers,id',
+                'new_password' => 'required|min:8|confirmed',
+                'new_password_confirmation' => 'required'
+            ], [
+                'account_manager_ids.required' => 'Pilih minimal satu Account Manager.',
+                'account_manager_ids.array' => 'Format data tidak valid.',
+                'account_manager_ids.min' => 'Pilih minimal satu Account Manager.',
+                'account_manager_ids.*.exists' => 'Account Manager tidak ditemukan.',
+                'new_password.required' => 'Password baru wajib diisi.',
+                'new_password.min' => 'Password minimal 8 karakter.',
+                'new_password.confirmed' => 'Konfirmasi password tidak cocok.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasi gagal: ' . $validator->errors()->first(),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $accountManagerIds = $request->account_manager_ids;
+            $newPassword = Hash::make($request->new_password);
+            $updated = 0;
+            $errors = [];
+            $updatedDetails = [];
+
+            foreach ($accountManagerIds as $id) {
+                try {
+                    $accountManager = AccountManager::with('user')->findOrFail($id);
+
+                    if (!$accountManager->user) {
+                        $errors[] = "Account Manager '{$accountManager->nama}' tidak memiliki akun user terdaftar.";
+                        continue;
+                    }
+
+                    // Update password
+                    $accountManager->user->update(['password' => $newPassword]);
+
+                    $updated++;
+                    $updatedDetails[] = [
+                        'id' => $accountManager->id,
+                        'nama' => $accountManager->nama,
+                        'nik' => $accountManager->nik,
+                        'email' => $accountManager->user->email
+                    ];
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error mengubah password Account Manager ID {$id}: " . $e->getMessage();
+                }
+            }
+
+            DB::commit();
+
+            $message = "Berhasil mengubah password {$updated} Account Manager.";
+            if (!empty($errors)) {
+                $message .= " " . count($errors) . " data gagal diproses.";
+            }
+
+            // Log bulk password reset activity
+            Log::info('Bulk Password Reset Activity', [
+                'updated_count' => $updated,
+                'error_count' => count($errors),
+                'admin_ip' => $request->ip(),
+                'updated_details' => $updatedDetails,
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'updated' => $updated,
+                    'errors' => $errors,
+                    'updated_details' => $updatedDetails
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk Password Reset Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat mengubah password: ' . $e->getMessage()
+            ], 500);
         }
     }
 

@@ -106,7 +106,7 @@ class AccountManagerDetailController extends Controller
             $yearsList = [Carbon::now()->year];
         }
 
-        // Get total revenue time period (earliest to latest year)
+        // ✅ UPDATED: Get total revenue time period (earliest to latest month/year) - seperti calculatePeriodRange
         $revenuePeriod = $this->getRevenuePeriod($accountManager->id);
 
         return view('detailAM', [
@@ -193,21 +193,44 @@ class AccountManagerDetailController extends Controller
     }
 
     /**
-     * Get the revenue time period (earliest to latest year with data)
+     * ✅ UPDATED: Get the revenue time period (earliest to latest month/year with data)
+     * Mirip dengan calculatePeriodRange() di DashboardController
      */
     private function getRevenuePeriod($accountManagerId)
     {
-        $earliestYear = Revenue::where('account_manager_id', $accountManagerId)
+        // Ambil tanggal minimum dan maksimum dari revenue
+        $minDate = Revenue::where('account_manager_id', $accountManagerId)
             ->orderBy('bulan', 'asc')
-            ->value(DB::raw('YEAR(bulan)'));
+            ->value('bulan');
 
-        $latestYear = Revenue::where('account_manager_id', $accountManagerId)
+        $maxDate = Revenue::where('account_manager_id', $accountManagerId)
             ->orderBy('bulan', 'desc')
-            ->value(DB::raw('YEAR(bulan)'));
+            ->value('bulan');
+
+        // Jika tidak ada data, return default
+        if (!$minDate || !$maxDate) {
+            return [
+                'earliest' => 'Belum ada data',
+                'latest' => 'Belum ada data',
+                'period_string' => 'Belum ada data',
+                'formatted_period' => 'Belum ada data'
+            ];
+        }
+
+        // Format tanggal dengan Carbon (locale Indonesia)
+        $minMonth = Carbon::parse($minDate)->locale('id')->translatedFormat('M Y');
+        $maxMonth = Carbon::parse($maxDate)->locale('id')->translatedFormat('M Y');
+
+        // Buat string periode
+        $periodString = $minMonth === $maxMonth ? $minMonth : "$minMonth hingga $maxMonth";
 
         return [
-            'earliest' => $earliestYear ?? Carbon::now()->year,
-            'latest' => $latestYear ?? Carbon::now()->year
+            'earliest' => $minMonth,
+            'latest' => $maxMonth,
+            'period_string' => $periodString,
+            'formatted_period' => "Sejak $periodString",
+            'earliest_date' => $minDate,
+            'latest_date' => $maxDate
         ];
     }
 

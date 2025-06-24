@@ -35,7 +35,10 @@ Route::get('/search-account-managers', [RegisteredUserController::class, 'search
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
-    Route::get('/revenue_data', [RevenueController::class, 'index'])->name('revenue.data');
+
+    // ✅ Revenue data route - admin only
+    Route::get('/revenue_data', [RevenueController::class, 'index'])->name('revenue.data')
+        ->middleware('admin');
 });
 
 // ✅ AUTHENTICATED ROUTES
@@ -46,8 +49,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/update-image', [ProfileController::class, 'updateImage'])->name('profile.update-image');
 
-    // ✅ REVENUE ROUTES - Complete with FIXED search routes
-    Route::prefix('revenue')->name('revenue.')->group(function () {
+    // ✅ REVENUE ROUTES - Admin only
+    Route::prefix('revenue')->name('revenue.')->middleware('admin')->group(function () {
         // Basic CRUD
         Route::get('/', [RevenueController::class, 'index'])->name('index');
         Route::get('/data', [RevenueController::class, 'index'])->name('data.filtered');
@@ -57,29 +60,36 @@ Route::middleware('auth')->group(function () {
         Route::put('/{id}', [RevenueController::class, 'update'])->name('update');
         Route::delete('/{id}', [RevenueController::class, 'destroy'])->name('destroy');
 
-        // ✅ FIXED: Import/Export using controller methods
+        // Import/Export
         Route::post('/import', [RevenueController::class, 'import'])->name('import');
         Route::get('/export', [RevenueController::class, 'export'])->name('export');
         Route::get('/template', [RevenueController::class, 'downloadTemplate'])->name('template');
         Route::get('/download-template', [RevenueController::class, 'downloadTemplate'])->name('download-template');
 
-        // ✅ CRITICAL FIX: Search routes - Changed from POST to GET to match JavaScript AJAX calls
+        // Search routes
         Route::get('/search', [RevenueController::class, 'search'])->name('search');
         Route::get('/search-account-manager', [RevenueController::class, 'searchAccountManager'])->name('search-account-manager');
         Route::get('/search-corporate-customer', [RevenueController::class, 'searchCorporateCustomer'])->name('search-corporate-customer');
 
-        // ✅ NEW: Additional utility routes from enhanced controller
+        // Import utility routes
         Route::get('/import-info', [RevenueController::class, 'getImportInfo'])->name('import-info');
         Route::post('/preview-import', [RevenueController::class, 'previewImport'])->name('preview-import');
         Route::get('/stats', [RevenueController::class, 'getStats'])->name('stats');
 
-        // ✅ ADDED: Missing utility routes for JavaScript integration
+        // Bulk operations routes
+        Route::post('/bulk-delete', [RevenueController::class, 'bulkDelete'])->name('bulk-delete');
+        Route::post('/bulk-delete-preview', [RevenueController::class, 'bulkDeletePreview'])->name('bulk-delete-preview');
+
+        // Monthly stats route
+        Route::get('/monthly-stats', [RevenueController::class, 'getMonthlyRevenueStats'])->name('monthly-stats');
+
+        // Utility routes
         Route::get('/account-manager/{id}/divisions', [RevenueController::class, 'getAccountManagerDivisions'])->name('account-manager.divisions');
         Route::get('/statistics', [RevenueController::class, 'getStatistics'])->name('statistics');
     });
 
-    // ✅ ACCOUNT MANAGER ROUTES - Complete with ALL missing routes added
-    Route::prefix('account-manager')->name('account-manager.')->group(function () {
+    // ✅ ACCOUNT MANAGER ROUTES - Admin only
+    Route::prefix('account-manager')->name('account-manager.')->middleware('admin')->group(function () {
         // Basic CRUD
         Route::get('/', [AccountManagerController::class, 'index'])->name('index');
         Route::get('/create', [AccountManagerController::class, 'create'])->name('create');
@@ -89,26 +99,34 @@ Route::middleware('auth')->group(function () {
         Route::put('/{id}', [AccountManagerController::class, 'update'])->name('update');
         Route::delete('/{id}', [AccountManagerController::class, 'destroy'])->name('destroy');
 
-        // ✅ FIXED: Import/Export using controller methods
+        // Import/Export
         Route::post('/import', [AccountManagerController::class, 'import'])->name('import');
         Route::get('/export', [AccountManagerController::class, 'export'])->name('export');
         Route::get('/template', [AccountManagerController::class, 'downloadTemplate'])->name('template');
         Route::get('/download-template', [AccountManagerController::class, 'downloadTemplate'])->name('download-template');
 
-        // ✅ NEW: Enhanced controller methods that were missing routes
+        // Enhanced features
         Route::get('/add-modal', [AccountManagerController::class, 'showAddModal'])->name('add-modal');
         Route::get('/form-data', [AccountManagerController::class, 'getFormData'])->name('form-data');
         Route::post('/bulk-delete', [AccountManagerController::class, 'bulkDelete'])->name('bulk-delete');
         Route::post('/validate-nik', [AccountManagerController::class, 'validateNik'])->name('validate-nik');
         Route::get('/statistics', [AccountManagerController::class, 'getStatistics'])->name('statistics');
 
+        // ✅ NEW: Password Management Routes - FIXED missing routes
+        Route::post('/{id}/change-password', [AccountManagerController::class, 'changePassword'])->name('change-password');
+        Route::get('/{id}/user-status', [AccountManagerController::class, 'getUserStatus'])->name('user-status');
+        Route::get('/{id}/user-info', [AccountManagerController::class, 'getUserStatus'])->name('user-info');
+        Route::get('/{id}/check-user', [AccountManagerController::class, 'checkUserStatus'])->name('check-user');
+        Route::delete('/{id}/reset-user', [AccountManagerController::class, 'resetUserAccount'])->name('reset-user');
+        Route::post('/bulk-password-reset', [AccountManagerController::class, 'bulkPasswordReset'])->name('bulk-password-reset');
+
         // Search Routes
         Route::get('/search', [AccountManagerController::class, 'search'])->name('search');
         Route::get('/{id}/divisions', [AccountManagerController::class, 'getDivisions'])->name('divisions');
     });
 
-    // ✅ UNDERSCORE ROUTES for backward compatibility - Account Manager
-    Route::prefix('account_manager')->name('account_manager.')->group(function () {
+    // ✅ UNDERSCORE ROUTES for backward compatibility - Account Manager (Admin only)
+    Route::prefix('account_manager')->name('account_manager.')->middleware('admin')->group(function () {
         Route::get('/', [AccountManagerController::class, 'index'])->name('index');
         Route::get('/create', [AccountManagerController::class, 'create'])->name('create');
         Route::post('/store', [AccountManagerController::class, 'store'])->name('store');
@@ -116,7 +134,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/{id}', [AccountManagerController::class, 'update'])->name('update');
         Route::delete('/{id}', [AccountManagerController::class, 'destroy'])->name('destroy');
 
-        // ✅ FIXED: Import/Export using controller methods for consistency
         Route::post('/import', [AccountManagerController::class, 'import'])->name('import');
         Route::get('/export', [AccountManagerController::class, 'export'])->name('export');
         Route::get('/template', [AccountManagerController::class, 'downloadTemplate'])->name('template');
@@ -126,8 +143,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/validate-nik', [AccountManagerController::class, 'validateNik'])->name('validate-nik');
     });
 
-    // ✅ CORPORATE CUSTOMER ROUTES - Complete with ALL missing routes added
-    Route::prefix('corporate-customer')->name('corporate-customer.')->group(function () {
+    // ✅ CORPORATE CUSTOMER ROUTES - Admin only
+    Route::prefix('corporate-customer')->name('corporate-customer.')->middleware('admin')->group(function () {
         // Basic CRUD
         Route::get('/', [CorporateCustomerController::class, 'index'])->name('index');
         Route::get('/create', [CorporateCustomerController::class, 'create'])->name('create');
@@ -137,23 +154,26 @@ Route::middleware('auth')->group(function () {
         Route::put('/{id}', [CorporateCustomerController::class, 'update'])->name('update');
         Route::delete('/{id}', [CorporateCustomerController::class, 'destroy'])->name('destroy');
 
-        // ✅ FIXED: Import/Export using controller methods
+        // Import/Export
         Route::post('/import', [CorporateCustomerController::class, 'import'])->name('import');
         Route::get('/export', [CorporateCustomerController::class, 'export'])->name('export');
         Route::get('/template', [CorporateCustomerController::class, 'downloadTemplate'])->name('template');
         Route::get('/download-template', [CorporateCustomerController::class, 'downloadTemplate'])->name('download-template');
 
-        // ✅ NEW: Enhanced controller methods that were missing routes
+        // Enhanced features
         Route::get('/search', [CorporateCustomerController::class, 'search'])->name('search');
         Route::get('/statistics', [CorporateCustomerController::class, 'getStatistics'])->name('statistics');
         Route::post('/bulk-delete', [CorporateCustomerController::class, 'bulkDelete'])->name('bulk-delete');
         Route::post('/validate-nipnas', [CorporateCustomerController::class, 'validateNipnas'])->name('validate-nipnas');
     });
 
-    Route::get('/corporate-customer/test-search', [CorporateCustomerController::class, 'testSearch'])->name('corporate-customer.test-search');
+    // ✅ Corporate Customer test route (Admin only)
+    Route::get('/corporate-customer/test-search', [CorporateCustomerController::class, 'testSearch'])
+        ->middleware('admin')
+        ->name('corporate-customer.test-search');
 
-    // ✅ UNDERSCORE ROUTES for backward compatibility - Corporate Customer
-    Route::prefix('corporate_customer')->name('corporate_customer.')->group(function () {
+    // ✅ UNDERSCORE ROUTES for backward compatibility - Corporate Customer (Admin only)
+    Route::prefix('corporate_customer')->name('corporate_customer.')->middleware('admin')->group(function () {
         Route::get('/', [CorporateCustomerController::class, 'index'])->name('index');
         Route::get('/create', [CorporateCustomerController::class, 'create'])->name('create');
         Route::post('/store', [CorporateCustomerController::class, 'store'])->name('store');
@@ -161,7 +181,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/{id}', [CorporateCustomerController::class, 'update'])->name('update');
         Route::delete('/{id}', [CorporateCustomerController::class, 'destroy'])->name('destroy');
 
-        // ✅ FIXED: Import/Export using controller methods for consistency
         Route::post('/import', [CorporateCustomerController::class, 'import'])->name('import');
         Route::get('/export', [CorporateCustomerController::class, 'export'])->name('export');
         Route::get('/template', [CorporateCustomerController::class, 'downloadTemplate'])->name('template');
@@ -171,56 +190,66 @@ Route::middleware('auth')->group(function () {
         Route::post('/validate-nipnas', [CorporateCustomerController::class, 'validateNipnas'])->name('validate-nipnas');
     });
 
-    // ✅ API ROUTES - Complete API endpoints with ALL missing routes added
+    // ✅ API ROUTES
     Route::prefix('api')->name('api.')->group(function () {
-        // Dropdown data
+        // PUBLIC API: Available for all authenticated users (for dropdowns, etc)
         Route::get('/divisi', [AccountManagerController::class, 'getDivisi'])->name('divisi');
         Route::get('/regional', [AccountManagerController::class, 'getRegional'])->name('regional');
         Route::get('/regionals', [RegionalController::class, 'getRegionals'])->name('regionals');
 
-        // Account Manager specific
-        Route::get('/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('account-manager.divisi');
-        Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'getAccountManagerData'])->name('account-manager.edit');
-        Route::put('/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager'])->name('account-manager.update');
+        // API routes - Admin only
+        Route::middleware('admin')->group(function () {
+            Route::get('/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('account-manager.divisi');
+            Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'getAccountManagerData'])->name('account-manager.edit');
+            Route::put('/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager'])->name('account-manager.update');
 
-        // Corporate Customer specific
-        Route::get('/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'getCorporateCustomerData'])->name('corporate-customer.edit');
-        Route::put('/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer'])->name('corporate-customer.update');
+            // Corporate Customer specific
+            Route::get('/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'getCorporateCustomerData'])->name('corporate-customer.edit');
+            Route::put('/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer'])->name('corporate-customer.update');
 
-        // Revenue specific
-        Route::get('/revenue/{id}/edit', [RevenueController::class, 'getRevenueData'])->name('revenue.edit');
-        Route::put('/revenue/{id}/update', [RevenueController::class, 'updateRevenue'])->name('revenue.update');
+            // ✅ FIXED: Revenue specific routes - Added missing ones
+            Route::get('/revenue/{id}/edit', [RevenueController::class, 'getRevenueData'])->name('revenue.edit');
+            Route::put('/revenue/{id}/update', [RevenueController::class, 'updateRevenue'])->name('revenue.update');
+            Route::delete('/revenue/{revenue}', [RevenueController::class, 'destroy'])->name('revenue.destroy');
+            Route::post('/revenue/bulk-delete', [RevenueController::class, 'bulkDelete'])->name('revenue.bulk-delete');
+        });
     });
 
-    // ✅ OTHER EXISTING ROUTES - Preserved as requested
+    // ✅ OTHER EXISTING ROUTES - Available for all authenticated users
     Route::get('/profile/show', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [UserController::class, 'settings'])->name('settings');
-    Route::get('/global-search', [RevenueController::class, 'search'])->name('global.search');
 
-    // Leaderboard routes
+    // ✅ Global search - Admin only
+    Route::get('/global-search', [RevenueController::class, 'search'])
+        ->middleware('admin')
+        ->name('global.search');
+
+    // ✅ PUBLIC: Leaderboard routes (available for all users)
     Route::get('/leaderboardAM', [LeaderboardController::class, 'index'])->name('leaderboard');
     Route::get('/witel-perform', [UserController::class, 'witelPerform'])->name('witel.perform');
 
-    // Witel Performance routes
+    // ✅ PUBLIC: Witel Performance routes (available for all users)
     Route::post('/witel-perform/update-charts', [WitelPerformController::class, 'updateCharts'])->name('witel.update-charts');
     Route::post('/witel-perform/filter-by-divisi', [WitelPerformController::class, 'filterByDivisi'])->name('witel.filter-by-divisi');
     Route::post('/witel-perform/filter-by-witel', [WitelPerformController::class, 'filterByWitel'])->name('witel.filter-by-witel');
     Route::post('/witel-perform/filter-by-regional', [WitelPerformController::class, 'filterByRegional'])->name('witel.filter-by-regional');
 
-    // Detail routes
+    // ✅ PUBLIC: Detail routes (available for all users)
     Route::get('/account-manager/{id}', [AccountManagerDetailController::class, 'show'])->name('account_manager.detail');
     Route::get('/witel/{witel_id}/leaderboard', [WitelLeaderboardController::class, 'index'])->name('witel.leaderboard');
     Route::get('/divisi/{divisi_id}/leaderboard', [DivisiLeaderboardController::class, 'index'])->name('divisi.leaderboard');
 
-    // Regional routes
-    Route::get('/regionals', [RegionalController::class, 'index'])->name('regional.index');
-    Route::get('/regionals/create', [RegionalController::class, 'create'])->name('regional.create');
-    Route::post('/regionals', [RegionalController::class, 'store'])->name('regional.store');
-    Route::get('/regionals/{regional}/edit', [RegionalController::class, 'edit'])->name('regional.edit');
-    Route::put('/regionals/{regional}', [RegionalController::class, 'update'])->name('regional.update');
-    Route::delete('/regionals/{regional}', [RegionalController::class, 'destroy'])->name('regional.destroy');
+    // ✅ Regional management routes - Admin only
+    Route::prefix('regionals')->name('regional.')->middleware('admin')->group(function () {
+        Route::get('/', [RegionalController::class, 'index'])->name('index');
+        Route::get('/create', [RegionalController::class, 'create'])->name('create');
+        Route::post('/', [RegionalController::class, 'store'])->name('store');
+        Route::get('/{regional}/edit', [RegionalController::class, 'edit'])->name('edit');
+        Route::put('/{regional}', [RegionalController::class, 'update'])->name('update');
+        Route::delete('/{regional}', [RegionalController::class, 'destroy'])->name('destroy');
+    });
 
-    // Static routes
+    // ✅ PUBLIC: Static routes (available for all users)
     Route::get('/MonitoringLOP', function () {
         return view('MonitoringLOP');
     })->name('monitoring-LOP');

@@ -393,18 +393,33 @@ class RevenueController extends Controller
     /**
      * ✅ EXISTING: Remove the specified revenue
      */
+    // Ubah destroy method untuk return JSON jika AJAX request
+    // Di destroy() method - tambahkan kondisi untuk handle web route
     public function destroy($id)
     {
         try {
             $revenue = Revenue::findOrFail($id);
             $revenue->delete();
 
-            return back()->with('success', 'Data Revenue berhasil dihapus.');
+            // ✅ FIX: Tambahkan pengecekan untuk web route
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Data Revenue berhasil dihapus.'
+                ]);
+            }
 
+            // ✅ FIX: Handle web route redirect
+            return redirect()->route('revenue.index')->with('success', 'Data Revenue berhasil dihapus.');
         } catch (\Exception $e) {
-            Log::error('Revenue Delete Error: ' . $e->getMessage());
-
-            return back()->with('error', 'Terjadi kesalahan saat menghapus data Revenue.');
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->route('revenue.index')->with('error', 'Terjadi kesalahan saat menghapus data Revenue.');
         }
     }
 

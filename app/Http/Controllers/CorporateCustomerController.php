@@ -262,7 +262,10 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Remove the specified corporate customer
+     * 🔧 FIXED: Remove the specified corporate customer with CASCADE DELETE
+     *
+     * MAJOR CHANGE: Sekarang akan menghapus semua revenue terkait terlebih dahulu (CASCADE DELETE)
+     * bukan menolak penghapusan seperti sebelumnya
      */
     public function destroy($id)
     {
@@ -271,28 +274,76 @@ class CorporateCustomerController extends Controller
 
             $corporateCustomer = CorporateCustomer::findOrFail($id);
 
-            // Check if Corporate Customer has related revenue data
-            if ($corporateCustomer->revenues()->exists()) {
-                return back()->with('error', 'Corporate Customer tidak dapat dihapus karena masih memiliki data revenue terkait.');
+            // 🔧 CRITICAL FIX: CASCADE DELETE - Hapus revenue terkait dulu, bukan tolak penghapusan
+            $relatedRevenuesCount = $corporateCustomer->revenues()->count();
+
+            if ($relatedRevenuesCount > 0) {
+                // Delete all related revenues first (CASCADE DELETE)
+                $corporateCustomer->revenues()->delete();
+                Log::info("CASCADE DELETE: Deleted {$relatedRevenuesCount} related revenues for Corporate Customer ID: {$id}");
             }
 
             // Delete the corporate customer
+            $corporateCustomerName = $corporateCustomer->nama;
+            $corporateCustomerNipnas = $corporateCustomer->nipnas;
             $corporateCustomer->delete();
 
             DB::commit();
 
-            return back()->with('success', 'Corporate Customer berhasil dihapus.');
+            // 🔧 ENHANCED SUCCESS MESSAGE: Informasikan apa saja yang dihapus
+            $message = "Corporate Customer '{$corporateCustomerName}' (NIPNAS: {$corporateCustomerNipnas}) berhasil dihapus";
+
+            if ($relatedRevenuesCount > 0) {
+                $message .= " beserta {$relatedRevenuesCount} data revenue terkait";
+            }
+
+            $message .= ".";
+
+            // Log successful deletion
+            Log::info('Corporate Customer CASCADE DELETE completed', [
+                'corporate_customer_id' => $id,
+                'corporate_customer_name' => $corporateCustomerName,
+                'corporate_customer_nipnas' => $corporateCustomerNipnas,
+                'deleted_revenues_count' => $relatedRevenuesCount,
+                'user_ip' => request()->ip(),
+                'timestamp' => now()
+            ]);
+
+            // Handle different response types
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data' => [
+                        'deleted_corporate_customer' => $corporateCustomerName,
+                        'deleted_nipnas' => $corporateCustomerNipnas,
+                        'deleted_revenues_count' => $relatedRevenuesCount
+                    ]
+                ]);
+            }
+
+            return back()->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Corporate Customer Delete Error: ' . $e->getMessage());
+            Log::error('Corporate Customer Delete Error: ' . $e->getMessage(), [
+                'corporate_customer_id' => $id,
+                'error_trace' => $e->getTraceAsString()
+            ]);
+
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan saat menghapus Corporate Customer: ' . $e->getMessage()
+                ], 500);
+            }
 
             return back()->with('error', 'Terjadi kesalahan saat menghapus Corporate Customer.');
         }
     }
 
     /**
-     * ✅ NEW: Bulk delete corporate customers
+     * 🔧 FIXED: Bulk delete corporate customers with CASCADE DELETE
      */
     public function bulkDelete(Request $request)
     {
@@ -320,22 +371,27 @@ class CorporateCustomerController extends Controller
             $deleted = 0;
             $errors = [];
             $deletedDetails = [];
+            $totalDeletedRevenues = 0;
 
             foreach ($ids as $id) {
                 try {
                     $corporateCustomer = CorporateCustomer::findOrFail($id);
 
-                    // Check if has related revenue data
-                    if ($corporateCustomer->revenues()->exists()) {
-                        $errors[] = "Corporate Customer '{$corporateCustomer->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
-                        continue;
+                    // 🔧 CRITICAL FIX: CASCADE DELETE logic - tidak lagi reject, tapi delete semua
+                    $relatedRevenuesCount = $corporateCustomer->revenues()->count();
+
+                    // Delete related revenues (CASCADE DELETE)
+                    if ($relatedRevenuesCount > 0) {
+                        $corporateCustomer->revenues()->delete();
+                        $totalDeletedRevenues += $relatedRevenuesCount;
                     }
 
                     $corporateCustomerInfo = [
                         'id' => $corporateCustomer->id,
                         'nama' => $corporateCustomer->nama,
                         'nipnas' => $corporateCustomer->nipnas,
-                        'created_at' => $corporateCustomer->created_at
+                        'created_at' => $corporateCustomer->created_at,
+                        'deleted_revenues_count' => $relatedRevenuesCount
                     ];
 
                     $corporateCustomer->delete();
@@ -344,12 +400,22 @@ class CorporateCustomerController extends Controller
 
                 } catch (\Exception $e) {
                     $errors[] = "Error menghapus Corporate Customer ID {$id}: " . $e->getMessage();
+                    Log::error("Bulk Delete Error for Corporate Customer ID {$id}", [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                 }
             }
 
             DB::commit();
 
-            $message = "Berhasil menghapus {$deleted} Corporate Customer.";
+            // 🔧 ENHANCED SUCCESS MESSAGE
+            $message = "Berhasil menghapus {$deleted} Corporate Customer";
+            if ($totalDeletedRevenues > 0) {
+                $message .= " beserta {$totalDeletedRevenues} data revenue terkait";
+            }
+            $message .= ".";
+
             if (!empty($errors)) {
                 $message .= " " . count($errors) . " data gagal dihapus.";
             }
@@ -357,6 +423,7 @@ class CorporateCustomerController extends Controller
             // ✅ LOG BULK DELETE ACTIVITY
             Log::info('Bulk Delete Corporate Customer Activity', [
                 'deleted_count' => $deleted,
+                'total_deleted_revenues' => $totalDeletedRevenues,
                 'error_count' => count($errors),
                 'user_ip' => $request->ip(),
                 'deleted_details' => $deletedDetails
@@ -367,6 +434,7 @@ class CorporateCustomerController extends Controller
                 'message' => $message,
                 'data' => [
                     'deleted' => $deleted,
+                    'total_deleted_revenues' => $totalDeletedRevenues,
                     'errors' => $errors,
                     'deleted_details' => $deletedDetails
                 ]
@@ -379,6 +447,135 @@ class CorporateCustomerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan saat menghapus data Corporate Customer.'
+            ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Bulk delete ALL corporate customers with filter support
+     *
+     * Route: POST /corporate-customer/bulk-delete-all
+     * Function: Menghapus SEMUA Corporate Customer sesuai filter yang aktif
+     */
+    public function bulkDeleteAll(Request $request)
+    {
+        try {
+            $query = CorporateCustomer::query();
+
+            // Apply filters from request
+            if ($request->has('search_filter') && !empty($request->search_filter)) {
+                $searchTerm = trim($request->search_filter);
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('nipnas', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            // Additional filters can be added here if needed
+            if ($request->has('created_after') && !empty($request->created_after)) {
+                $query->where('created_at', '>=', $request->created_after);
+            }
+
+            if ($request->has('created_before') && !empty($request->created_before)) {
+                $query->where('created_at', '<=', $request->created_before);
+            }
+
+            // Get count and preview before delete
+            $corporateCustomers = $query->with(['revenues'])->get();
+            $totalCount = $corporateCustomers->count();
+
+            if ($totalCount === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data Corporate Customer yang sesuai dengan filter.'
+                ], 422);
+            }
+
+            // Calculate what will be deleted (CASCADE info)
+            $totalRevenueCount = 0;
+            $deletedDetails = [];
+
+            foreach ($corporateCustomers as $cc) {
+                $revenueCount = $cc->revenues()->count();
+                $totalRevenueCount += $revenueCount;
+
+                $deletedDetails[] = [
+                    'id' => $cc->id,
+                    'nama' => $cc->nama,
+                    'nipnas' => $cc->nipnas,
+                    'revenue_count' => $revenueCount,
+                    'created_at' => $cc->created_at
+                ];
+            }
+
+            DB::beginTransaction();
+
+            $deletedCount = 0;
+            $deletedRevenuesTotal = 0;
+
+            // Perform CASCADE DELETE for each Corporate Customer
+            foreach ($corporateCustomers as $cc) {
+                try {
+                    // Delete related revenues first (CASCADE DELETE)
+                    $revenueCount = $cc->revenues()->count();
+                    if ($revenueCount > 0) {
+                        $cc->revenues()->delete();
+                        $deletedRevenuesTotal += $revenueCount;
+                    }
+
+                    // Delete corporate customer
+                    $cc->delete();
+                    $deletedCount++;
+
+                } catch (\Exception $e) {
+                    Log::error("Error deleting Corporate Customer ID {$cc->id} in bulk delete all", [
+                        'error' => $e->getMessage(),
+                        'cc_id' => $cc->id,
+                        'cc_name' => $cc->nama
+                    ]);
+                    // Continue with other deletions
+                }
+            }
+
+            DB::commit();
+
+            // Generate comprehensive success message
+            $message = "Berhasil menghapus {$deletedCount} dari {$totalCount} Corporate Customer";
+
+            if ($deletedRevenuesTotal > 0) {
+                $message .= " beserta {$deletedRevenuesTotal} data revenue terkait";
+            }
+
+            $message .= ".";
+
+            // Log bulk delete all activity
+            Log::info('Bulk Delete All Corporate Customer Activity', [
+                'total_count' => $totalCount,
+                'deleted_count' => $deletedCount,
+                'deleted_revenues_total' => $deletedRevenuesTotal,
+                'filters' => $request->only(['search_filter', 'created_after', 'created_before']),
+                'user_ip' => $request->ip(),
+                'deleted_preview' => $deletedDetails
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'total_count' => $totalCount,
+                    'deleted_count' => $deletedCount,
+                    'deleted_revenues_total' => $deletedRevenuesTotal,
+                    'preview_sample' => array_slice($deletedDetails, 0, 10) // First 10 for preview
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Corporate Customer Bulk Delete All Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data Corporate Customer: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -598,7 +795,7 @@ class CorporateCustomerController extends Controller
         }
     }
 
-    /**
+/**
      * ✅ EXISTING: Test method untuk debugging database connection dan data
      */
     public function testSearch()
@@ -666,7 +863,8 @@ class CorporateCustomerController extends Controller
                 '💡 NIPNAS harus unik dan berupa angka 3-20 digit',
                 '💡 Gunakan export existing data sebagai referensi format',
                 '💡 Jika NIPNAS sudah ada, data akan diupdate',
-                '💡 Nama customer akan di-trim untuk menghilangkan spasi berlebih'
+                '💡 Nama customer akan di-trim untuk menghilangkan spasi berlebih',
+                '💡 Import akan menghapus auto refresh - refresh manual setelah melihat hasil'
             ],
             'validation_examples' => [
                 'NIPNAS_VALID' => ['4648251', '123456', '999999999'],
@@ -770,7 +968,7 @@ class CorporateCustomerController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Get statistics for dashboard
+     * ✅ ENHANCED: Get statistics for dashboard with revenue relationship info
      */
     public function getStatistics()
     {
@@ -779,24 +977,73 @@ class CorporateCustomerController extends Controller
             $recentCustomers = CorporateCustomer::where('created_at', '>=', now()->subDays(30))->count();
             $activeCustomers = CorporateCustomer::whereHas('revenues')->distinct()->count();
 
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'total_customers' => $totalCustomers,
-                    'recent_customers' => $recentCustomers,
-                    'active_customers' => $activeCustomers,
-                    'inactive_customers' => $totalCustomers - $activeCustomers
-                ]
-            ]);
+            // ✅ ENHANCED: Revenue-related statistics
+            $totalRevenuesLinked = DB::table('revenues')
+                ->join('corporate_customers', 'revenues.corporate_customer_id', '=', 'corporate_customers.id')
+                ->count();
+
+            // Top customers by revenue count
+            $topCustomersByRevenue = CorporateCustomer::select([
+                    'corporate_customers.id',
+                    'corporate_customers.nama',
+                    'corporate_customers.nipnas',
+                    DB::raw('COUNT(revenues.id) as revenue_count'),
+                    DB::raw('SUM(revenues.real_revenue) as total_real_revenue'),
+                    DB::raw('SUM(revenues.target_revenue) as total_target_revenue')
+                ])
+                ->leftJoin('revenues', 'corporate_customers.id', '=', 'revenues.corporate_customer_id')
+                ->groupBy('corporate_customers.id', 'corporate_customers.nama', 'corporate_customers.nipnas')
+                ->orderBy('revenue_count', 'desc')
+                ->limit(10)
+                ->get();
+
+            // Customer distribution by NIPNAS length
+            $nipnasLengthDistribution = CorporateCustomer::select([
+                    DB::raw('LENGTH(nipnas) as nipnas_length'),
+                    DB::raw('COUNT(*) as count')
+                ])
+                ->groupBy(DB::raw('LENGTH(nipnas)'))
+                ->orderBy('nipnas_length')
+                ->get();
+
+            // Monthly creation statistics
+            $monthlyCreationStats = CorporateCustomer::select([
+                    DB::raw('YEAR(created_at) as year'),
+                    DB::raw('MONTH(created_at) as month'),
+                    DB::raw('COUNT(*) as count')
+                ])
+                ->where('created_at', '>=', now()->subYear())
+                ->groupBy(DB::raw('YEAR(created_at)'), DB::raw('MONTH(created_at)'))
+                ->orderBy('year', 'desc')
+                ->orderBy('month', 'desc')
+                ->get();
+
+            return [
+                'total_customers' => $totalCustomers,
+                'recent_customers' => $recentCustomers,
+                'active_customers' => $activeCustomers,
+                'inactive_customers' => $totalCustomers - $activeCustomers,
+                'total_revenues_linked' => $totalRevenuesLinked,
+                'top_customers_by_revenue' => $topCustomersByRevenue,
+                'nipnas_length_distribution' => $nipnasLengthDistribution,
+                'monthly_creation_stats' => $monthlyCreationStats,
+                'activity_rate' => $totalCustomers > 0 ? round(($activeCustomers / $totalCustomers) * 100, 2) : 0
+            ];
 
         } catch (\Exception $e) {
             Log::error('Corporate Customer Statistics Error: ' . $e->getMessage());
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan saat mengambil statistik.',
-                'data' => []
-            ]);
+            return [
+                'total_customers' => 0,
+                'recent_customers' => 0,
+                'active_customers' => 0,
+                'inactive_customers' => 0,
+                'total_revenues_linked' => 0,
+                'top_customers_by_revenue' => collect(),
+                'nipnas_length_distribution' => collect(),
+                'monthly_creation_stats' => collect(),
+                'activity_rate' => 0
+            ];
         }
     }
 
@@ -889,5 +1136,260 @@ class CorporateCustomerController extends Controller
     public function updateCorporateCustomer(Request $request, $id)
     {
         return $this->update($request, $id);
+    }
+
+    /**
+     * 🆕 NEW: Get bulk delete preview (show what will be deleted)
+     */
+    public function bulkDeletePreview(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'ids' => 'required|array|min:1',
+                'ids.*' => 'exists:corporate_customers,id'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+
+            $corporateCustomers = CorporateCustomer::with(['revenues'])
+                ->whereIn('id', $request->ids)
+                ->get();
+
+            $preview = [];
+            $totalRevenueCount = 0;
+
+            foreach ($corporateCustomers as $cc) {
+                $revenueCount = $cc->revenues()->count();
+                $totalRevenueCount += $revenueCount;
+
+                $preview[] = [
+                    'id' => $cc->id,
+                    'nama' => $cc->nama,
+                    'nipnas' => $cc->nipnas,
+                    'revenue_count' => $revenueCount,
+                    'created_at' => $cc->created_at->format('d M Y H:i'),
+                    'warning' => $revenueCount > 0 ? "Will delete {$revenueCount} related revenues" : null
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Preview for {$corporateCustomers->count()} Corporate Customers",
+                'data' => [
+                    'total_customers' => $corporateCustomers->count(),
+                    'total_revenues_to_delete' => $totalRevenueCount,
+                    'preview' => $preview,
+                    'warning' => $totalRevenueCount > 0 ?
+                        "⚠️ CASCADE DELETE: This operation will also delete {$totalRevenueCount} related revenue records!" :
+                        "ℹ️ No related revenue records will be affected."
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Bulk Delete Preview Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menampilkan preview: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Get Corporate Customer with revenue summary
+     */
+    public function getCorporateCustomerWithRevenueSummary($id)
+    {
+        try {
+            $corporateCustomer = CorporateCustomer::with(['revenues.accountManager', 'revenues.divisi'])
+                ->findOrFail($id);
+
+            $revenueSummary = [
+                'total_revenues' => $corporateCustomer->revenues->count(),
+                'total_target' => $corporateCustomer->revenues->sum('target_revenue'),
+                'total_real' => $corporateCustomer->revenues->sum('real_revenue'),
+                'achievement_rate' => 0,
+                'latest_revenue_date' => null,
+                'active_account_managers' => $corporateCustomer->revenues->pluck('accountManager.nama')->unique()->values(),
+                'active_divisis' => $corporateCustomer->revenues->pluck('divisi.nama')->unique()->values()
+            ];
+
+            if ($revenueSummary['total_target'] > 0) {
+                $revenueSummary['achievement_rate'] = round(
+                    ($revenueSummary['total_real'] / $revenueSummary['total_target']) * 100,
+                    2
+                );
+            }
+
+            if ($corporateCustomer->revenues->isNotEmpty()) {
+                $revenueSummary['latest_revenue_date'] = $corporateCustomer->revenues
+                    ->sortByDesc('bulan')
+                    ->first()
+                    ->bulan;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'corporate_customer' => [
+                        'id' => $corporateCustomer->id,
+                        'nama' => $corporateCustomer->nama,
+                        'nipnas' => $corporateCustomer->nipnas,
+                        'created_at' => $corporateCustomer->created_at,
+                        'updated_at' => $corporateCustomer->updated_at
+                    ],
+                    'revenue_summary' => $revenueSummary
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get Corporate Customer With Revenue Summary Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Corporate Customer tidak ditemukan.'
+            ], 404);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Search Corporate Customers with revenue statistics
+     */
+    public function searchWithStats(Request $request)
+    {
+        try {
+            $searchTerm = trim($request->get('search', ''));
+            $limit = $request->get('limit', 10);
+
+            if (strlen($searchTerm) < 2) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'Search term must be at least 2 characters'
+                ]);
+            }
+
+            $corporateCustomers = CorporateCustomer::select([
+                    'corporate_customers.id',
+                    'corporate_customers.nama',
+                    'corporate_customers.nipnas',
+                    'corporate_customers.created_at',
+                    DB::raw('COUNT(revenues.id) as revenue_count'),
+                    DB::raw('SUM(revenues.real_revenue) as total_real_revenue'),
+                    DB::raw('SUM(revenues.target_revenue) as total_target_revenue')
+                ])
+                ->leftJoin('revenues', 'corporate_customers.id', '=', 'revenues.corporate_customer_id')
+                ->where(function($q) use ($searchTerm) {
+                    $q->where('corporate_customers.nama', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('corporate_customers.nipnas', 'LIKE', "%{$searchTerm}%");
+                })
+                ->groupBy('corporate_customers.id', 'corporate_customers.nama', 'corporate_customers.nipnas', 'corporate_customers.created_at')
+                ->orderBy('corporate_customers.nama')
+                ->limit($limit)
+                ->get();
+
+            $results = $corporateCustomers->map(function($customer) {
+                $achievementRate = 0;
+                if ($customer->total_target_revenue > 0) {
+                    $achievementRate = round(($customer->total_real_revenue / $customer->total_target_revenue) * 100, 2);
+                }
+
+                return [
+                    'id' => $customer->id,
+                    'nama' => $customer->nama,
+                    'nipnas' => $customer->nipnas,
+                    'revenue_count' => $customer->revenue_count,
+                    'total_real_revenue' => $customer->total_real_revenue ?: 0,
+                    'total_target_revenue' => $customer->total_target_revenue ?: 0,
+                    'achievement_rate' => $achievementRate,
+                    'is_active' => $customer->revenue_count > 0
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $results,
+                'meta' => [
+                    'search_term' => $searchTerm,
+                    'found_count' => $results->count(),
+                    'limit' => $limit
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Corporate Customer Search With Stats Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat pencarian.',
+                'data' => []
+            ]);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Get Corporate Customer usage analysis
+     */
+    public function getUsageAnalysis()
+    {
+        try {
+            // Customers with no revenues
+            $unusedCustomers = CorporateCustomer::whereDoesntHave('revenues')->count();
+
+            // Customers with revenues
+            $activeCustomers = CorporateCustomer::whereHas('revenues')->count();
+
+            // Most active customers (by revenue count)
+            $mostActiveCustomers = CorporateCustomer::select([
+                    'corporate_customers.id',
+                    'corporate_customers.nama',
+                    'corporate_customers.nipnas',
+                    DB::raw('COUNT(revenues.id) as revenue_count')
+                ])
+                ->join('revenues', 'corporate_customers.id', '=', 'revenues.corporate_customer_id')
+                ->groupBy('corporate_customers.id', 'corporate_customers.nama', 'corporate_customers.nipnas')
+                ->orderBy('revenue_count', 'desc')
+                ->limit(10)
+                ->get();
+
+            // Recently created but unused
+            $recentUnused = CorporateCustomer::whereDoesntHave('revenues')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count();
+
+            // NIPNAS statistics
+            $nipnasStats = [
+                'shortest' => CorporateCustomer::selectRaw('MIN(LENGTH(nipnas)) as min_length')->value('min_length'),
+                'longest' => CorporateCustomer::selectRaw('MAX(LENGTH(nipnas)) as max_length')->value('max_length'),
+                'average' => CorporateCustomer::selectRaw('AVG(LENGTH(nipnas)) as avg_length')->value('avg_length')
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_customers' => CorporateCustomer::count(),
+                    'active_customers' => $activeCustomers,
+                    'unused_customers' => $unusedCustomers,
+                    'recent_unused' => $recentUnused,
+                    'usage_rate' => CorporateCustomer::count() > 0 ?
+                        round(($activeCustomers / CorporateCustomer::count()) * 100, 2) : 0,
+                    'most_active_customers' => $mostActiveCustomers,
+                    'nipnas_statistics' => $nipnasStats
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Corporate Customer Usage Analysis Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menganalisis usage data.'
+            ], 500);
+        }
     }
 }

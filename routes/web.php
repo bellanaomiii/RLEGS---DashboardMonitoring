@@ -79,6 +79,8 @@ Route::middleware('auth')->group(function () {
         // Bulk operations routes
         Route::post('/bulk-delete', [RevenueController::class, 'bulkDelete'])->name('bulk-delete');
         Route::post('/bulk-delete-preview', [RevenueController::class, 'bulkDeletePreview'])->name('bulk-delete-preview');
+        // 🆕 FIX: Tambah bulk delete all dengan filter
+        Route::post('/bulk-delete-all', [RevenueController::class, 'bulkDeleteAll'])->name('bulk-delete-all');
 
         // Monthly stats route
         Route::get('/monthly-stats', [RevenueController::class, 'getMonthlyRevenueStats'])->name('monthly-stats');
@@ -109,10 +111,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/add-modal', [AccountManagerController::class, 'showAddModal'])->name('add-modal');
         Route::get('/form-data', [AccountManagerController::class, 'getFormData'])->name('form-data');
         Route::post('/bulk-delete', [AccountManagerController::class, 'bulkDelete'])->name('bulk-delete');
+        // 🆕 FIX: Tambah bulk delete all untuk Account Manager
+        Route::post('/bulk-delete-all', [AccountManagerController::class, 'bulkDeleteAll'])->name('bulk-delete-all');
         Route::post('/validate-nik', [AccountManagerController::class, 'validateNik'])->name('validate-nik');
         Route::get('/statistics', [AccountManagerController::class, 'getStatistics'])->name('statistics');
 
-        // ✅ NEW: Password Management Routes - FIXED missing routes
+        // ✅ FIX: Password Management Routes - TAMBAH missing routes
         Route::post('/{id}/change-password', [AccountManagerController::class, 'changePassword'])->name('change-password');
         Route::get('/{id}/user-status', [AccountManagerController::class, 'getUserStatus'])->name('user-status');
         Route::get('/{id}/user-info', [AccountManagerController::class, 'getUserStatus'])->name('user-info');
@@ -164,6 +168,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/search', [CorporateCustomerController::class, 'search'])->name('search');
         Route::get('/statistics', [CorporateCustomerController::class, 'getStatistics'])->name('statistics');
         Route::post('/bulk-delete', [CorporateCustomerController::class, 'bulkDelete'])->name('bulk-delete');
+        // 🆕 FIX: Tambah bulk delete all untuk Corporate Customer
+        Route::post('/bulk-delete-all', [CorporateCustomerController::class, 'bulkDeleteAll'])->name('bulk-delete-all');
         Route::post('/validate-nipnas', [CorporateCustomerController::class, 'validateNipnas'])->name('validate-nipnas');
     });
 
@@ -199,19 +205,26 @@ Route::middleware('auth')->group(function () {
 
         // API routes - Admin only
         Route::middleware('admin')->group(function () {
-            Route::get('/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('account-manager.divisi');
-            Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'getAccountManagerData'])->name('account-manager.edit');
-            Route::put('/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager'])->name('account-manager.update');
-
-            // Corporate Customer specific
-            Route::get('/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'getCorporateCustomerData'])->name('corporate-customer.edit');
-            Route::put('/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer'])->name('corporate-customer.update');
-
-            // ✅ FIXED: Revenue specific routes - Added missing ones
-            Route::get('/revenue/{id}/edit', [RevenueController::class, 'getRevenueData'])->name('revenue.edit');
+            // 🆕 FIX: Revenue specific API routes - TAMBAH missing routes
+            Route::get('/revenue/{id}/edit', [RevenueController::class, 'edit'])->name('revenue.edit');
+            Route::get('/revenue/{id}/data', [RevenueController::class, 'getRevenueData'])->name('revenue.data');
             Route::put('/revenue/{id}/update', [RevenueController::class, 'updateRevenue'])->name('revenue.update');
             Route::delete('/revenue/{revenue}', [RevenueController::class, 'destroy'])->name('revenue.destroy');
             Route::post('/revenue/bulk-delete', [RevenueController::class, 'bulkDelete'])->name('revenue.bulk-delete');
+
+            // Account Manager specific API routes
+            Route::get('/account-manager/{id}/divisi', [RevenueController::class, 'getAccountManagerDivisions'])->name('account-manager.divisi');
+            Route::get('/account-manager/{id}/edit', [AccountManagerController::class, 'edit'])->name('account-manager.edit');
+            Route::get('/account-manager/{id}/data', [AccountManagerController::class, 'getAccountManagerData'])->name('account-manager.data');
+            Route::put('/account-manager/{id}/update', [AccountManagerController::class, 'updateAccountManager'])->name('account-manager.update');
+            // 🆕 FIX: TAMBAH missing user status routes di API
+            Route::get('/account-manager/{id}/user-status', [AccountManagerController::class, 'getUserStatus'])->name('account-manager.user-status');
+            Route::get('/account-manager/{id}/check-user', [AccountManagerController::class, 'checkUserStatus'])->name('account-manager.check-user');
+
+            // Corporate Customer specific API routes
+            Route::get('/corporate-customer/{id}/edit', [CorporateCustomerController::class, 'edit'])->name('corporate-customer.edit');
+            Route::get('/corporate-customer/{id}/data', [CorporateCustomerController::class, 'getCorporateCustomerData'])->name('corporate-customer.data');
+            Route::put('/corporate-customer/{id}/update', [CorporateCustomerController::class, 'updateCorporateCustomer'])->name('corporate-customer.update');
         });
     });
 

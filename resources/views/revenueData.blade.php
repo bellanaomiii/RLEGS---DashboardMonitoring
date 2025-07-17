@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{{ asset('css/revenue.css') }}">
     <!-- Font Awesome untuk ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- ✅ CRITICAL: CSRF Meta Tag -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <style>
@@ -215,8 +216,8 @@
         /* ========== MONTH PICKER - FIXED 3x4 LAYOUT ========== */
         /* 🚀 CRITICAL FIX: Prevent month picker container from taking excessive height */
         .month-picker-container {
-            position: absolute;
-            z-index: 9999;
+            position: relative;
+            z-index: 10000;
             width: 100%;
             height: auto !important; /* ✅ Force auto height */
             min-height: unset !important; /* ✅ Remove any min-height */
@@ -232,16 +233,23 @@
             border: 2px solid #e2e8f0;
             border-radius: var(--radius-lg);
             box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-            z-index: 9999;
+            z-index: 10001 !important; /* ✅ Paksa z-index tinggi */
             display: none;
             padding: 24px;
             margin-top: 4px;
             min-width: 340px;
         }
 
+        .form-row,
+        .dashboard-card {
+            position: relative;
+            z-index: 1; /* Lebih rendah dari month picker */
+        }
+
         .month-picker.show {
             display: block;
             animation: slideDown 0.3s ease;
+            z-index: 10001 !important; /* ✅ Pastikan saat show juga tinggi */
         }
 
         @keyframes slideDown {
@@ -360,7 +368,7 @@
             border: 2px solid;
         }
 
-        /* ========== BULK ACTIONS TOOLBAR ========== */
+        /* ========== 🆕 BULK ACTIONS TOOLBAR - ENHANCED WITH BULK DELETE ALL ========== */
         .bulk-actions-toolbar {
             display: none;
             position: sticky;
@@ -433,6 +441,38 @@
         .btn-bulk-light:hover {
             background: #f8f9fa;
             border-color: #adb5bd;
+        }
+
+        /* 🆕 ENHANCED: Bulk Delete All Styles */
+        .bulk-delete-all-section {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #f87171;
+            border-radius: var(--radius-md);
+            padding: 16px 24px;
+            margin: 0 24px 20px 24px;
+            text-align: center;
+        }
+
+        .btn-bulk-delete-all {
+            background: #dc2626;
+            color: white;
+            border: 2px solid #dc2626;
+            padding: 12px 24px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-bulk-delete-all:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
         /* ========== 🔥 ULTIMATE FIX: PERFECT CHECKBOX ALIGNMENT ========== */
@@ -752,7 +792,7 @@
             display: block;
         }
 
-        /* ========== NOTIFICATIONS ========== */
+        /* ========== 🆕 NOTIFICATIONS ENHANCED ========== */
         .notification-persistent {
             position: fixed;
             top: 20px;
@@ -1370,6 +1410,112 @@
             font-weight: 500;
         }
 
+        /* ========== 🆕 IMPORT RESULT MODAL STYLES ========== */
+        .import-result-modal .modal-xl {
+            max-width: 90%;
+        }
+
+        .import-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .summary-card.info {
+            border-color: var(--info-blue);
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+
+        .summary-card.success {
+            border-color: var(--success-green);
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+
+        .summary-card.warning {
+            border-color: var(--warning-orange);
+            background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        }
+
+        .summary-card.error {
+            border-color: var(--error-red);
+            background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+        }
+
+        .summary-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .import-details {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: var(--radius-md);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* ========== PROGRESS STEPS FOR IMPORT ========== */
+        .progress-container {
+            background: #f8fafc;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin: 20px 0;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 0;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active {
+            opacity: 1;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .progress-icon {
+            background: var(--secondary-blue);
+            color: white;
+        }
+
         /* ========== RESPONSIVE DESIGN ========== */
         @media (max-width: 576px) {
             .action-btn {
@@ -1556,25 +1702,6 @@
         .no-js .js-dependent {
             display: none;
         }
-
-        /* ========== 🔥 DEBUG MODE - Uncomment untuk debugging ========== */
-        /*
-        .form-row {
-            border: 3px solid red !important;
-            background: rgba(255,0,0,0.1) !important;
-        }
-        
-        .form-group {
-            border: 2px solid blue !important;
-            background: rgba(0,0,255,0.1) !important;
-        }
-
-        .table-select-header,
-        .table-select-cell {
-            border: 2px solid green !important;
-            background: rgba(0,255,0,0.1) !important;
-        }
-        */
     </style>
 @endsection
 
@@ -1587,6 +1714,15 @@
             Silakan aktifkan JavaScript untuk pengalaman terbaik.
         </div>
 
+        <!-- ✅ CRITICAL: Error Boundary for JavaScript Errors -->
+        <div class="js-error-boundary" id="js-error-boundary">
+            <h3><i class="fas fa-exclamation-triangle me-2"></i>Sistem Error</h3>
+            <p>Terjadi kesalahan saat memuat sistem. Silakan muat ulang halaman.</p>
+            <button class="btn btn-warning" onclick="window.location.reload()">
+                <i class="fas fa-sync-alt me-1"></i> Muat Ulang Halaman
+            </button>
+        </div>
+
         <!-- Header Dashboard -->
         <div class="header-dashboard">
             <h1 class="header-title">
@@ -1595,6 +1731,16 @@
             <p class="header-subtitle">
                 Kelola dan pantau data revenue Account Manager RLEGS secara efisien
             </p>
+        </div>
+
+        <!-- ✅ CRITICAL: Enhanced Notification Container -->
+        <div id="notification-container" class="notification-persistent">
+            <div class="content">
+                <div class="title" id="notification-title">Notifikasi</div>
+                <p class="message" id="notification-message"></p>
+                <div class="details mt-2" id="notification-details" style="display: none;"></div>
+            </div>
+            <button class="close-btn" id="notification-close">&times;</button>
         </div>
 
         <!-- Alert Messages -->
@@ -1618,16 +1764,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
-
-        <!-- Enhanced Notification Container -->
-        <div id="notification-container" class="notification-persistent">
-            <div class="content">
-                <div class="title" id="notification-title">Notifikasi</div>
-                <p class="message" id="notification-message"></p>
-                <div class="details mt-2" id="notification-details" style="display: none;"></div>
-            </div>
-            <button class="close-btn" id="notification-close">&times;</button>
-        </div>
 
         <!-- 🔥 FIXED: Form Tambah Data Revenue - PERFECT 2 ROWS × 3 COLUMNS LAYOUT -->
         <div class="dashboard-card">
@@ -1872,6 +2008,27 @@
                 </div>
             </div>
 
+            <!-- 🆕 CRITICAL: Bulk Delete All Section - Above Bulk Actions Toolbar -->
+            <div class="bulk-delete-all-section" style="display: none;" id="bulk-delete-all-section">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="mb-1 text-danger fw-bold">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Hapus Massal Keseluruhan Data
+                        </h6>
+                        <p class="mb-0 small">Menghapus SEMUA data pada tab aktif (dengan filter jika ada)</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-bulk-delete-all" id="bulk-delete-all-btn">
+                            <i class="fas fa-trash-alt me-1"></i> Hapus Semua Data
+                        </button>
+                        <button class="btn btn-light" id="hide-bulk-delete-all">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- FIXED: Bulk Actions Toolbar Outside Table -->
             <div class="bulk-actions-toolbar" id="bulk-actions-toolbar">
                 <div class="selection-info">
@@ -1884,6 +2041,9 @@
                     </button>
                     <button class="btn-bulk btn-bulk-light" id="clear-selection-btn">
                         <i class="fas fa-times me-1"></i> Batal
+                    </button>
+                    <button class="btn-bulk btn-bulk-light" id="show-bulk-delete-all">
+                        <i class="fas fa-trash-alt me-1"></i> Hapus Massal
                     </button>
                 </div>
             </div>
@@ -2670,6 +2830,62 @@
             </div>
         </div>
 
+        <!-- ✅ FIXED: Bulk Delete All Confirmation Modal -->
+        <div class="modal fade" id="bulkDeleteAllModal" tabindex="-1" aria-labelledby="bulkDeleteAllModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="bulkDeleteAllModalLabel">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Konfirmasi Hapus SEMUA Data
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-radiation me-2"></i>
+                                PERINGATAN KRITIS!
+                            </h6>
+                            <p class="mb-2">
+                                Anda akan menghapus <strong>SEMUA DATA</strong> pada tab yang aktif.
+                                Tindakan ini akan menghapus data secara CASCADE (termasuk data terkait).
+                            </p>
+                            <hr>
+                            <p class="mb-0 small">
+                                <strong>Tindakan ini TIDAK DAPAT DIBATALKAN!</strong>
+                            </p>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6>
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informasi Filter Aktif:
+                            </h6>
+                            <div id="active-filters-display">
+                                <p class="mb-0">Tidak ada filter aktif - SEMUA data akan dihapus</p>
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmBulkDeleteAll">
+                            <label class="form-check-label fw-bold text-danger" for="confirmBulkDeleteAll">
+                                Ya, saya yakin ingin menghapus SEMUA data dan memahami konsekuensinya
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Batal
+                        </button>
+                        <button type="button" class="btn btn-danger" id="confirm-bulk-delete-all" disabled>
+                            <i class="fas fa-radiation me-1"></i> HAPUS SEMUA DATA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ✅ FIXED: Change Password Modal -->
         <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -3297,10 +3513,9 @@
 
     </div>
 
-
-    <!-- ✅ FIXED: JavaScript Configuration Variables -->
+    <!-- ✅ CRITICAL: JavaScript Configuration Variables -->
     <script>
-        // ✅ Global configuration dan URLs untuk revenue.js
+        // ✅ FIXED: Complete Global configuration dan URLs untuk revenue.js
         window.revenueConfig = {
             baseUrl: "{{ url('/') }}",
             csrfToken: "{{ csrf_token() }}",
@@ -3310,31 +3525,42 @@
                 revenueSearch: "{{ route('revenue.search') }}",
                 revenueUpdate: "{{ route('revenue.update', ':id') }}",
                 revenueDestroy: "{{ route('revenue.destroy', ':id') }}",
-                revenueEdit: "{{ route('revenue.edit', ':id') }}",
-                revenueBulkDelete: "{{ route('revenue.bulk-delete') }}",
+                revenueEdit: "{{ url('/api/revenue') }}/:id/edit",
+                revenueBulkDelete: "{{ url('/revenue/bulk-delete') }}",
+                revenueBulkDeleteAll: "{{ url('/revenue/bulk-delete-all') }}",
                 revenueImport: "{{ route('revenue.import') }}",
                 revenueExport: "{{ route('revenue.export') }}",
+                revenueTemplate: "{{ route('revenue.template') }}",
 
                 // Account Manager routes
                 accountManagerStore: "{{ route('account-manager.store') }}",
                 accountManagerSearch: "{{ route('account-manager.search') }}",
                 accountManagerUpdate: "{{ route('account-manager.update', ':id') }}",
-                accountManagerEdit: "{{ route('account-manager.edit', ':id') }}",
-                accountManagerDivisions: "{{ route('account-manager.divisions', ':id') }}",
+                accountManagerEdit: "{{ url('/api/account-manager') }}/:id/edit",
+                accountManagerDivisions: "{{ url('/api/account-manager') }}/:id/divisi",
                 accountManagerValidateNik: "{{ route('account-manager.validate-nik') }}",
-                accountManagerChangePassword: "{{ route('account-manager.change-password', ':id') }}",
+                accountManagerChangePassword: "{{ url('/account-manager') }}/:id/change-password",
+                accountManagerUserStatus: "{{ url('/api/account-manager') }}/:id/user-status",
+                accountManagerBulkDelete: "{{ url('/account-manager/bulk-delete') }}",
+                accountManagerBulkDeleteAll: "{{ url('/account-manager/bulk-delete-all') }}",
                 accountManagerImport: "{{ route('account-manager.import') }}",
+                accountManagerExport: "{{ route('account-manager.export') }}",
+                accountManagerTemplate: "{{ route('account-manager.template') }}",
 
                 // Corporate Customer routes
                 corporateCustomerStore: "{{ route('corporate-customer.store') }}",
                 corporateCustomerSearch: "{{ route('corporate-customer.search') }}",
                 corporateCustomerUpdate: "{{ route('corporate-customer.update', ':id') }}",
-                corporateCustomerEdit: "{{ route('corporate-customer.edit', ':id') }}",
+                corporateCustomerEdit: "{{ url('/api/corporate-customer') }}/:id/edit",
                 corporateCustomerValidateNipnas: "{{ route('corporate-customer.validate-nipnas') }}",
+                corporateCustomerBulkDelete: "{{ url('/corporate-customer/bulk-delete') }}",
+                corporateCustomerBulkDeleteAll: "{{ url('/corporate-customer/bulk-delete-all') }}",
                 corporateCustomerImport: "{{ route('corporate-customer.import') }}",
+                corporateCustomerExport: "{{ route('corporate-customer.export') }}",
+                corporateCustomerTemplate: "{{ route('corporate-customer.template') }}",
 
                 // Statistics routes
-                revenueStats: "{{ route('revenue.stats') }}",
+                revenueStats: "{{ url('/api/revenue/stats') }}",
             },
             currentUser: {
                 role: "{{ auth()->user()->role ?? 'user' }}",
@@ -3353,7 +3579,7 @@
             }
         };
 
-        // ✅ Current data dari server untuk revenue.js
+        // ✅ FIXED: Current data dari server untuk revenue.js
         window.currentData = {
             revenues: @json($revenues ?? collect()),
             accountManagers: @json($accountManagers ?? collect()),
@@ -3431,6 +3657,9 @@
 
             // ✅ FIXED: Form Submissions
             initializeFormSubmissions();
+
+            // ✅ FIXED: Bulk Delete All Functionality
+            initializeBulkDeleteAll();
         });
 
         // ✅ FIXED: Month Picker Functions
@@ -3454,10 +3683,13 @@
             ];
 
             function updateYearDisplay() {
-                currentYearSpan.textContent = currentYear;
+                if (currentYearSpan) {
+                    currentYearSpan.textContent = currentYear;
+                }
             }
 
             function generateMonthGrid() {
+                if (!monthGrid) return;
                 monthGrid.innerHTML = '';
                 months.forEach((month, index) => {
                     const monthButton = document.createElement('button');
@@ -3485,24 +3717,34 @@
             }
 
             function showPicker() {
-                monthPicker.classList.add('show');
-                generateMonthGrid();
-                updateYearDisplay();
+                if (monthPicker) {
+                    monthPicker.classList.add('show');
+                    generateMonthGrid();
+                    updateYearDisplay();
+                }
             }
 
             function hidePicker() {
-                monthPicker.classList.remove('show');
+                if (monthPicker) {
+                    monthPicker.classList.remove('show');
+                }
             }
 
             function applySelection() {
                 const monthName = months[selectedMonth - 1];
                 const formattedValue = `${monthName} ${currentYear}`;
-                monthInput.value = formattedValue;
+                if (monthInput) {
+                    monthInput.value = formattedValue;
+                }
 
                 // Update hidden inputs
-                document.getElementById('bulan_month').value = selectedMonth.toString().padStart(2, '0');
-                document.getElementById('bulan_year').value = currentYear;
-                document.getElementById('bulan').value = `${currentYear}-${selectedMonth.toString().padStart(2, '0')}`;
+                const bulanMonthInput = document.getElementById('bulan_month');
+                const bulanYearInput = document.getElementById('bulan_year');
+                const bulanInput = document.getElementById('bulan');
+
+                if (bulanMonthInput) bulanMonthInput.value = selectedMonth.toString().padStart(2, '0');
+                if (bulanYearInput) bulanYearInput.value = currentYear;
+                if (bulanInput) bulanInput.value = `${currentYear}-${selectedMonth.toString().padStart(2, '0')}`;
 
                 hidePicker();
             }
@@ -3536,8 +3778,8 @@
             // Close picker when clicking outside
             document.addEventListener('click', function(event) {
                 if (monthPicker && !monthPicker.contains(event.target) &&
-                    !monthInput.contains(event.target) &&
-                    !openButton.contains(event.target)) {
+                    monthInput && !monthInput.contains(event.target) &&
+                    openButton && !openButton.contains(event.target)) {
                     hidePicker();
                 }
             });
@@ -3646,6 +3888,49 @@
             }
         }
 
+        // ✅ FIXED: Bulk Delete All Functionality
+        function initializeBulkDeleteAll() {
+            const showBulkDeleteAllBtn = document.getElementById('show-bulk-delete-all');
+            const hideBulkDeleteAllBtn = document.getElementById('hide-bulk-delete-all');
+            const bulkDeleteAllSection = document.getElementById('bulk-delete-all-section');
+            const bulkDeleteAllBtn = document.getElementById('bulk-delete-all-btn');
+            const confirmCheckbox = document.getElementById('confirmBulkDeleteAll');
+            const confirmBulkDeleteAllBtn = document.getElementById('confirm-bulk-delete-all');
+
+            // Show bulk delete all section
+            if (showBulkDeleteAllBtn && bulkDeleteAllSection) {
+                showBulkDeleteAllBtn.addEventListener('click', function() {
+                    bulkDeleteAllSection.style.display = 'block';
+                });
+            }
+
+            // Hide bulk delete all section
+            if (hideBulkDeleteAllBtn && bulkDeleteAllSection) {
+                hideBulkDeleteAllBtn.addEventListener('click', function() {
+                    bulkDeleteAllSection.style.display = 'none';
+                });
+            }
+
+            // Enable/disable confirm button based on checkbox
+            if (confirmCheckbox && confirmBulkDeleteAllBtn) {
+                confirmCheckbox.addEventListener('change', function() {
+                    confirmBulkDeleteAllBtn.disabled = !this.checked;
+                });
+            }
+
+            // Handle bulk delete all click
+            if (bulkDeleteAllBtn) {
+                bulkDeleteAllBtn.addEventListener('click', function() {
+                    // Show confirmation modal
+                    const modal = document.getElementById('bulkDeleteAllModal');
+                    if (modal) {
+                        const bsModal = new bootstrap.Modal(modal);
+                        bsModal.show();
+                    }
+                });
+            }
+        }
+
         // ✅ FIXED: Form Submissions
         function initializeFormSubmissions() {
             // Prevent double submission
@@ -3681,10 +3966,117 @@
                 }
             }
         });
+
+        // ✅ FIXED: Filter Toggle
+        document.addEventListener('click', function(event) {
+            if (event.target && event.target.id === 'filterToggle') {
+                const filterArea = document.getElementById('filterArea');
+                if (filterArea) {
+                    if (filterArea.style.display === 'none' || filterArea.style.display === '') {
+                        filterArea.style.display = 'block';
+                        event.target.classList.add('active');
+                        const icon = event.target.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-filter-circle-xmark';
+                        }
+                    } else {
+                        filterArea.style.display = 'none';
+                        event.target.classList.remove('active');
+                        const icon = event.target.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-filter';
+                        }
+                    }
+                }
+            }
+        });
+
+        // ✅ FIXED: Enhanced Error Handling
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled Promise Rejection:', event.reason);
+
+            // Show user-friendly error notification
+            const notification = document.getElementById('notification-container');
+            const title = document.getElementById('notification-title');
+            const message = document.getElementById('notification-message');
+
+            if (notification && title && message) {
+                title.textContent = 'Koneksi Bermasalah';
+                message.textContent = 'Terjadi masalah koneksi. Beberapa fitur mungkin tidak berfungsi normal.';
+                notification.className = 'notification-persistent warning show';
+
+                // Auto hide after 5 seconds
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 5000);
+            }
+        });
+
+        // ✅ FIXED: Loading State Management
+        function showLoading() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        }
+
+        function hideLoading() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // ✅ FIXED: Global form validation helper
+        function validateForm(form) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            return isValid;
+        }
+
+        // ✅ FIXED: Notification helper function
+        function showNotification(title, message, type = 'info', duration = 5000) {
+            const notification = document.getElementById('notification-container');
+            const titleElement = document.getElementById('notification-title');
+            const messageElement = document.getElementById('notification-message');
+
+            if (notification && titleElement && messageElement) {
+                titleElement.textContent = title;
+                messageElement.textContent = message;
+                notification.className = `notification-persistent ${type} show`;
+
+                if (duration > 0) {
+                    setTimeout(() => {
+                        notification.classList.remove('show');
+                    }, duration);
+                }
+            }
+        }
+
+        // ✅ FIXED: Expose global functions for external use
+        window.revenueHelpers = {
+            showLoading: showLoading,
+            hideLoading: hideLoading,
+            validateForm: validateForm,
+            showNotification: showNotification,
+            changePerPage: changePerPage
+        };
+
+        console.log('✅ Revenue Management System - Configuration loaded successfully');
     </script>
 
     <!-- ✅ Load revenue.js - All JavaScript functionality will be handled here -->
     <script src="{{ asset('js/revenue.js?v=' . time()) }}"></script>
-     <script src="{{ asset('js/dashboard.js?v=' . time()) }}"></script>
+    <script src="{{ asset('js/dashboard.js?v=' . time()) }}"></script>
 
 @endsection

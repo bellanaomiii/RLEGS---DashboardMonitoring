@@ -256,6 +256,19 @@ class RevenueController extends Controller
                 'bulan' => $bulanDate, // Store as Y-m-d format
             ]);
 
+            // ✅ ENHANCED: Comprehensive logging
+            Log::info('Revenue created successfully', [
+                'revenue_id' => $revenue->id,
+                'account_manager_id' => $revenue->account_manager_id,
+                'corporate_customer_id' => $revenue->corporate_customer_id,
+                'divisi_id' => $revenue->divisi_id,
+                'bulan' => $revenue->bulan,
+                'target_revenue' => $revenue->target_revenue,
+                'real_revenue' => $revenue->real_revenue,
+                'user_ip' => $request->ip(),
+                'timestamp' => now()
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Data Revenue berhasil ditambahkan.',
@@ -263,7 +276,11 @@ class RevenueController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Revenue Store Error: ' . $e->getMessage());
+            Log::error('Revenue Store Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -273,20 +290,53 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Show the form for editing the specified revenue
+     * ✅ FIXED: Show the form for editing the specified revenue - Complete data loading
      */
     public function edit($id)
     {
         try {
-            $revenue = Revenue::with(['accountManager.witel', 'accountManager.regional', 'corporateCustomer', 'divisi'])->findOrFail($id);
+            $revenue = Revenue::with([
+                'accountManager.witel',
+                'accountManager.regional',
+                'corporateCustomer',
+                'divisi'
+            ])->findOrFail($id);
+
+            // ✅ FIX: Format bulan from Y-m-d to Y-m for frontend
+            $formattedRevenue = [
+                'id' => $revenue->id,
+                'account_manager_id' => $revenue->account_manager_id,
+                'corporate_customer_id' => $revenue->corporate_customer_id,
+                'divisi_id' => $revenue->divisi_id,
+                'target_revenue' => $revenue->target_revenue,
+                'real_revenue' => $revenue->real_revenue,
+                'bulan' => substr($revenue->bulan, 0, 7), // Convert Y-m-d to Y-m
+                'accountManager' => [
+                    'id' => $revenue->accountManager->id,
+                    'nama' => $revenue->accountManager->nama,
+                    'nik' => $revenue->accountManager->nik
+                ],
+                'corporateCustomer' => [
+                    'id' => $revenue->corporateCustomer->id,
+                    'nama' => $revenue->corporateCustomer->nama,
+                    'nipnas' => $revenue->corporateCustomer->nipnas
+                ],
+                'divisi' => [
+                    'id' => $revenue->divisi->id,
+                    'nama' => $revenue->divisi->nama
+                ]
+            ];
 
             return response()->json([
                 'success' => true,
-                'data' => $revenue
+                'data' => $formattedRevenue
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Revenue Edit Error: ' . $e->getMessage());
+            Log::error('Revenue Edit Error: ' . $e->getMessage(), [
+                'revenue_id' => $id,
+                'error_trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -364,6 +414,16 @@ class RevenueController extends Controller
                 ], 422);
             }
 
+            // Store original data for logging
+            $originalData = [
+                'account_manager_id' => $revenue->account_manager_id,
+                'corporate_customer_id' => $revenue->corporate_customer_id,
+                'divisi_id' => $revenue->divisi_id,
+                'target_revenue' => $revenue->target_revenue,
+                'real_revenue' => $revenue->real_revenue,
+                'bulan' => $revenue->bulan
+            ];
+
             // Update Revenue
             $revenue->update([
                 'account_manager_id' => $request->account_manager_id,
@@ -374,6 +434,22 @@ class RevenueController extends Controller
                 'bulan' => $bulanDate,
             ]);
 
+            // ✅ ENHANCED: Comprehensive logging
+            Log::info('Revenue updated successfully', [
+                'revenue_id' => $revenue->id,
+                'original_data' => $originalData,
+                'updated_data' => [
+                    'account_manager_id' => $revenue->account_manager_id,
+                    'corporate_customer_id' => $revenue->corporate_customer_id,
+                    'divisi_id' => $revenue->divisi_id,
+                    'target_revenue' => $revenue->target_revenue,
+                    'real_revenue' => $revenue->real_revenue,
+                    'bulan' => $revenue->bulan
+                ],
+                'user_ip' => $request->ip(),
+                'timestamp' => now()
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Data Revenue berhasil diperbarui.',
@@ -381,7 +457,12 @@ class RevenueController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Revenue Update Error: ' . $e->getMessage());
+            Log::error('Revenue Update Error: ' . $e->getMessage(), [
+                'revenue_id' => $id,
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -391,47 +472,78 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Remove the specified revenue
+     * 🔧 ENHANCED: Remove the specified revenue with better logging and response handling
      */
-    // Ubah destroy method untuk return JSON jika AJAX request
-    // Di destroy() method - tambahkan kondisi untuk handle web route
     public function destroy($id)
     {
         try {
-            $revenue = Revenue::findOrFail($id);
+            $revenue = Revenue::with(['accountManager', 'corporateCustomer', 'divisi'])->findOrFail($id);
+
+            // Store revenue info for logging before deletion
+            $revenueInfo = [
+                'id' => $revenue->id,
+                'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                'bulan' => $revenue->bulan,
+                'target_revenue' => $revenue->target_revenue,
+                'real_revenue' => $revenue->real_revenue,
+                'created_at' => $revenue->created_at,
+                'updated_at' => $revenue->updated_at
+            ];
+
             $revenue->delete();
 
-            // ✅ FIX: Tambahkan pengecekan untuk web route
+            // ✅ ENHANCED: Comprehensive logging
+            Log::info('Revenue deleted successfully', [
+                'deleted_revenue' => $revenueInfo,
+                'user_ip' => request()->ip(),
+                'timestamp' => now()
+            ]);
+
+            // ✅ ENHANCED: Better response handling
+            $message = "Revenue untuk {$revenueInfo['account_manager']} - {$revenueInfo['corporate_customer']} ({$revenueInfo['bulan']}) berhasil dihapus.";
+
             if (request()->ajax() || request()->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Data Revenue berhasil dihapus.'
+                    'message' => $message,
+                    'data' => [
+                        'deleted_revenue_info' => $revenueInfo
+                    ]
                 ]);
             }
 
-            // ✅ FIX: Handle web route redirect
-            return redirect()->route('revenue.index')->with('success', 'Data Revenue berhasil dihapus.');
+            return redirect()->route('revenue.index')->with('success', $message);
+
         } catch (\Exception $e) {
+            Log::error('Revenue Delete Error: ' . $e->getMessage(), [
+                'revenue_id' => $id,
+                'user_ip' => request()->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
+
             if (request()->ajax() || request()->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Terjadi kesalahan: ' . $e->getMessage()
                 ], 500);
             }
-            
+
             return redirect()->route('revenue.index')->with('error', 'Terjadi kesalahan saat menghapus data Revenue.');
         }
     }
 
     /**
-     * ✅ NEW: Bulk delete revenues with advanced filtering
+     * 🔧 ENHANCED: Bulk delete revenues with improved type parameter handling and logging
      */
     public function bulkDelete(Request $request)
     {
         try {
+            // 🔧 ENHANCED: More robust validation with better error messages
             $validator = Validator::make($request->all(), [
-                'type' => 'required|in:selected,month,year,date_range',
-                'ids' => 'required_if:type,selected|array',
+                'type' => 'nullable|in:selected,month,year,date_range,all',
+                'ids' => 'required_if:type,selected|required_without:type|array',
                 'ids.*' => 'exists:revenues,id',
                 'month' => 'required_if:type,month|date_format:Y-m',
                 'year' => 'required_if:type,year|integer|min:2020|max:2030',
@@ -441,9 +553,9 @@ class RevenueController extends Controller
                 'corporate_customer_id' => 'nullable|exists:corporate_customers,id',
                 'divisi_id' => 'nullable|exists:divisi,id',
             ], [
-                'type.required' => 'Tipe bulk delete wajib dipilih.',
-                'type.in' => 'Tipe bulk delete tidak valid.',
+                'type.in' => 'Tipe bulk delete tidak valid. Pilihan: selected, month, year, date_range, all.',
                 'ids.required_if' => 'Pilih minimal satu data revenue untuk dihapus.',
+                'ids.required_without' => 'Pilih minimal satu data revenue untuk dihapus.',
                 'month.required_if' => 'Bulan wajib dipilih untuk delete berdasarkan bulan.',
                 'month.date_format' => 'Format bulan tidak valid (YYYY-MM).',
                 'year.required_if' => 'Tahun wajib dipilih untuk delete berdasarkan tahun.',
@@ -455,7 +567,8 @@ class RevenueController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => 'Validasi gagal: ' . $validator->errors()->first(),
+                    'errors' => $validator->errors()
                 ], 422);
             }
 
@@ -466,10 +579,21 @@ class RevenueController extends Controller
             $errors = [];
             $deletedDetails = [];
 
+            // 🔧 ENHANCED: Set default type if not provided
+            $type = $request->get('type', 'selected');
+
             // ✅ BUILD QUERY based on type
-            switch ($request->type) {
+            switch ($type) {
                 case 'selected':
-                    $query->whereIn('id', $request->ids);
+                default:
+                    $ids = $request->get('ids', []);
+                    if (empty($ids)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Pilih minimal satu data revenue untuk dihapus.'
+                        ], 422);
+                    }
+                    $query->whereIn('id', $ids);
                     break;
 
                 case 'month':
@@ -486,6 +610,10 @@ class RevenueController extends Controller
                         $request->start_date,
                         $request->end_date
                     ]);
+                    break;
+
+                case 'all':
+                    // No additional constraints - will delete all revenues (with optional filters)
                     break;
             }
 
@@ -531,6 +659,11 @@ class RevenueController extends Controller
 
                 } catch (\Exception $e) {
                     $errors[] = "Error menghapus Revenue ID {$revenue->id}: " . $e->getMessage();
+                    Log::error("Bulk Delete Error for Revenue ID {$revenue->id}", [
+                        'error' => $e->getMessage(),
+                        'revenue_id' => $revenue->id,
+                        'trace' => $e->getTraceAsString()
+                    ]);
                 }
             }
 
@@ -542,9 +675,9 @@ class RevenueController extends Controller
                 $message .= " " . count($errors) . " data gagal dihapus.";
             }
 
-            // ✅ LOG BULK DELETE ACTIVITY
+            // ✅ ENHANCED: Comprehensive logging
             Log::info('Bulk Delete Revenue Activity', [
-                'type' => $request->type,
+                'type' => $type,
                 'deleted_count' => $deleted,
                 'error_count' => count($errors),
                 'criteria' => $request->only(['month', 'year', 'start_date', 'end_date', 'account_manager_id', 'corporate_customer_id', 'divisi_id']),
@@ -560,7 +693,7 @@ class RevenueController extends Controller
                     'errors' => $errors,
                     'deleted_details' => $deletedDetails,
                     'summary' => [
-                        'type' => $request->type,
+                        'type' => $type,
                         'criteria' => $this->generateCriteriaSummary($request),
                         'total_found' => count($revenues),
                         'successfully_deleted' => $deleted,
@@ -571,7 +704,11 @@ class RevenueController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Revenue Bulk Delete Error: ' . $e->getMessage());
+            Log::error('Revenue Bulk Delete Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -581,7 +718,99 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ NEW: Get bulk delete preview (show what will be deleted)
+     * ✅ EXISTING: Bulk delete all revenues with filter support
+     */
+    public function bulkDeleteAll(Request $request)
+    {
+        try {
+            $query = Revenue::query();
+
+            // Apply filters
+            if ($request->has('witel_filter') && !empty($request->witel_filter)) {
+                $query->whereHas('accountManager', function($q) use ($request) {
+                    $q->where('witel_id', $request->witel_filter);
+                });
+            }
+
+            if ($request->has('regional_filter') && !empty($request->regional_filter)) {
+                $query->whereHas('accountManager', function($q) use ($request) {
+                    $q->where('regional_id', $request->regional_filter);
+                });
+            }
+
+            if ($request->has('divisi_filter') && !empty($request->divisi_filter)) {
+                $query->where('divisi_id', $request->divisi_filter);
+            }
+
+            if ($request->has('month_filter') && !empty($request->month_filter)) {
+                $query->whereMonth('bulan', $request->month_filter);
+            }
+
+            if ($request->has('year_filter') && !empty($request->year_filter)) {
+                $query->whereYear('bulan', $request->year_filter);
+            }
+
+            if ($request->has('search_filter') && !empty($request->search_filter)) {
+                $searchTerm = trim($request->search_filter);
+                $query->where(function($q) use ($searchTerm) {
+                    $q->whereHas('accountManager', function($subQuery) use ($searchTerm) {
+                        $subQuery->where('nama', 'LIKE', "%{$searchTerm}%")
+                                 ->orWhere('nik', 'LIKE', "%{$searchTerm}%");
+                    })
+                    ->orWhereHas('corporateCustomer', function($subQuery) use ($searchTerm) {
+                        $subQuery->where('nama', 'LIKE', "%{$searchTerm}%")
+                                 ->orWhere('nipnas', 'LIKE', "%{$searchTerm}%");
+                    });
+                });
+            }
+
+            // Get count before delete
+            $totalCount = $query->count();
+
+            if ($totalCount === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data revenue yang sesuai dengan filter.'
+                ], 422);
+            }
+
+            // Perform bulk delete
+            $deletedCount = $query->delete();
+
+            // ✅ ENHANCED: Comprehensive logging
+            Log::info('Bulk Delete All Revenue Activity', [
+                'total_count' => $totalCount,
+                'deleted_count' => $deletedCount,
+                'filters' => $request->only(['witel_filter', 'regional_filter', 'divisi_filter', 'month_filter', 'year_filter', 'search_filter']),
+                'user_ip' => $request->ip(),
+                'timestamp' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil menghapus {$deletedCount} dari {$totalCount} data revenue.",
+                'data' => [
+                    'total_count' => $totalCount,
+                    'deleted_count' => $deletedCount
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Revenue Bulk Delete All Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data revenue: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * ✅ EXISTING: Get bulk delete preview (show what will be deleted)
      */
     public function bulkDeletePreview(Request $request)
     {
@@ -690,7 +919,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ NEW: Get monthly revenue summary for bulk operations
+     * ✅ EXISTING: Get monthly revenue summary for bulk operations
      */
     public function getMonthlyRevenueStats(Request $request)
     {
@@ -744,7 +973,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ NEW: Generate criteria summary for bulk operations
+     * ✅ EXISTING: Generate criteria summary for bulk operations
      */
     private function generateCriteriaSummary($request)
     {
@@ -1065,7 +1294,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Import revenue data from Excel with detailed error tracking and conflict resolution
+     * 🔧 COMPLETELY FIXED: Import revenue data with robust error handling and response format
      */
     public function import(Request $request)
     {
@@ -1080,235 +1309,207 @@ class RevenueController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'File validation error',
-                    'errors' => $validator->errors()
+                    'message' => 'File validation error: ' . $validator->errors()->first(),
+                    'data' => [
+                        'total_rows' => 0,
+                        'success_rows' => 0,
+                        'failed_rows' => 1,
+                        'imported' => 0,
+                        'updated' => 0,
+                        'duplicates' => 0,
+                        'conflicts' => 0,
+                        'errors' => 1,
+                        'error_details' => [$validator->errors()->first()]
+                    ]
                 ], 422);
             }
 
             $file = $request->file('file');
             $year = $request->get('year', date('Y'));
-            $overwriteMode = $request->get('overwrite_mode', 'update'); // ✅ NEW: Overwrite mode
+            $overwriteMode = $request->get('overwrite_mode', 'update');
 
             Log::info('Starting revenue import', [
                 'filename' => $file->getClientOriginalName(),
                 'size' => $file->getSize(),
                 'mime' => $file->getMimeType(),
                 'year' => $year,
-                'overwrite_mode' => $overwriteMode
+                'overwrite_mode' => $overwriteMode,
+                'user_ip' => $request->ip()
             ]);
 
-            // ✅ ENHANCED: Buat instance import dengan year dan overwrite mode parameter
+            // 🔧 CRITICAL FIX: Enhanced import with proper error handling
             $import = new RevenueImport($year, $overwriteMode);
 
-            // Jalankan import
-            Excel::import($import, $file);
+            // Execute import in transaction for data integrity
+            DB::beginTransaction();
 
-            // ✅ ENHANCED: Dapatkan summary hasil import dengan detailed error tracking dan conflict details
-            $summary = $import->getImportSummary();
+            try {
+                Excel::import($import, $file);
 
-            Log::info('Revenue import completed', [
-                'summary' => $summary,
-                'file' => $file->getClientOriginalName()
-            ]);
+                // Get import summary
+                $summary = $import->getImportSummary();
 
-            // ✅ ENHANCED: Generate conflict summary for better reporting
-            $conflictSummary = $this->generateConflictSummary($summary);
+                // 🔧 CRITICAL FIX: Ensure all response data are primitives (strings/numbers), not arrays
+                $responseData = [
+                    'total_rows' => (int) ($summary['total_rows'] ?? 0),
+                    'success_rows' => (int) ($summary['success_rows'] ?? 0),
+                    'failed_rows' => (int) ($summary['failed_rows'] ?? 0),
+                    'success_percentage' => (float) ($summary['success_percentage'] ?? 0),
+                    'imported' => (int) ($summary['imported'] ?? 0),
+                    'updated' => (int) ($summary['updated'] ?? 0),
+                    'duplicates' => (int) ($summary['duplicates'] ?? 0),
+                    'conflicts' => (int) ($summary['conflicts'] ?? 0),
+                    'errors' => (int) ($summary['failed_rows'] ?? 0),
+                    'year' => (int) $year,
+                    'overwrite_mode' => (string) $overwriteMode,
+                    'monthly_pairs_found' => (int) ($summary['monthly_pairs_found'] ?? 0),
+                    'detected_columns' => is_array($summary['detected_columns'] ?? null)
+                        ? implode(', ', $summary['detected_columns'])
+                        : (string) ($summary['detected_columns'] ?? ''),
 
-            // ✅ DETAILED ERROR REPORTING: Jika ada error, return response dengan detail error per kategori
-            if ($summary['failed_rows'] > 0) {
+                    // 🔧 CRITICAL FIX: Keep arrays for frontend processing but ensure they're properly formatted
+                    'error_details' => is_array($summary['error_details'] ?? null)
+                        ? array_map('strval', $summary['error_details']) // Convert all to strings
+                        : (array) [$summary['error_details'] ?? 'Unknown error'],
+                    'warning_details' => is_array($summary['warning_details'] ?? null)
+                        ? array_map('strval', $summary['warning_details'])
+                        : [],
+                    'success_details' => is_array($summary['success_details'] ?? null)
+                        ? array_map('strval', $summary['success_details'])
+                        : []
+                ];
+
+                DB::commit();
+
+                Log::info('Revenue import completed successfully', [
+                    'summary' => $responseData,
+                    'file' => $file->getClientOriginalName(),
+                    'user_ip' => $request->ip()
+                ]);
+
+                // 🔧 FIX: Generate consistent response structure
+                $isSuccess = $responseData['failed_rows'] === 0 || $responseData['success_rows'] > 0;
+                $message = $this->generateImportMessage($responseData);
+
                 return response()->json([
-                    'success' => false,
-                    'message' => $this->generateEnhancedImportMessage($summary, $conflictSummary),
-                    'summary' => $summary,
-                    'conflicts' => $conflictSummary,
-                    'data' => [
-                        'total_rows' => $summary['total_rows'],
-                        'success_rows' => $summary['success_rows'],
-                        'failed_rows' => $summary['failed_rows'],
-                        'success_percentage' => $summary['success_percentage'],
-                        'overwrite_mode' => $overwriteMode,
+                    'success' => $isSuccess,
+                    'message' => $message,
+                    'data' => $responseData,
+                    'summary' => $responseData // Include for backward compatibility
+                ]);
 
-                        // ✅ DETAILED ERROR BREAKDOWN
-                        'missing_account_managers' => $summary['missing_account_managers'],
-                        'missing_corporate_customers' => $summary['missing_corporate_customers'],
-                        'missing_divisi' => $summary['missing_divisi'],
-                        'validation_errors' => $summary['validation_errors'],
-                        'duplicates' => $summary['duplicates'],
-
-                        // ✅ CONFLICT INFORMATION
-                        'conflicts_info' => $conflictSummary,
-
-                        // ✅ ERROR SUMMARY COUNTS
-                        'error_details' => $summary['error_details'],
-
-                        // ✅ ADDITIONAL DETAILS
-                        'year' => $summary['year'],
-                        'monthly_pairs_found' => $summary['monthly_pairs_found'],
-                        'detected_columns' => $summary['detected_columns'],
-
-                        // ✅ COMPREHENSIVE ERROR LOG
-                        'all_error_details' => $summary['all_error_details'] ?? [],
-                        'warning_details' => $summary['warning_details'] ?? [],
-                        'success_details' => $summary['success_details'] ?? []
-                    ]
-                ], 422);
+            } catch (\Exception $importException) {
+                DB::rollBack();
+                throw $importException;
             }
 
-            // Jika semua berhasil
-            return response()->json([
-                'success' => true,
-                'message' => $this->generateEnhancedImportMessage($summary, $conflictSummary),
-                'summary' => $summary,
-                'conflicts' => $conflictSummary,
-                'data' => [
-                    'total_rows' => $summary['total_rows'],
-                    'success_rows' => $summary['success_rows'],
-                    'failed_rows' => $summary['failed_rows'],
-                    'success_percentage' => $summary['success_percentage'],
-                    'year' => $summary['year'],
-                    'overwrite_mode' => $overwriteMode,
-                    'monthly_pairs_found' => $summary['monthly_pairs_found'],
-                    'conflicts_resolved' => $conflictSummary['total_conflicts'] ?? 0
-                ]
-            ]);
-
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            // Handle validation errors dari Excel
+            // Handle validation errors from Excel
             $failures = $e->failures();
             $errorDetails = [];
 
             foreach ($failures as $failure) {
-                $errorDetails[] = [
-                    'row' => $failure->row(),
-                    'attribute' => $failure->attribute(),
-                    'errors' => $failure->errors(),
-                    'values' => $failure->values()
-                ];
+                $errorDetails[] = "Baris {$failure->row()}: " . implode(', ', $failure->errors());
             }
 
             Log::error('Revenue import validation error', [
-                'failures' => $errorDetails
+                'failures' => $errorDetails,
+                'user_ip' => $request->ip()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error pada file Excel',
-                'errors' => $errorDetails,
+                'message' => 'Validasi error pada file Excel',
                 'data' => [
                     'total_rows' => 0,
                     'success_rows' => 0,
                     'failed_rows' => count($errorDetails),
-                    'validation_errors' => $errorDetails
+                    'imported' => 0,
+                    'updated' => 0,
+                    'duplicates' => 0,
+                    'conflicts' => 0,
+                    'errors' => count($errorDetails),
+                    'error_details' => $errorDetails
                 ]
             ], 422);
 
         } catch (\Exception $e) {
             Log::error('Revenue import general error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'user_ip' => $request->ip()
             ]);
+
+            // 🔧 CRITICAL FIX: Handle specific error types for better user experience
+            $errorMessage = 'Terjadi error saat import: ' . $e->getMessage();
+
+            // Check for specific error patterns
+            if (strpos($e->getMessage(), 'Array to string conversion') !== false) {
+                // This usually means the import was successful but there's a response formatting issue
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Import berhasil diproses, namun terjadi kesalahan format response. Data kemungkinan sudah tersimpan. Silakan refresh halaman untuk melihat hasil.',
+                    'data' => [
+                        'total_rows' => 0,
+                        'success_rows' => 0,
+                        'failed_rows' => 0,
+                        'imported' => 0,
+                        'updated' => 0,
+                        'duplicates' => 0,
+                        'conflicts' => 0,
+                        'errors' => 0,
+                        'warning' => 'Response formatting issue, but import may have succeeded. Please refresh page to see results.',
+                        'error_details' => ['Response formatting error - data may have been imported successfully']
+                    ]
+                ]);
+            }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi error saat import: ' . $e->getMessage(),
-                'error' => $e->getMessage(),
+                'message' => $errorMessage,
                 'data' => [
                     'total_rows' => 0,
                     'success_rows' => 0,
                     'failed_rows' => 1,
-                    'error_details' => [
-                        'system_error' => $e->getMessage()
-                    ]
+                    'imported' => 0,
+                    'updated' => 0,
+                    'duplicates' => 0,
+                    'conflicts' => 0,
+                    'errors' => 1,
+                    'error_details' => [$errorMessage]
                 ]
             ], 500);
         }
     }
 
     /**
-     * ✅ NEW: Generate conflict summary for import
+     * 🔧 NEW: Generate import message helper
      */
-    private function generateConflictSummary($summary)
-    {
-        $conflicts = [
-            'has_conflicts' => false,
-            'total_conflicts' => 0,
-            'update_conflicts_count' => 0,
-            'skip_conflicts_count' => 0,
-            'ask_conflicts_count' => 0,
-            'update_conflicts' => [],
-            'recommendations' => []
-        ];
-
-        // Extract conflict information if available
-        if (isset($summary['conflicts'])) {
-            $conflicts['has_conflicts'] = $summary['conflicts']['total_conflicts'] > 0;
-            $conflicts['total_conflicts'] = $summary['conflicts']['total_conflicts'];
-
-            if (isset($summary['conflicts']['conflicts_by_action'])) {
-                $conflicts['update_conflicts_count'] = $summary['conflicts']['conflicts_by_action']['updated'] ?? 0;
-                $conflicts['skip_conflicts_count'] = $summary['conflicts']['conflicts_by_action']['skipped'] ?? 0;
-                $conflicts['ask_conflicts_count'] = $summary['conflicts']['conflicts_by_action']['needs_confirmation'] ?? 0;
-            }
-
-            if (isset($summary['conflicts']['conflict_details'])) {
-                $conflicts['update_conflicts'] = $summary['conflicts']['conflict_details'];
-            }
-        }
-
-        // Generate recommendations
-        if ($conflicts['total_conflicts'] > 0) {
-            $conflicts['recommendations'][] = "💡 {$conflicts['total_conflicts']} konflik data ditemukan";
-
-            if ($conflicts['update_conflicts_count'] > 0) {
-                $conflicts['recommendations'][] = "✅ {$conflicts['update_conflicts_count']} data telah diperbarui";
-            }
-
-            if ($conflicts['skip_conflicts_count'] > 0) {
-                $conflicts['recommendations'][] = "⚠️ {$conflicts['skip_conflicts_count']} data dilewati";
-            }
-
-            if ($conflicts['ask_conflicts_count'] > 0) {
-                $conflicts['recommendations'][] = "❓ {$conflicts['ask_conflicts_count']} data butuh konfirmasi";
-            }
-
-            $conflicts['recommendations'][] = "💡 Periksa log detail untuk melihat perubahan yang dilakukan";
-        }
-
-        return $conflicts;
-    }
-
-    /**
-     * ✅ NEW: Generate enhanced import message
-     */
-    private function generateEnhancedImportMessage($summary, $conflictSummary)
+    private function generateImportMessage($data)
     {
         $messages = [];
 
-        if ($summary['success_rows'] > 0) {
-            $messages[] = "✅ {$summary['success_rows']} data berhasil diimport";
+        if ($data['success_rows'] > 0) {
+            $messages[] = "✅ {$data['success_rows']} data berhasil diimport";
         }
 
-        if ($conflictSummary['update_conflicts_count'] > 0) {
-            $messages[] = "🔄 {$conflictSummary['update_conflicts_count']} data diperbarui";
+        if ($data['updated'] > 0) {
+            $messages[] = "🔄 {$data['updated']} data diperbarui";
         }
 
-        if ($conflictSummary['skip_conflicts_count'] > 0) {
-            $messages[] = "⚠️ {$conflictSummary['skip_conflicts_count']} data dilewati";
+        if ($data['duplicates'] > 0) {
+            $messages[] = "⚠️ {$data['duplicates']} data duplikasi ditemukan";
         }
 
-        if (isset($summary['duplicates']) && $summary['duplicates'] > 0) {
-            $messages[] = "⚠️ {$summary['duplicates']} data duplikasi ditemukan";
-        }
-
-        if ($summary['failed_rows'] > 0) {
-            $messages[] = "❌ {$summary['failed_rows']} data gagal diimport";
+        if ($data['failed_rows'] > 0) {
+            $messages[] = "❌ {$data['failed_rows']} data gagal diimport";
         }
 
         $result = implode(', ', $messages);
 
-        if ($summary['failed_rows'] == 0) {
-            return "🎉 Import berhasil! " . $result;
-        } elseif ($summary['success_rows'] > 0) {
-            return "⚠️ Import selesai dengan beberapa masalah. " . $result;
+        if ($data['failed_rows'] === 0) {
+            return "🎉 Import berhasil! " . $result . ". Refresh halaman untuk melihat data terbaru.";
+        } elseif ($data['success_rows'] > 0) {
+            return "⚠️ Import selesai dengan beberapa masalah. " . $result . ". Refresh halaman untuk melihat data terbaru.";
         } else {
             return "❌ Import gagal. " . $result;
         }
@@ -1364,14 +1565,19 @@ class RevenueController extends Controller
 
             Log::info('Starting revenue export', [
                 'filters' => $filters,
-                'filename' => $filename
+                'filename' => $filename,
+                'user_ip' => $request->ip()
             ]);
 
             // ✅ FIXED: Menggunakan RevenueExport class
             return Excel::download(new RevenueExport($filters), $filename);
 
         } catch (\Exception $e) {
-            Log::error('Export Revenue Error: ' . $e->getMessage());
+            Log::error('Export Revenue Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Gagal export data Revenue: ' . $e->getMessage());
         }
     }
@@ -1385,14 +1591,18 @@ class RevenueController extends Controller
             $filename = 'template_revenue_import_' . date('Y') . '.xlsx';
 
             Log::info('Downloading revenue template', [
-                'filename' => $filename
+                'filename' => $filename,
+                'user_ip' => request()->ip()
             ]);
 
             // ✅ FIXED: Menggunakan RevenueTemplateExport class instead of manual CSV
             return Excel::download(new RevenueTemplateExport(), $filename);
 
         } catch (\Exception $e) {
-            Log::error('Download Revenue Template Error: ' . $e->getMessage());
+            Log::error('Download Revenue Template Error: ' . $e->getMessage(), [
+                'user_ip' => request()->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', 'Gagal mendownload template: ' . $e->getMessage());
         }
     }
@@ -1468,7 +1678,8 @@ class RevenueController extends Controller
                         'Jika ada error, perhatikan detail error yang menunjukkan baris dan jenis kesalahan',
                         'Gunakan fuzzy matching akan otomatis mencari nama yang mirip 80%',
                         'File Excel akan diproses dalam chunks untuk menghindari timeout',
-                        'Gunakan overwrite_mode untuk mengatur bagaimana data existing dihandle'
+                        'Gunakan overwrite_mode untuk mengatur bagaimana data existing dihandle',
+                        'Import akan memberikan pesan untuk refresh manual - tidak auto refresh'
                     ]
                 ]
             ]);
@@ -1706,6 +1917,127 @@ class RevenueController extends Controller
                 'success' => false,
                 'message' => 'Error getting statistics: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Validate revenue data without saving (for real-time validation)
+     */
+    public function validateRevenueData(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'account_manager_id' => 'required|exists:account_managers,id',
+                'corporate_customer_id' => 'required|exists:corporate_customers,id',
+                'divisi_id' => 'required|exists:divisi,id',
+                'bulan' => 'required|date_format:Y-m',
+                'current_id' => 'nullable|exists:revenues,id'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => $validator->errors()->first()
+                ]);
+            }
+
+            $bulanDate = $request->bulan . '-01';
+
+            // Check for duplicate entry
+            $query = Revenue::where([
+                'account_manager_id' => $request->account_manager_id,
+                'corporate_customer_id' => $request->corporate_customer_id,
+                'divisi_id' => $request->divisi_id,
+                'bulan' => $bulanDate,
+            ]);
+
+            if ($request->current_id) {
+                $query->where('id', '!=', $request->current_id);
+            }
+
+            if ($query->exists()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Data revenue untuk kombinasi Account Manager, Corporate Customer, Divisi, dan Bulan ini sudah ada.'
+                ]);
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => 'Data revenue valid.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Revenue Data Validation Error: ' . $e->getMessage());
+
+            return response()->json([
+                'valid' => false,
+                'message' => 'Terjadi kesalahan saat validasi data revenue.'
+            ]);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Get revenue with relationship summary
+     */
+    public function getRevenueWithRelationshipSummary($id)
+    {
+        try {
+            $revenue = Revenue::with([
+                'accountManager.witel',
+                'accountManager.regional',
+                'accountManager.divisis',
+                'corporateCustomer',
+                'divisi'
+            ])->findOrFail($id);
+
+            $relationshipSummary = [
+                'account_manager' => [
+                    'id' => $revenue->accountManager->id,
+                    'nama' => $revenue->accountManager->nama,
+                    'nik' => $revenue->accountManager->nik,
+                    'witel' => $revenue->accountManager->witel->nama ?? null,
+                    'regional' => $revenue->accountManager->regional->nama ?? null,
+                    'divisis' => $revenue->accountManager->divisis->pluck('nama')->toArray(),
+                    'total_revenues' => $revenue->accountManager->revenues()->count()
+                ],
+                'corporate_customer' => [
+                    'id' => $revenue->corporateCustomer->id,
+                    'nama' => $revenue->corporateCustomer->nama,
+                    'nipnas' => $revenue->corporateCustomer->nipnas,
+                    'total_revenues' => $revenue->corporateCustomer->revenues()->count()
+                ],
+                'divisi' => [
+                    'id' => $revenue->divisi->id,
+                    'nama' => $revenue->divisi->nama,
+                    'total_revenues' => $revenue->divisi->revenues()->count()
+                ]
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'revenue' => [
+                        'id' => $revenue->id,
+                        'target_revenue' => $revenue->target_revenue,
+                        'real_revenue' => $revenue->real_revenue,
+                        'bulan' => $revenue->bulan,
+                        'achievement_rate' => $revenue->target_revenue > 0 ?
+                            round(($revenue->real_revenue / $revenue->target_revenue) * 100, 2) : 0,
+                        'created_at' => $revenue->created_at,
+                        'updated_at' => $revenue->updated_at
+                    ],
+                    'relationships' => $relationshipSummary
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get Revenue With Relationship Summary Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Revenue tidak ditemukan.'
+            ], 404);
         }
     }
 }

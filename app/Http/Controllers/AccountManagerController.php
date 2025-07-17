@@ -125,6 +125,24 @@ class AccountManagerController extends Controller
     }
 
     /**
+     * ✅ EXISTING: Show the form for creating new account manager
+     */
+    public function create()
+    {
+        try {
+            $witels = Witel::orderBy('nama')->get();
+            $regionals = Regional::orderBy('nama')->get();
+            $divisis = Divisi::orderBy('nama')->get();
+
+            return view('account-managers.create', compact('witels', 'regionals', 'divisis'));
+
+        } catch (\Exception $e) {
+            Log::error('Account Manager Create Error: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat memuat form.');
+        }
+    }
+
+    /**
      * ✅ EXISTING: Get form data for dropdowns (called from routes)
      */
     public function getFormData()
@@ -355,7 +373,10 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Remove the specified account manager
+     * 🔧 FIXED: Remove the specified account manager with CASCADE DELETE
+     *
+     * MAJOR CHANGE: Sekarang akan menghapus semua revenue terkait terlebih dahulu (CASCADE DELETE)
+     * bukan menolak penghapusan seperti sebelumnya
      */
     public function destroy($id)
     {
@@ -364,36 +385,93 @@ class AccountManagerController extends Controller
 
             $accountManager = AccountManager::findOrFail($id);
 
-            // Check if Account Manager has related revenue data
-            if ($accountManager->revenues()->exists()) {
-                return back()->with('error', 'Account Manager tidak dapat dihapus karena masih memiliki data revenue terkait.');
+            // 🔧 CRITICAL FIX: CASCADE DELETE - Hapus revenue terkait dulu, bukan tolak penghapusan
+            $relatedRevenuesCount = $accountManager->revenues()->count();
+
+            if ($relatedRevenuesCount > 0) {
+                // Delete all related revenues first (CASCADE DELETE)
+                $accountManager->revenues()->delete();
+                Log::info("CASCADE DELETE: Deleted {$relatedRevenuesCount} related revenues for Account Manager ID: {$id}");
             }
 
-            // ✅ NEW: Check if Account Manager has user account
-            if ($accountManager->user) {
-                return back()->with('error', 'Account Manager tidak dapat dihapus karena memiliki akun user terdaftar. Hapus akun user terlebih dahulu.');
+            // Check if Account Manager has user account - masih perlu dicek untuk keamanan
+            $hasUserAccount = $accountManager->user ? true : false;
+            $userEmail = null;
+
+            if ($hasUserAccount) {
+                $userEmail = $accountManager->user->email;
+                // Delete user account as well (CASCADE DELETE)
+                $accountManager->user->delete();
+                Log::info("CASCADE DELETE: Deleted user account {$userEmail} for Account Manager ID: {$id}");
             }
 
             // Detach divisions first
             $accountManager->divisis()->detach();
 
             // Delete the account manager
+            $accountManagerName = $accountManager->nama;
             $accountManager->delete();
 
             DB::commit();
 
-            return back()->with('success', 'Account Manager berhasil dihapus.');
+            // 🔧 ENHANCED SUCCESS MESSAGE: Informasikan apa saja yang dihapus
+            $message = "Account Manager '{$accountManagerName}' berhasil dihapus";
+
+            if ($relatedRevenuesCount > 0) {
+                $message .= " beserta {$relatedRevenuesCount} data revenue terkait";
+            }
+
+            if ($hasUserAccount) {
+                $message .= " dan akun user ({$userEmail})";
+            }
+
+            $message .= ".";
+
+            // Log successful deletion
+            Log::info('Account Manager CASCADE DELETE completed', [
+                'account_manager_id' => $id,
+                'account_manager_name' => $accountManagerName,
+                'deleted_revenues_count' => $relatedRevenuesCount,
+                'deleted_user_account' => $hasUserAccount ? $userEmail : 'none',
+                'user_ip' => request()->ip(),
+                'timestamp' => now()
+            ]);
+
+            // Handle different response types
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data' => [
+                        'deleted_account_manager' => $accountManagerName,
+                        'deleted_revenues_count' => $relatedRevenuesCount,
+                        'deleted_user_account' => $hasUserAccount
+                    ]
+                ]);
+            }
+
+            return back()->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Account Manager Delete Error: ' . $e->getMessage());
+            Log::error('Account Manager Delete Error: ' . $e->getMessage(), [
+                'account_manager_id' => $id,
+                'error_trace' => $e->getTraceAsString()
+            ]);
+
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan saat menghapus Account Manager: ' . $e->getMessage()
+                ], 500);
+            }
 
             return back()->with('error', 'Terjadi kesalahan saat menghapus Account Manager.');
         }
     }
 
     /**
-     * ✅ NEW: Check if Account Manager has registered user account
+     * ✅ EXISTING: Check if Account Manager has registered user account
      */
     public function checkUserStatus($id)
     {
@@ -409,7 +487,7 @@ class AccountManagerController extends Controller
                     'email' => $accountManager->user->email,
                     'role' => $accountManager->user->role,
                     'created_at' => $accountManager->user->created_at,
-                    'profile_image_url' => $accountManager->user->getProfileImageUrl()
+                    'last_login_at' => $accountManager->user->last_login_at
                 ];
             }
 
@@ -434,7 +512,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Change password for Account Manager's user account
+     * ✅ EXISTING: Change password for Account Manager's user account
      */
     public function changePassword(Request $request, $id)
     {
@@ -499,7 +577,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get Account Manager user status for password change feature (alternative endpoint)
+     * ✅ EXISTING: Get Account Manager user status for password change feature (alternative endpoint)
      */
     public function getUserStatus($id)
     {
@@ -531,7 +609,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Reset/Delete user account for Account Manager
+     * ✅ EXISTING: Reset/Delete user account for Account Manager
      */
     public function resetUserAccount($id)
     {
@@ -579,7 +657,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Bulk delete account managers
+     * ✅ EXISTING: Bulk delete account managers (for selected items)
      */
     public function bulkDelete(Request $request)
     {
@@ -607,21 +685,28 @@ class AccountManagerController extends Controller
             $deleted = 0;
             $errors = [];
             $deletedDetails = [];
+            $totalDeletedRevenues = 0;
+            $totalDeletedUsers = 0;
 
             foreach ($ids as $id) {
                 try {
                     $accountManager = AccountManager::with('user')->findOrFail($id);
 
-                    // Check if has related revenue data
-                    if ($accountManager->revenues()->exists()) {
-                        $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki data revenue terkait.";
-                        continue;
+                    // 🔧 CRITICAL FIX: CASCADE DELETE logic - tidak lagi reject, tapi delete semua
+                    $relatedRevenuesCount = $accountManager->revenues()->count();
+                    $hasUserAccount = $accountManager->user ? true : false;
+                    $userEmail = $hasUserAccount ? $accountManager->user->email : null;
+
+                    // Delete related revenues (CASCADE DELETE)
+                    if ($relatedRevenuesCount > 0) {
+                        $accountManager->revenues()->delete();
+                        $totalDeletedRevenues += $relatedRevenuesCount;
                     }
 
-                    // ✅ NEW: Check if has user account
-                    if ($accountManager->user) {
-                        $errors[] = "Account Manager '{$accountManager->nama}' tidak dapat dihapus karena memiliki akun user terdaftar.";
-                        continue;
+                    // Delete user account if exists (CASCADE DELETE)
+                    if ($hasUserAccount) {
+                        $accountManager->user->delete();
+                        $totalDeletedUsers++;
                     }
 
                     $accountManagerInfo = [
@@ -630,7 +715,9 @@ class AccountManagerController extends Controller
                         'nik' => $accountManager->nik,
                         'witel' => $accountManager->witel->nama ?? 'Unknown',
                         'regional' => $accountManager->regional->nama ?? 'Unknown',
-                        'divisis' => $accountManager->divisis->pluck('nama')->implode(', ')
+                        'divisis' => $accountManager->divisis->pluck('nama')->implode(', '),
+                        'deleted_revenues_count' => $relatedRevenuesCount,
+                        'deleted_user_account' => $userEmail
                     ];
 
                     // Detach divisions first
@@ -643,12 +730,25 @@ class AccountManagerController extends Controller
 
                 } catch (\Exception $e) {
                     $errors[] = "Error menghapus Account Manager ID {$id}: " . $e->getMessage();
+                    Log::error("Bulk Delete Error for Account Manager ID {$id}", [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                 }
             }
 
             DB::commit();
 
-            $message = "Berhasil menghapus {$deleted} Account Manager.";
+            // 🔧 ENHANCED SUCCESS MESSAGE
+            $message = "Berhasil menghapus {$deleted} Account Manager";
+            if ($totalDeletedRevenues > 0) {
+                $message .= " beserta {$totalDeletedRevenues} data revenue terkait";
+            }
+            if ($totalDeletedUsers > 0) {
+                $message .= " dan {$totalDeletedUsers} akun user";
+            }
+            $message .= ".";
+
             if (!empty($errors)) {
                 $message .= " " . count($errors) . " data gagal dihapus.";
             }
@@ -656,6 +756,8 @@ class AccountManagerController extends Controller
             // ✅ LOG BULK DELETE ACTIVITY
             Log::info('Bulk Delete Account Manager Activity', [
                 'deleted_count' => $deleted,
+                'total_deleted_revenues' => $totalDeletedRevenues,
+                'total_deleted_users' => $totalDeletedUsers,
                 'error_count' => count($errors),
                 'user_ip' => $request->ip(),
                 'deleted_details' => $deletedDetails
@@ -666,6 +768,8 @@ class AccountManagerController extends Controller
                 'message' => $message,
                 'data' => [
                     'deleted' => $deleted,
+                    'total_deleted_revenues' => $totalDeletedRevenues,
+                    'total_deleted_users' => $totalDeletedUsers,
                     'errors' => $errors,
                     'deleted_details' => $deletedDetails
                 ]
@@ -678,6 +782,179 @@ class AccountManagerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan saat menghapus data Account Manager.'
+            ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Bulk delete ALL account managers with filter support
+     *
+     * Route: POST /account-manager/bulk-delete-all
+     * Function: Menghapus SEMUA Account Manager sesuai filter yang aktif
+     */
+/**
+     * 🆕 NEW: Bulk delete ALL account managers with filter support
+     *
+     * Route: POST /account-manager/bulk-delete-all
+     * Function: Menghapus SEMUA Account Manager sesuai filter yang aktif
+     */
+    public function bulkDeleteAll(Request $request)
+    {
+        try {
+            $query = AccountManager::query();
+
+            // Apply filters from request
+            if ($request->has('witel_filter') && !empty($request->witel_filter)) {
+                $query->where('witel_id', $request->witel_filter);
+            }
+
+            if ($request->has('regional_filter') && !empty($request->regional_filter)) {
+                $query->where('regional_id', $request->regional_filter);
+            }
+
+            if ($request->has('divisi_filter') && !empty($request->divisi_filter)) {
+                $query->whereHas('divisis', function($q) use ($request) {
+                    $q->where('divisi.id', $request->divisi_filter);
+                });
+            }
+
+            if ($request->has('search_filter') && !empty($request->search_filter)) {
+                $searchTerm = trim($request->search_filter);
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('nama', 'LIKE', "%{$searchTerm}%")
+                      ->orWhere('nik', 'LIKE', "%{$searchTerm}%");
+                });
+            }
+
+            if ($request->has('user_status_filter') && !empty($request->user_status_filter)) {
+                if ($request->user_status_filter === 'registered') {
+                    $query->whereHas('user');
+                } elseif ($request->user_status_filter === 'not_registered') {
+                    $query->whereDoesntHave('user');
+                }
+            }
+
+            // Get count and preview before delete
+            $accountManagers = $query->with(['user', 'revenues'])->get();
+            $totalCount = $accountManagers->count();
+
+            if ($totalCount === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak ada data Account Manager yang sesuai dengan filter.'
+                ], 422);
+            }
+
+            // Calculate what will be deleted (CASCADE info)
+            $totalRevenueCount = 0;
+            $totalUserCount = 0;
+            $deletedDetails = [];
+
+            foreach ($accountManagers as $am) {
+                $revenueCount = $am->revenues()->count();
+                $hasUser = $am->user ? true : false;
+
+                $totalRevenueCount += $revenueCount;
+                if ($hasUser) {
+                    $totalUserCount++;
+                }
+
+                $deletedDetails[] = [
+                    'id' => $am->id,
+                    'nama' => $am->nama,
+                    'nik' => $am->nik,
+                    'witel' => $am->witel->nama ?? 'Unknown',
+                    'regional' => $am->regional->nama ?? 'Unknown',
+                    'revenue_count' => $revenueCount,
+                    'has_user' => $hasUser,
+                    'user_email' => $hasUser ? $am->user->email : null
+                ];
+            }
+
+            DB::beginTransaction();
+
+            $deletedCount = 0;
+            $deletedRevenuesTotal = 0;
+            $deletedUsersTotal = 0;
+
+            // Perform CASCADE DELETE for each Account Manager
+            foreach ($accountManagers as $am) {
+                try {
+                    // Delete related revenues first (CASCADE DELETE)
+                    $revenueCount = $am->revenues()->count();
+                    if ($revenueCount > 0) {
+                        $am->revenues()->delete();
+                        $deletedRevenuesTotal += $revenueCount;
+                    }
+
+                    // Delete user account if exists (CASCADE DELETE)
+                    if ($am->user) {
+                        $am->user->delete();
+                        $deletedUsersTotal++;
+                    }
+
+                    // Detach divisions
+                    $am->divisis()->detach();
+
+                    // Delete account manager
+                    $am->delete();
+                    $deletedCount++;
+
+                } catch (\Exception $e) {
+                    Log::error("Error deleting Account Manager ID {$am->id} in bulk delete all", [
+                        'error' => $e->getMessage(),
+                        'am_id' => $am->id,
+                        'am_name' => $am->nama
+                    ]);
+                    // Continue with other deletions
+                }
+            }
+
+            DB::commit();
+
+            // Generate comprehensive success message
+            $message = "Berhasil menghapus {$deletedCount} dari {$totalCount} Account Manager";
+
+            if ($deletedRevenuesTotal > 0) {
+                $message .= " beserta {$deletedRevenuesTotal} data revenue terkait";
+            }
+
+            if ($deletedUsersTotal > 0) {
+                $message .= " dan {$deletedUsersTotal} akun user";
+            }
+
+            $message .= ".";
+
+            // Log bulk delete all activity
+            Log::info('Bulk Delete All Account Manager Activity', [
+                'total_count' => $totalCount,
+                'deleted_count' => $deletedCount,
+                'deleted_revenues_total' => $deletedRevenuesTotal,
+                'deleted_users_total' => $deletedUsersTotal,
+                'filters' => $request->only(['witel_filter', 'regional_filter', 'divisi_filter', 'search_filter', 'user_status_filter']),
+                'user_ip' => $request->ip(),
+                'deleted_preview' => $deletedDetails
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'total_count' => $totalCount,
+                    'deleted_count' => $deletedCount,
+                    'deleted_revenues_total' => $deletedRevenuesTotal,
+                    'deleted_users_total' => $deletedUsersTotal,
+                    'preview_sample' => array_slice($deletedDetails, 0, 10) // First 10 for preview
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Account Manager Bulk Delete All Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data Account Manager: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -841,7 +1118,8 @@ class AccountManagerController extends Controller
                 '💡 Download template untuk melihat format yang benar',
                 '💡 Periksa sheet "Master Data" untuk data yang valid',
                 '💡 Gunakan export existing data sebagai referensi',
-                '💡 Satu NIK bisa memiliki multiple divisi (buat baris terpisah)'
+                '💡 Satu NIK bisa memiliki multiple divisi (buat baris terpisah)',
+                '💡 Import akan menghapus auto refresh - refresh manual setelah melihat hasil'
             ]
         ];
     }
@@ -1009,9 +1287,14 @@ class AccountManagerController extends Controller
             $recentAccountManagers = AccountManager::where('created_at', '>=', now()->subDays(30))->count();
             $activeAccountManagers = AccountManager::whereHas('revenues')->distinct()->count();
 
-            // ✅ NEW: Count Account Managers with and without user accounts
+            // ✅ ENHANCED: Count Account Managers with and without user accounts
             $accountManagersWithUsers = AccountManager::whereHas('user')->count();
             $accountManagersWithoutUsers = $totalAccountManagers - $accountManagersWithUsers;
+
+            // Count total revenues related to Account Managers
+            $totalRevenuesLinked = DB::table('revenues')
+                ->join('account_managers', 'revenues.account_manager_id', '=', 'account_managers.id')
+                ->count();
 
             // Count by divisi
             $divisiStats = DB::table('account_manager_divisi')
@@ -1030,7 +1313,17 @@ class AccountManagerController extends Controller
                 })
                 ->sortDesc();
 
-            // ✅ NEW: User registration statistics
+            // Count by witel
+            $witelStats = AccountManager::with('witel')
+                ->get()
+                ->groupBy('witel.nama')
+                ->map(function ($items) {
+                    return $items->count();
+                })
+                ->sortDesc()
+                ->take(10); // Top 10 witel
+
+            // ✅ ENHANCED: User registration statistics
             $userRegistrationStats = [
                 'total_with_accounts' => $accountManagersWithUsers,
                 'total_without_accounts' => $accountManagersWithoutUsers,
@@ -1045,11 +1338,13 @@ class AccountManagerController extends Controller
                 'recent_account_managers' => $recentAccountManagers,
                 'active_account_managers' => $activeAccountManagers,
                 'inactive_account_managers' => $totalAccountManagers - $activeAccountManagers,
+                'total_revenues_linked' => $totalRevenuesLinked,
                 'divisi_stats' => $divisiStats,
                 'regional_stats' => $regionalStats,
-                'user_registration_stats' => $userRegistrationStats, // ✅ NEW
-                'accounts_with_users' => $accountManagersWithUsers, // ✅ NEW
-                'accounts_without_users' => $accountManagersWithoutUsers // ✅ NEW
+                'witel_stats' => $witelStats,
+                'user_registration_stats' => $userRegistrationStats,
+                'accounts_with_users' => $accountManagersWithUsers,
+                'accounts_without_users' => $accountManagersWithoutUsers
             ];
 
         } catch (\Exception $e) {
@@ -1060,8 +1355,10 @@ class AccountManagerController extends Controller
                 'recent_account_managers' => 0,
                 'active_account_managers' => 0,
                 'inactive_account_managers' => 0,
+                'total_revenues_linked' => 0,
                 'divisi_stats' => collect(),
                 'regional_stats' => collect(),
+                'witel_stats' => collect(),
                 'user_registration_stats' => [
                     'total_with_accounts' => 0,
                     'total_without_accounts' => 0,
@@ -1127,7 +1424,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Get all Account Managers with user status for admin panel
+     * ✅ EXISTING: Get all Account Managers with user status for admin panel
      */
     public function getAccountManagersWithUserStatus(Request $request)
     {
@@ -1168,7 +1465,8 @@ class AccountManagerController extends Controller
                     'user_email' => $am->user ? $am->user->email : null,
                     'user_created_at' => $am->user ? $am->user->created_at->format('d M Y H:i') : null,
                     'user_last_login' => $am->user && $am->user->last_login_at ? $am->user->last_login_at->format('d M Y H:i') : null,
-                    'can_change_password' => $am->user ? true : false
+                    'can_change_password' => $am->user ? true : false,
+                    'revenue_count' => $am->revenues()->count()
                 ];
             });
 
@@ -1189,7 +1487,7 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ NEW: Bulk password reset for multiple Account Managers
+     * ✅ EXISTING: Bulk password reset for multiple Account Managers
      */
     public function bulkPasswordReset(Request $request)
     {

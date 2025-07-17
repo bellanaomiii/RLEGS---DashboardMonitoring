@@ -357,7 +357,7 @@ public function __construct($year = null, $overwriteMode = 'update')
             5 => ['MEI', 'MAY', '05', 'Mei'],
             6 => ['JUN', 'JUNI', 'JUNE', '06', 'Jun'],
             7 => ['JUL', 'JULI', 'JULY', '07', 'Jul'],
-            8 => ['AGU', 'AGS', 'AGUSTUS', 'AUGUST', '08', 'Aug'],
+            8 => ['AGU', 'AGS', 'AGUSTUS', 'AUGUST', '08', 'Aug', 'Agus'],
             9 => ['SEP', 'SEPTEMBER', '09', 'Sep'],
             10 => ['OKT', 'OKTOBER', 'OCTOBER', '10', 'Oct'],
             11 => ['NOV', 'NOVEMBER', '11', 'Nov'],

@@ -241,10 +241,7 @@
         }
 
         .form-row,
-        .dashboard-card {
-            position: relative;
-            z-index: 1; /* Lebih rendah dari month picker */
-        }
+
 
         .month-picker.show {
             display: block;

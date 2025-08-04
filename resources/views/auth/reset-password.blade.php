@@ -30,10 +30,9 @@
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="px-4 py-2 mt-2 bg-[#0F1B31] text-white rounded-md hover:bg-[#1c2e50] transition">
+            {{ __('Reset Password') }}
+        </button>
+
     </form>
 </x-guest-layout>

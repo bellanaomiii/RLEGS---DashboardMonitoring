@@ -71,13 +71,20 @@
                     @enderror
                 </div>
 
-                <!-- Remember Me -->
-                <div class="block mt-4">
+                <!-- Remember Me & Forgot Password -->
+                <div class="flex items-center justify-between mt-4">
+                    <!-- Remember Me -->
                     <label for="remember_me" class="inline-flex items-center">
                         <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
                         <span class="ms-2 text-sm text-gray-600">Ingat saya</span>
                     </label>
+
+                    <!-- Forgot Password -->
+                    <a href="/forgot-password" class="text-sm text-indigo-600 hover:underline">
+                        Lupa Kata Sandi?
+                    </a>
                 </div>
+
 
                 <!-- Login Link and Submit Button -->
                 <div class="flex items-center justify-between mt-6">
@@ -90,6 +97,7 @@
                         <button type="submit" class="px-4 py-2 bg-[#0e223e] text-white rounded-md hover:bg-[#1e3c72] transition-colors">
                             Masuk
                         </button>
+                        
 {{-- 
                         @if (Route::has('password.request'))
                             <a class="text-sm text-blue-600 hover:underline mt-2" href="{{ route('password.request') }}">

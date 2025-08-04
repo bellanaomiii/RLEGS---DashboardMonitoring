@@ -15,6 +15,9 @@ use App\Http\Controllers\WitelLeaderboardController;
 use App\Http\Controllers\DivisiLeaderboardController;
 use App\Http\Controllers\WitelPerformController;
 use App\Http\Controllers\RegionalController;
+use App\Http\Controllers\Auth\NewPasswordController;
+
+
 
 // ✅ BASIC ROUTES
 Route::get('/', function () {
@@ -25,6 +28,14 @@ Route::get('/logout', function () {
     Auth::logout();
     return redirect('/');
 })->name('logout');
+
+Route::post('/reset-password', [NewPasswordController::class, 'store'])
+    ->middleware('guest')
+    ->name('password.store');
+
+Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
+    ->middleware('guest')
+    ->name('password.reset');
 
 // Search route untuk register
 Route::get('/search-account-managers', [RegisteredUserController::class, 'searchAccountManagers'])

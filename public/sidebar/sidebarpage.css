@@ -339,10 +339,10 @@ a.sidebar-link:hover {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background-color: #153456; 
+    background-color: #153456;
     padding: 10px;
     border-radius: 50%;
-    z-index: 10; 
+    z-index: 10;
 }
 
 .left-btn {
@@ -406,7 +406,7 @@ a.sidebar-link:hover {
     font-weight: bold;
     align-items: center;
     justify-content: center;
-    height: 200px; 
+    height: 200px;
     border: 1px solid #cacaca;
     transition: all 0.3s ease;
 }
@@ -468,14 +468,14 @@ a.sidebar-link:hover {
 }
 
 #main-content {
-    margin-left: 20px; 
+    margin-left: 20px;
     padding: 45px;
     transition: margin-left 0.3s ease-in-out;
     width: calc(100% - 70px);
 }
 
 #sidebar.expand + #main-content {
-    margin-left: 30px; 
+    margin-left: 30px;
     width: calc(100% - 90px);
 }
 
@@ -483,7 +483,7 @@ a.sidebar-link:hover {
 /* Pastikan container relatif terhadap dropdown */
 .month-picker-container {
     position: relative !important;
-    height: 280px;
+    height: 20px;
 }
 
 /* Dropdown bulan-tahun */
@@ -503,8 +503,8 @@ a.sidebar-link:hover {
 }
 
 .filter-content {
-    overflow: visible !important; 
-    position: relative; 
+    overflow: visible !important;
+    position: relative;
     z-index: 10;
 }
 
@@ -519,7 +519,7 @@ a.sidebar-link:hover {
     height: auto;
     max-height: 38px;
     overflow: hidden;
-    
+
     /* Styling dasar */
     background: linear-gradient(135deg, #0e223e, #1e3c72 50%, #2a5298); /* Gradient Blue */
     color: white;
@@ -527,31 +527,31 @@ a.sidebar-link:hover {
     border-radius: 4px;
     padding: 8px 12px;
     width: 100%;
-    
+
     /* Tambahkan ikon dropdown */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: calc(100% - 10px) center;
     background-size: 12px;
-    
+
     /* Behavior pada klik */
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
   }
-  
+
   /* Styling untuk dropdown ketika dibuka */
   #filterSelect2:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(30, 42, 74, 0.5);
   }
-  
+
   /* Styling untuk opsi */
   #filterSelect2 option {
     padding: 8px 12px;
   }
-  
+
   /* Styling untuk opsi terpilih */
   #filterSelect2 option:checked,
   #filterSelect2 option:selected {

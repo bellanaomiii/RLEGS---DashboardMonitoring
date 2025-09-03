@@ -22,6 +22,12 @@ class AccountManagerDetailController extends Controller
         // Get selected category filter (untuk AM multi divisi DGS+DSS)
         $selectedCategoryFilter = $request->input('category_filter', 'enterprise'); // default enterprise
 
+        // Get view mode (detail atau aggregate)
+        $viewMode = $request->input('view_mode', 'detail'); // default detail
+
+        // Get selected month filter for detail view
+        $selectedMonth = $request->input('month', 'all');
+
         // Get the account manager with relationships
         $accountManager = AccountManager::with(['witel', 'divisis', 'corporateCustomers', 'user', 'revenues'])
             ->findOrFail($id);
@@ -58,16 +64,28 @@ class AccountManagerDetailController extends Controller
 
         if ($selectedDivisiId) {
             // If specific divisi is selected, get only data for that divisi
-            $customerRevenuesByDivisi[$selectedDivisiId] = $this->getCustomerRevenues($accountManager, $selectedYear, $selectedDivisiId);
+            if ($viewMode === 'detail') {
+                $customerRevenuesByDivisi[$selectedDivisiId] = $this->getDetailedCustomerRevenues($accountManager, $selectedYear, $selectedDivisiId, $selectedMonth);
+            } else {
+                $customerRevenuesByDivisi[$selectedDivisiId] = $this->getCustomerRevenues($accountManager, $selectedYear, $selectedDivisiId);
+            }
         } else {
             // Otherwise get data for all divisi
             foreach ($accountManager->divisis as $divisi) {
-                $customerRevenuesByDivisi[$divisi->id] = $this->getCustomerRevenues($accountManager, $selectedYear, $divisi->id);
+                if ($viewMode === 'detail') {
+                    $customerRevenuesByDivisi[$divisi->id] = $this->getDetailedCustomerRevenues($accountManager, $selectedYear, $divisi->id, $selectedMonth);
+                } else {
+                    $customerRevenuesByDivisi[$divisi->id] = $this->getCustomerRevenues($accountManager, $selectedYear, $divisi->id);
+                }
             }
         }
 
         // For backward compatibility, also send combined data
-        $customerRevenues = $this->getCustomerRevenues($accountManager, $selectedYear);
+        if ($viewMode === 'detail') {
+            $customerRevenues = $this->getDetailedCustomerRevenues($accountManager, $selectedYear, null, $selectedMonth);
+        } else {
+            $customerRevenues = $this->getCustomerRevenues($accountManager, $selectedYear);
+        }
 
         // Get monthly performance data for all divisi
         $monthlyPerformanceByDivisi = [];
@@ -106,7 +124,10 @@ class AccountManagerDetailController extends Controller
             $yearsList = [Carbon::now()->year];
         }
 
-        // ✅ UPDATED: Get total revenue time period (earliest to latest month/year) - seperti calculatePeriodRange
+        // Get months list for dropdown (only for detail view)
+        $monthsList = $this->getAvailableMonths($accountManager->id, $selectedYear);
+
+        // Get total revenue time period (earliest to latest month/year)
         $revenuePeriod = $this->getRevenuePeriod($accountManager->id);
 
         return view('detailAM', [
@@ -122,13 +143,92 @@ class AccountManagerDetailController extends Controller
             'insights' => $insights,
             'insightsByDivisi' => $insightsByDivisi,
             'yearsList' => $yearsList,
+            'monthsList' => $monthsList,
             'selectedYear' => $selectedYear,
+            'selectedMonth' => $selectedMonth,
             'selectedDivisiId' => $selectedDivisiId,
             'selectedCategoryFilter' => $selectedCategoryFilter,
+            'viewMode' => $viewMode,
             'amCategory' => $amCategory,
             'needsCategoryFilter' => $needsCategoryFilter,
             'revenuePeriod' => $revenuePeriod
         ]);
+    }
+
+    /**
+     * NEW FUNCTION: Get detailed customer revenues with monthly breakdown
+     */
+    private function getDetailedCustomerRevenues($accountManager, $year, $divisiId = null, $selectedMonth = 'all')
+    {
+        // Start with base query
+        $query = DB::table('revenues')
+            ->join('corporate_customers', 'revenues.corporate_customer_id', '=', 'corporate_customers.id')
+            ->leftJoin('divisi', 'revenues.divisi_id', '=', 'divisi.id')
+            ->select(
+                'revenues.id as revenue_id',
+                'corporate_customers.id as customer_id',
+                'corporate_customers.nama as customer_name',
+                'corporate_customers.nipnas',
+                'divisi.nama as divisi_name',
+                'revenues.divisi_id',
+                'revenues.real_revenue',
+                'revenues.target_revenue',
+                DB::raw('CASE WHEN revenues.target_revenue > 0 THEN (revenues.real_revenue / revenues.target_revenue * 100) ELSE 0 END as achievement'),
+                'revenues.bulan',
+                DB::raw('MONTHNAME(revenues.bulan) as month_name'),
+                DB::raw('MONTH(revenues.bulan) as month_number'),
+                DB::raw('YEAR(revenues.bulan) as year')
+            )
+            ->where('revenues.account_manager_id', $accountManager->id)
+            ->whereYear('revenues.bulan', $year);
+
+        // Add divisi filter if specified
+        if ($divisiId) {
+            $query->where('revenues.divisi_id', $divisiId);
+        }
+
+        // Add month filter if specified and not 'all'
+        if ($selectedMonth !== 'all' && is_numeric($selectedMonth)) {
+            $query->whereMonth('revenues.bulan', $selectedMonth);
+        }
+
+        // Order by month desc, then by revenue desc
+        $detailedRevenueData = $query->orderBy('revenues.bulan', 'desc')
+            ->orderBy('revenues.real_revenue', 'desc')
+            ->get();
+
+        return $detailedRevenueData;
+    }
+
+    /**
+     * NEW FUNCTION: Get available months for the selected year and account manager
+     */
+    private function getAvailableMonths($accountManagerId, $year)
+    {
+        $months = Revenue::selectRaw('MONTH(bulan) as month_number, MONTHNAME(bulan) as month_name')
+            ->where('account_manager_id', $accountManagerId)
+            ->whereYear('bulan', $year)
+            ->groupBy(DB::raw('MONTH(bulan)'), DB::raw('MONTHNAME(bulan)'))
+            ->orderBy(DB::raw('MONTH(bulan)'))
+            ->get();
+
+        // Convert to array with Indonesian month names
+        $indonesianMonths = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        $monthsList = [];
+        foreach ($months as $month) {
+            $monthsList[] = [
+                'number' => $month->month_number,
+                'name' => $indonesianMonths[$month->month_number] ?? $month->month_name,
+                'english_name' => $month->month_name
+            ];
+        }
+
+        return $monthsList;
     }
 
     /**
@@ -193,8 +293,7 @@ class AccountManagerDetailController extends Controller
     }
 
     /**
-     * ✅ UPDATED: Get the revenue time period (earliest to latest month/year with data)
-     * Mirip dengan calculatePeriodRange() di DashboardController
+     * Get the revenue time period (earliest to latest month/year with data)
      */
     private function getRevenuePeriod($accountManagerId)
     {
@@ -657,7 +756,7 @@ class AccountManagerDetailController extends Controller
         }
 
         // Generate insight message
-        $message = "Performance Account Manager menunjukkan achievment tertinggi pada bulan " .
+        $message = "Performance Account Manager menunjukkan achievement tertinggi pada bulan " .
                   ($bestAchievementMonth ? $bestAchievementMonth['month_name'] : "-") .
                   " dengan nilai " . number_format($maxAchievement, 2) . "% dari target. " .
                   "Revenue tertinggi dicapai pada bulan " .
@@ -672,6 +771,184 @@ class AccountManagerDetailController extends Controller
             'avg_achievement' => $avgAchievement,
             'trend' => $trend,
             'message' => $message
+        ];
+    }
+
+    /**
+     * NEW FUNCTION: Get formatted month name in Indonesian
+     */
+    private function getIndonesianMonthName($monthNumber)
+    {
+        $indonesianMonths = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+
+        return $indonesianMonths[$monthNumber] ?? 'Unknown';
+    }
+
+    /**
+     * NEW FUNCTION: Format currency to readable format
+     */
+    private function formatCurrency($amount)
+    {
+        if ($amount >= 1000000000) {
+            return 'Rp ' . number_format($amount / 1000000000, 2, ',', '.') . ' M';
+        } elseif ($amount >= 1000000) {
+            return 'Rp ' . number_format($amount / 1000000, 2, ',', '.') . ' Jt';
+        } else {
+            return 'Rp ' . number_format($amount, 0, ',', '.');
+        }
+    }
+
+    /**
+     * NEW FUNCTION: Get achievement badge class based on percentage
+     */
+    private function getAchievementBadgeClass($achievement)
+    {
+        if ($achievement >= 100) {
+            return 'badge-success';
+        } elseif ($achievement >= 80) {
+            return 'badge-warning';
+        } else {
+            return 'badge-danger';
+        }
+    }
+
+    /**
+     * NEW FUNCTION: Get statistics for detailed customer view
+     */
+    private function getDetailedCustomerStatistics($accountManager, $year, $divisiId = null, $selectedMonth = 'all')
+    {
+        $detailedData = $this->getDetailedCustomerRevenues($accountManager, $year, $divisiId, $selectedMonth);
+
+        if ($detailedData->isEmpty()) {
+            return [
+                'total_records' => 0,
+                'total_customers' => 0,
+                'total_real_revenue' => 0,
+                'total_target_revenue' => 0,
+                'average_achievement' => 0,
+                'highest_achievement' => 0,
+                'lowest_achievement' => 0,
+                'achievement_above_100' => 0,
+                'achievement_80_to_100' => 0,
+                'achievement_below_80' => 0
+            ];
+        }
+
+        $totalRecords = $detailedData->count();
+        $uniqueCustomers = $detailedData->unique('customer_id')->count();
+        $totalRealRevenue = $detailedData->sum('real_revenue');
+        $totalTargetRevenue = $detailedData->sum('target_revenue');
+        $averageAchievement = $detailedData->avg('achievement');
+        $highestAchievement = $detailedData->max('achievement');
+        $lowestAchievement = $detailedData->min('achievement');
+
+        // Count achievements by categories
+        $achievementAbove100 = $detailedData->where('achievement', '>=', 100)->count();
+        $achievement80To100 = $detailedData->whereBetween('achievement', [80, 99.99])->count();
+        $achievementBelow80 = $detailedData->where('achievement', '<', 80)->count();
+
+        return [
+            'total_records' => $totalRecords,
+            'total_customers' => $uniqueCustomers,
+            'total_real_revenue' => $totalRealRevenue,
+            'total_target_revenue' => $totalTargetRevenue,
+            'average_achievement' => round($averageAchievement, 2),
+            'highest_achievement' => round($highestAchievement, 2),
+            'lowest_achievement' => round($lowestAchievement, 2),
+            'achievement_above_100' => $achievementAbove100,
+            'achievement_80_to_100' => $achievement80To100,
+            'achievement_below_80' => $achievementBelow80
+        ];
+    }
+
+    /**
+     * NEW FUNCTION: Get customer revenue comparison between aggregate and detail view
+     */
+    private function getCustomerRevenueComparison($accountManager, $year, $divisiId = null)
+    {
+        $aggregateData = $this->getCustomerRevenues($accountManager, $year, $divisiId);
+        $detailedData = $this->getDetailedCustomerRevenues($accountManager, $year, $divisiId);
+
+        // Group detailed data by customer
+        $detailedGrouped = $detailedData->groupBy('customer_id')->map(function ($group) {
+            return [
+                'customer_name' => $group->first()->customer_name,
+                'nipnas' => $group->first()->nipnas,
+                'total_records' => $group->count(),
+                'months_count' => $group->unique('month_number')->count(),
+                'total_real_revenue' => $group->sum('real_revenue'),
+                'total_target_revenue' => $group->sum('target_revenue'),
+                'average_achievement' => $group->avg('achievement'),
+                'best_month_achievement' => $group->max('achievement'),
+                'worst_month_achievement' => $group->min('achievement'),
+                'months_list' => $group->pluck('month_name')->unique()->values()->toArray()
+            ];
+        });
+
+        return [
+            'aggregate' => $aggregateData,
+            'detailed_grouped' => $detailedGrouped,
+            'comparison' => [
+                'aggregate_count' => $aggregateData->count(),
+                'detailed_unique_customers' => $detailedGrouped->count(),
+                'total_detail_records' => $detailedData->count()
+            ]
+        ];
+    }
+
+    /**
+     * NEW FUNCTION: Get monthly breakdown summary for a specific customer
+     */
+    private function getCustomerMonthlyBreakdown($accountManager, $customerId, $year, $divisiId = null)
+    {
+        $query = DB::table('revenues')
+            ->join('corporate_customers', 'revenues.corporate_customer_id', '=', 'corporate_customers.id')
+            ->leftJoin('divisi', 'revenues.divisi_id', '=', 'divisi.id')
+            ->select(
+                'revenues.*',
+                'corporate_customers.nama as customer_name',
+                'corporate_customers.nipnas',
+                'divisi.nama as divisi_name',
+                DB::raw('MONTHNAME(revenues.bulan) as month_name'),
+                DB::raw('MONTH(revenues.bulan) as month_number'),
+                DB::raw('CASE WHEN revenues.target_revenue > 0 THEN (revenues.real_revenue / revenues.target_revenue * 100) ELSE 0 END as achievement')
+            )
+            ->where('revenues.account_manager_id', $accountManager->id)
+            ->where('revenues.corporate_customer_id', $customerId)
+            ->whereYear('revenues.bulan', $year);
+
+        if ($divisiId) {
+            $query->where('revenues.divisi_id', $divisiId);
+        }
+
+        $monthlyData = $query->orderBy('revenues.bulan')
+            ->get();
+
+        // Calculate totals and statistics
+        $totalRealRevenue = $monthlyData->sum('real_revenue');
+        $totalTargetRevenue = $monthlyData->sum('target_revenue');
+        $overallAchievement = $totalTargetRevenue > 0 ? ($totalRealRevenue / $totalTargetRevenue * 100) : 0;
+        $averageMonthlyAchievement = $monthlyData->avg('achievement');
+        $bestMonth = $monthlyData->sortByDesc('achievement')->first();
+        $worstMonth = $monthlyData->sortBy('achievement')->first();
+
+        return [
+            'monthly_data' => $monthlyData,
+            'statistics' => [
+                'total_months' => $monthlyData->count(),
+                'total_real_revenue' => $totalRealRevenue,
+                'total_target_revenue' => $totalTargetRevenue,
+                'overall_achievement' => round($overallAchievement, 2),
+                'average_monthly_achievement' => round($averageMonthlyAchievement, 2),
+                'best_month' => $bestMonth,
+                'worst_month' => $worstMonth,
+                'months_above_target' => $monthlyData->where('achievement', '>=', 100)->count(),
+                'months_below_target' => $monthlyData->where('achievement', '<', 100)->count()
+            ]
         ];
     }
 }

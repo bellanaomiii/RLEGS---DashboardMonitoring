@@ -3,7 +3,7 @@
 /* Main content container - match exactly dengan leaderboard */
 .main-content {
     padding: 0 30px;
-    margin-left: 85px; /* Sesuaikan dengan lebar sidebar */
+    margin-left: 40px; /* Sesuaikan dengan lebar sidebar */
     width: calc(100% - 85px);
 }
 

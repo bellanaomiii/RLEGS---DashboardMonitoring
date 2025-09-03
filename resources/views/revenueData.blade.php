@@ -42,7 +42,7 @@
         /* ========== DASHBOARD LAYOUT ========== */
         .main-content {
             padding: 24px;
-            background: #f8fafc;
+            background: #ffffff;
             min-height: 100vh;
         }
 
@@ -161,7 +161,7 @@
 
         .form-control {
             width: 100%;
-            padding: 14px 16px;
+            padding: 14px px;
             border: 2px solid #e2e8f0;
             border-radius: var(--radius-md);
             font-size: 15px;
@@ -213,15 +213,14 @@
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
         }
 
-        /* ========== MONTH PICKER - FIXED 3x4 LAYOUT ========== */
-        /* 🚀 CRITICAL FIX: Prevent month picker container from taking excessive height */
+        /* ========== 🔥 FIXED: MONTH PICKER - REDUCED HEIGHT ========== */
         .month-picker-container {
             position: relative;
             z-index: 10000;
             width: 100%;
-            height: auto !important; /* ✅ Force auto height */
-            min-height: unset !important; /* ✅ Remove any min-height */
-            max-height: none !important; /* ✅ Remove height restrictions */
+            height: auto !important;
+            min-height: unset !important;
+            max-height: none !important;
         }
 
         .month-picker {
@@ -233,20 +232,17 @@
             border: 2px solid #e2e8f0;
             border-radius: var(--radius-lg);
             box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-            z-index: 10001 !important; /* ✅ Paksa z-index tinggi */
+            z-index: 10001 !important;
             display: none;
-            padding: 24px;
+            padding: 20px;
             margin-top: 4px;
-            min-width: 340px;
+            min-width: 320px;
         }
-
-        .form-row,
-
 
         .month-picker.show {
             display: block;
             animation: slideDown 0.3s ease;
-            z-index: 10001 !important; /* ✅ Pastikan saat show juga tinggi */
+            z-index: 10001 !important;
         }
 
         @keyframes slideDown {
@@ -264,28 +260,28 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
             border-bottom: 1px solid #e2e8f0;
         }
 
         .year-selector {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
         }
 
         .year-nav-btn {
             background: #f7fafc;
             border: 2px solid #e2e8f0;
             border-radius: var(--radius-md);
-            padding: 8px 12px;
+            padding: 6px 10px;
             cursor: pointer;
             transition: all 0.2s ease;
             color: var(--text-gray);
             font-size: 14px;
-            min-width: 40px;
-            height: 40px;
+            min-width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -300,12 +296,12 @@
 
         .current-year {
             font-weight: 700;
-            font-size: 20px;
+            font-size: 18px;
             color: var(--secondary-blue);
-            min-width: 90px;
+            min-width: 80px;
             text-align: center;
             background: var(--light-blue);
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: var(--radius-md);
             border: 2px solid var(--secondary-blue);
         }
@@ -313,12 +309,12 @@
         .month-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
         .month-option {
-            padding: 16px 12px;
+            padding: 12px 10px;
             border: 2px solid #e2e8f0;
             border-radius: var(--radius-md);
             cursor: pointer;
@@ -328,7 +324,7 @@
             font-weight: 500;
             background: white;
             color: var(--text-gray);
-            min-height: 52px;
+            min-height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -350,13 +346,13 @@
         .month-picker-footer {
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
-            padding-top: 16px;
+            gap: 10px;
+            padding-top: 12px;
             border-top: 1px solid #e2e8f0;
         }
 
         .month-picker-footer .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: var(--radius-md);
             font-weight: 500;
             font-size: 14px;
@@ -365,7 +361,7 @@
             border: 2px solid;
         }
 
-        /* ========== 🆕 BULK ACTIONS TOOLBAR - ENHANCED WITH BULK DELETE ALL ========== */
+        /* ========== 🆕 ENHANCED: BULK ACTIONS TOOLBAR ========== */
         .bulk-actions-toolbar {
             display: none;
             position: sticky;
@@ -490,7 +486,7 @@
             border-collapse: collapse;
             margin: 0;
             background: white;
-            table-layout: fixed; /* 🔥 CRITICAL: Force consistent column widths */
+            table-layout: fixed;
         }
 
         .table-modern thead th {
@@ -714,8 +710,8 @@
             display: flex;
             justify-content: flex-end;
             gap: 12px;
-            margin-top: 32px;
-            padding-top: 24px;
+            margin-top: 24px;
+            padding-top: 20px;
             border-top: 1px solid var(--border-gray);
         }
 
@@ -1699,6 +1695,719 @@
         .no-js .js-dependent {
             display: none;
         }
+
+
+        /* ========== ENHANCED MOBILE RESPONSIVE DESIGN ========== */
+
+        /* Mobile Small (320px - 480px) */
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 12px 8px;
+            }
+
+            .header-dashboard {
+                padding: 16px 12px;
+                margin-bottom: 12px;
+            }
+
+            .header-title {
+                font-size: 1.3rem;
+                line-height: 1.2;
+            }
+
+            .header-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .card-header {
+                padding: 12px;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .card-header-actions {
+                width: 100%;
+                display: flex;
+                gap: 6px;
+            }
+
+            .btn-export, .btn-import {
+                flex: 1;
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .form-section {
+                padding: 12px;
+            }
+
+            /* Critical: Form stays in rows but stacks on very small screens */
+            .dashboard-card .form-section .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .form-control, .input-group-text {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .btn-save {
+                width: 100%;
+                padding: 12px 20px;
+            }
+        }
+
+        /* Mobile Medium (481px - 576px) */
+        @media (min-width: 481px) and (max-width: 576px) {
+            .main-content {
+                padding: 16px 12px;
+            }
+
+            .dashboard-card .form-section .form-row {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 14px !important;
+            }
+
+            /* Last row item spans full width if odd number */
+            .dashboard-card .form-section .form-row .form-group:nth-child(3n) {
+                grid-column: 1 / -1;
+            }
+        }
+
+        /* Tablet Portrait (577px - 768px) */
+        @media (min-width: 577px) and (max-width: 768px) {
+            .dashboard-card .form-section .form-row {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 16px !important;
+            }
+
+            .dashboard-card .form-section .form-row .form-group:nth-child(3) {
+                grid-column: 1 / -1;
+            }
+        }
+
+        /* Common Mobile Styles (up to 768px) */
+        @media (max-width: 768px) {
+            .action-btn {
+                padding: 6px 8px;
+                font-size: 12px;
+                min-width: 32px;
+                height: 32px;
+                margin: 0 2px;
+            }
+
+            .am-profile-pic {
+                width: 28px;
+                height: 28px;
+            }
+
+            .table-modern {
+                font-size: 13px;
+            }
+
+            .table-modern thead th,
+            .table-modern tbody td {
+                padding: 8px 6px;
+            }
+
+            .table-select-header,
+            .table-select-cell {
+                width: 45px !important;
+                min-width: 45px !important;
+                max-width: 45px !important;
+                padding: 8px 4px !important;
+            }
+
+            .row-checkbox,
+            .table-modern input[type="checkbox"] {
+                width: 16px !important;
+                height: 16px !important;
+            }
+
+            .divisi-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+                margin: 2px;
+            }
+
+            .notification-persistent {
+                left: 8px;
+                right: 8px;
+                max-width: none;
+                padding: 12px 16px;
+            }
+
+            .bulk-actions-toolbar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                margin: 0 8px 16px 8px;
+                padding: 12px 16px;
+            }
+
+            .bulk-action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-bulk {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .template-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 12px;
+            }
+
+            .template-card {
+                padding: 16px;
+            }
+
+            .month-picker {
+                min-width: 280px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .month-picker-header {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .year-selector {
+                justify-content: center;
+            }
+
+            .month-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .month-option {
+                padding: 8px 6px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+
+            /* Search and Filter Mobile */
+            .search-form {
+                margin-bottom: 8px;
+            }
+
+            .input-group {
+                flex-wrap: nowrap;
+            }
+
+            .filter-toggle-container {
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+
+            .filter-area .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .filter-area .form-group {
+                margin-bottom: 8px;
+            }
+
+            /* Tab System Mobile */
+            .tabs {
+                flex-wrap: wrap;
+                gap: 4px;
+                padding: 12px 16px 0;
+            }
+
+            .tab-item {
+                padding: 10px 16px;
+                font-size: 13px;
+                flex: 1;
+                min-width: calc(33.333% - 8px);
+                text-align: center;
+            }
+
+            .tab-item i {
+                display: none; /* Hide icons on mobile to save space */
+            }
+
+            .tab-content {
+                padding: 16px 12px;
+            }
+
+            /* Pagination Mobile */
+            .pagination-simple {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .pagination-info {
+                text-align: center;
+                order: 1;
+            }
+
+            .pagination-controls {
+                order: 2;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .page-btn {
+                min-width: 36px;
+                height: 36px;
+                padding: 8px 10px;
+                font-size: 13px;
+            }
+
+            .per-page-select {
+                order: 3;
+                text-align: center;
+                margin: 0 auto;
+            }
+
+            /* Modal Mobile */
+            .modal-dialog {
+                margin: 8px;
+                max-width: calc(100% - 16px);
+            }
+
+            .modal-header {
+                padding: 12px 16px;
+            }
+
+            .modal-body {
+                padding: 16px;
+            }
+
+            .modal-title {
+                font-size: 1.1rem;
+            }
+
+            /* Empty State Mobile */
+            .empty-state {
+                padding: 40px 16px;
+                margin: 12px 0;
+            }
+
+            .empty-state-icon {
+                font-size: 3rem;
+            }
+
+            .empty-state-title {
+                font-size: 1.1rem;
+            }
+
+            .empty-state-description {
+                font-size: 0.9rem;
+            }
+
+            /* Status Badge Mobile */
+            .status-badge, .divisi-badge, .user-status-badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+
+            /* Form Actions Mobile */
+            .form-actions {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+
+            .form-actions .btn-save {
+                width: 100%;
+            }
+        }
+
+        /* Very Small Mobile Fixes (up to 360px) */
+        @media (max-width: 360px) {
+            .dashboard-card .form-section .form-row {
+                gap: 10px !important;
+            }
+
+            .form-control {
+                font-size: 13px;
+            }
+
+            .tab-item {
+                min-width: calc(50% - 4px);
+                font-size: 12px;
+            }
+
+            .month-picker {
+                min-width: 260px;
+                padding: 16px 12px;
+            }
+
+            .month-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+        }
+
+        /* ========== CRITICAL MOBILE TABLE IMPROVEMENTS ========== */
+        @media (max-width: 768px) {
+            /* Force table to take minimum required width */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+                scrollbar-color: #cbd5e0 transparent;
+                width: 100%;
+            }
+
+            .table-responsive::-webkit-scrollbar {
+                height: 6px;
+            }
+
+            .table-responsive::-webkit-scrollbar-track {
+                background: #f1f5f9;
+            }
+
+            .table-responsive::-webkit-scrollbar-thumb {
+                background: #cbd5e0;
+                border-radius: 3px;
+            }
+
+            /* Force table minimum width and proper column sizing */
+            .table-modern {
+                min-width: 900px !important;
+                width: 900px !important;
+                table-layout: fixed !important;
+                white-space: nowrap;
+            }
+
+            /* Fixed column widths for proper spacing */
+            .table-modern th:nth-child(1), /* Checkbox */
+            .table-modern td:nth-child(1) {
+                width: 50px !important;
+                min-width: 50px !important;
+                max-width: 50px !important;
+            }
+
+            .table-modern th:nth-child(2), /* Name/AM */
+            .table-modern td:nth-child(2) {
+                width: 140px !important;
+                min-width: 140px !important;
+                max-width: 140px !important;
+            }
+
+            .table-modern th:nth-child(3), /* Divisi */
+            .table-modern td:nth-child(3) {
+                width: 90px !important;
+                min-width: 90px !important;
+                max-width: 90px !important;
+            }
+
+            .table-modern th:nth-child(4), /* Customer */
+            .table-modern td:nth-child(4) {
+                width: 150px !important;
+                min-width: 150px !important;
+                max-width: 150px !important;
+            }
+
+            .table-modern th:nth-child(5), /* Target */
+            .table-modern td:nth-child(5) {
+                width: 110px !important;
+                min-width: 110px !important;
+                max-width: 110px !important;
+            }
+
+            .table-modern th:nth-child(6), /* Real */
+            .table-modern td:nth-child(6) {
+                width: 110px !important;
+                min-width: 110px !important;
+                max-width: 110px !important;
+            }
+
+            .table-modern th:nth-child(7), /* Achievement */
+            .table-modern td:nth-child(7) {
+                width: 90px !important;
+                min-width: 90px !important;
+                max-width: 90px !important;
+            }
+
+            .table-modern th:nth-child(8), /* Month */
+            .table-modern td:nth-child(8) {
+                width: 100px !important;
+                min-width: 100px !important;
+                max-width: 100px !important;
+            }
+
+            .table-modern th:last-child, /* Actions */
+            .table-modern td:last-child {
+                width: 80px !important;
+                min-width: 80px !important;
+                max-width: 80px !important;
+                position: sticky;
+                right: 0;
+                background: white;
+                z-index: 10;
+                box-shadow: -3px 0 6px rgba(0,0,0,0.1);
+            }
+
+            .table-modern thead th:last-child {
+                background: var(--secondary-blue) !important;
+                color: white !important;
+                box-shadow: -3px 0 6px rgba(0,0,0,0.2);
+            }
+
+            /* Prevent text wrapping and overflow */
+            .table-modern th,
+            .table-modern td {
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+                padding: 8px 6px !important;
+                font-size: 12px !important;
+                line-height: 1.3 !important;
+            }
+
+            /* AM Profile pic smaller */
+            .am-profile-pic {
+                width: 24px !important;
+                height: 24px !important;
+                margin-right: 6px !important;
+            }
+
+            /* Status badges smaller */
+            .status-badge,
+            .divisi-badge,
+            .user-status-badge {
+                font-size: 9px !important;
+                padding: 2px 6px !important;
+                border-radius: 10px !important;
+            }
+
+            /* Action buttons more compact */
+            .action-btn {
+                padding: 4px 6px !important;
+                font-size: 11px !important;
+                min-width: 28px !important;
+                height: 28px !important;
+                margin: 0 1px !important;
+            }
+
+            /* Revenue number formatting for mobile */
+            .table-modern td:nth-child(5),
+            .table-modern td:nth-child(6) {
+                font-size: 10px !important;
+            }
+
+            /* Better Mobile Form Spacing */
+            .input-group-text {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            /* Suggestions Container Mobile */
+            .suggestions-container {
+                max-height: 180px;
+                font-size: 13px;
+            }
+
+            .suggestion-item {
+                padding: 10px 12px;
+            }
+
+            .suggestion-name {
+                font-size: 13px;
+            }
+
+            .suggestion-detail {
+                font-size: 11px;
+            }
+
+            /* Mobile Search Results */
+            .search-results-overlay {
+                max-height: 250px;
+                margin-top: 2px;
+            }
+
+            /* Better Mobile Modals */
+            .modal-body .form-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .modal-body .input-group {
+                margin-bottom: 12px;
+            }
+
+            /* Mobile Alert Improvements */
+            .alert {
+                padding: 12px 16px;
+                font-size: 14px;
+                border-radius: 6px;
+                margin-bottom: 12px;
+            }
+
+            .alert .alert-heading {
+                font-size: 15px;
+                margin-bottom: 8px;
+            }
+
+            /* Mobile Template Cards */
+            .template-card {
+                text-align: center;
+                padding: 20px 16px;
+            }
+
+            .template-icon {
+                font-size: 2.5rem;
+                margin-bottom: 12px;
+            }
+
+            .template-title {
+                font-size: 1.1rem;
+                margin-bottom: 8px;
+            }
+
+            .template-description {
+                font-size: 0.85rem;
+                margin-bottom: 16px;
+            }
+
+            .template-btn {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+
+            /* Mobile Import Summary */
+            .import-summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                margin-bottom: 16px;
+            }
+
+            .summary-card {
+                padding: 16px 12px;
+            }
+
+            .summary-number {
+                font-size: 2rem;
+                margin-bottom: 6px;
+            }
+
+            .summary-label {
+                font-size: 12px;
+            }
+
+            /* Mobile Bulk Delete Section */
+            .bulk-delete-all-section {
+                margin: 0 8px 16px 8px;
+                padding: 12px 16px;
+            }
+
+            .bulk-delete-all-section h6 {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .bulk-delete-all-section p {
+                font-size: 12px;
+            }
+
+            .btn-bulk-delete-all {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            /* Mobile Progress Steps */
+            .progress-step {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+                padding: 8px 0;
+            }
+
+            .progress-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+                margin: 0 auto;
+            }
+
+            .progress-step strong {
+                font-size: 13px;
+            }
+
+            .progress-step small {
+                font-size: 11px;
+            }
+
+            /* Mobile Search Description */
+            .search-description {
+                padding: 10px 12px;
+                margin-bottom: 12px;
+                font-size: 13px;
+            }
+
+            /* Touch-friendly interactive elements */
+            .cursor-pointer,
+            .divisi-btn,
+            .month-option,
+            .page-btn,
+            .tab-item {
+                touch-action: manipulation;
+            }
+
+            /* Better mobile touch targets */
+            .add-link {
+                padding: 4px 0;
+                min-height: 44px;
+                display: inline-flex;
+                align-items: center;
+            }
+        }
+
+        /* ========== LANDSCAPE MOBILE OPTIMIZATION ========== */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .header-dashboard {
+                padding: 12px 16px;
+                margin-bottom: 12px;
+            }
+
+            .header-title {
+                font-size: 1.4rem;
+            }
+
+            .header-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .form-section {
+                padding: 12px 16px;
+            }
+
+            .dashboard-card .form-section .form-row {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 12px !important;
+            }
+
+            .dashboard-card .form-section .form-row .form-group:nth-child(3n) {
+                grid-column: span 1;
+            }
+        }
+
+        /* ========== HIGH DPI MOBILE SCREENS ========== */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .table-modern {
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+
+            .action-btn,
+            .btn-save,
+            .btn-import,
+            .btn-export {
+                -webkit-font-smoothing: antialiased;
+            }
+        }
     </style>
 @endsection
 
@@ -1730,16 +2439,6 @@
             </p>
         </div>
 
-        <!-- ✅ CRITICAL: Enhanced Notification Container -->
-        <div id="notification-container" class="notification-persistent">
-            <div class="content">
-                <div class="title" id="notification-title">Notifikasi</div>
-                <p class="message" id="notification-message"></p>
-                <div class="details mt-2" id="notification-details" style="display: none;"></div>
-            </div>
-            <button class="close-btn" id="notification-close">&times;</button>
-        </div>
-
         <!-- Alert Messages -->
         @if (session('error'))
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -1762,15 +2461,15 @@
             </div>
         @endif
 
-        <!-- 🔥 FIXED: Form Tambah Data Revenue - PERFECT 2 ROWS × 3 COLUMNS LAYOUT -->
+        <!-- 🔥 FIXED: Form Tambah Data Revenue - PERFECT MOBILE-RESPONSIVE LAYOUT -->
         <div class="dashboard-card">
             <div class="card-header">
                 <div>
                     <h5 class="card-title">Tambah Data Revenue</h5>
                     <p class="text-muted small mb-0">Tambahkan data revenue baru untuk Account Manager</p>
                 </div>
-                <div class="d-flex">
-                    <a href="{{ route('revenue.export') }}" class="btn-export me-2">
+                <div class="card-header-actions">
+                    <a href="{{ route('revenue.export') }}" class="btn-export">
                         <i class="fas fa-download me-1"></i> Export Data
                     </a>
                     <button class="btn-import" data-bs-toggle="modal" data-bs-target="#importRevenueModal">
@@ -1781,7 +2480,7 @@
             <div class="form-section">
                 <form action="{{ route('revenue.store') }}" method="POST" id="revenueForm" data-form-reset="true">
                     @csrf
-                    <!-- 🚀 ULTIMATE FIX: ROW 1 - Nama Account Manager | Divisi | Nama Corporate Customer -->
+                    <!-- 🚀 FIXED: ROW 1 - Nama Account Manager | Divisi | Nama Corporate Customer -->
                     <div class="form-row">
                         <div class="form-group">
                             <label for="account_manager" class="form-label"><strong>Nama Account Manager</strong></label>
@@ -1826,15 +2525,16 @@
                         </div>
                     </div>
 
-                    <!-- 🚀 ULTIMATE FIX: ROW 2 - Target Revenue | Real Revenue | Bulan Capaian -->
+                    <!-- 🚀 FIXED: ROW 2 - Target Revenue | Real Revenue | Bulan Capaian -->
                     <div class="form-row">
                         <div class="form-group">
                             <label for="target_revenue" class="form-label"><strong>Target Revenue</strong></label>
                             <div class="input-group">
                                 <span class="input-group-text">Rp</span>
                                 <input type="number" class="form-control" name="target_revenue" id="target_revenue"
-                                    placeholder="Masukkan target revenue" required min="0">
+                                    placeholder="Masukkan target revenue" required>
                             </div>
+                            <small class="text-muted">Nilai negatif diperbolehkan</small>
                         </div>
 
                         <div class="form-group">
@@ -1842,8 +2542,9 @@
                             <div class="input-group">
                                 <span class="input-group-text">Rp</span>
                                 <input type="number" class="form-control" name="real_revenue" id="real_revenue"
-                                    placeholder="Masukkan real revenue" required min="0">
+                                    placeholder="Masukkan real revenue" required>
                             </div>
+                            <small class="text-muted">Nilai negatif diperbolehkan</small>
                         </div>
 
                         <div class="form-group">
@@ -1861,7 +2562,7 @@
                                 <input type="hidden" name="bulan_year" id="bulan_year" value="{{ date('Y') }}">
                                 <input type="hidden" name="bulan" id="bulan" value="{{ date('Y-m') }}">
 
-                                <!-- FIXED: 3x4 Month Picker Layout -->
+                                <!-- FIXED: Mobile-Responsive Month Picker Layout -->
                                 <div id="global_month_picker" class="month-picker">
                                     <div class="month-picker-header">
                                         <div class="year-selector">
@@ -1952,16 +2653,16 @@
             </div>
         </div>
 
-        <!-- 🔥 FIXED: Enhanced Raw Data RLEGS dengan PERFECT CHECKBOX ALIGNMENT -->
+        <!-- 🔥 FIXED: Enhanced Raw Data RLEGS dengan PERFECT MOBILE-RESPONSIVE DESIGN -->
         <div class="dashboard-card">
             <div class="card-header">
                 <div>
                     <h5 class="card-title">Raw Data RLEGS Telkom</h5>
                     <p class="text-muted small mb-0">Data revenue lengkap Account Manager Telkom</p>
                 </div>
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center filter-toggle-container">
                     <!-- Enhanced Search Form -->
-                    <form action="{{ route('revenue.data') }}" method="GET" class="search-form me-2" id="global-search-form">
+                    <form action="{{ route('revenue.data') }}" method="GET" class="search-form" id="global-search-form">
                         <div class="input-group">
                             <input class="form-control" type="search" name="search" id="globalSearch"
                                    placeholder="Cari data..." autocomplete="off" value="{{ request('search') }}">
@@ -2046,7 +2747,7 @@
             </div>
 
             <!-- Filter Area -->
-            <div class="tab-content p-3 border-bottom" id="filterArea" style="display:none;">
+            <div class="filter-area" id="filterArea" style="display:none;">
                 <form action="{{ route('revenue.data') }}" method="GET" id="filter-form">
                     <input type="hidden" name="search" value="{{ request('search') }}">
                     <div class="form-row">
@@ -2217,7 +2918,7 @@
                             <table class="table-modern">
                                 <thead>
                                     <tr>
-                                        <!-- 🚀 ULTIMATE FIXED: Perfect Checkbox Column Header -->
+                                        <!-- 🚀 PERFECT MOBILE-RESPONSIVE CHECKBOX COLUMN HEADER -->
                                         <th class="table-select-header">
                                             <input type="checkbox" id="select-all-revenue" class="form-check-input">
                                         </th>
@@ -2243,7 +2944,7 @@
                                                 : ($achievement >= 80 ? 'bg-warning-soft' : 'bg-danger-soft');
                                         @endphp
                                         <tr class="table-row" data-id="{{ $revenue->id }}" data-type="revenue">
-                                            <!-- 🚀 ULTIMATE FIXED: Perfect Checkbox Cell -->
+                                            <!-- 🚀 PERFECT MOBILE-RESPONSIVE CHECKBOX CELL -->
                                             <td class="table-select-cell">
                                                 <input type="checkbox" class="form-check-input row-checkbox"
                                                        name="selected_ids[]" value="{{ $revenue->id }}">
@@ -2463,7 +3164,7 @@
                             </table>
                         </div>
 
-                        <!-- Similar pagination untuk Account Manager -->
+                        <!-- 🔥 FIXED: Complete Pagination for Account Manager -->
                         @if (isset($accountManagers) && method_exists($accountManagers, 'hasPages') && $accountManagers->hasPages())
                             <div class="pagination-container">
                                 <div class="pagination-simple">
@@ -2471,7 +3172,63 @@
                                         Menampilkan {{ $accountManagers->firstItem() ?? 0 }} sampai
                                         {{ $accountManagers->lastItem() ?? 0 }} dari {{ $accountManagers->total() ?? 0 }} hasil
                                     </div>
-                                    <!-- Add pagination controls here -->
+
+                                    <!-- 🚀 ADDED: Missing pagination controls -->
+                                    <div class="pagination-controls">
+                                        @if ($accountManagers->onFirstPage())
+                                            <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+                                        @else
+                                            <a href="{{ $accountManagers->previousPageUrl() }}" class="page-btn">
+                                                <i class="fas fa-chevron-left"></i>
+                                            </a>
+                                        @endif
+
+                                        @php
+                                            $currentPageAM = $accountManagers->currentPage();
+                                            $lastPageAM = $accountManagers->lastPage();
+                                            $rangeAM = 2;
+                                        @endphp
+
+                                        @if ($currentPageAM > $rangeAM + 1)
+                                            <a href="{{ $accountManagers->url(1) }}" class="page-btn">1</a>
+                                            @if ($currentPageAM > $rangeAM + 2)
+                                                <span class="page-btn disabled">...</span>
+                                            @endif
+                                        @endif
+
+                                        @for ($i = max(1, $currentPageAM - $rangeAM); $i <= min($lastPageAM, $currentPageAM + $rangeAM); $i++)
+                                            <a href="{{ $accountManagers->url($i) }}" class="page-btn {{ $i == $currentPageAM ? 'active' : '' }}">
+                                                {{ $i }}
+                                            </a>
+                                        @endfor
+
+                                        @if ($currentPageAM < $lastPageAM - $rangeAM)
+                                            @if ($currentPageAM < $lastPageAM - $rangeAM - 1)
+                                                <span class="page-btn disabled">...</span>
+                                            @endif
+                                            <a href="{{ $accountManagers->url($lastPageAM) }}" class="page-btn">{{ $lastPageAM }}</a>
+                                        @endif
+
+                                        @if ($accountManagers->hasMorePages())
+                                            <a href="{{ $accountManagers->nextPageUrl() }}" class="page-btn">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </a>
+                                        @else
+                                            <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+                                        @endif
+                                    </div>
+
+                                    <!-- 🚀 ADDED: Missing per page selector -->
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label for="perPageAM" class="small">Baris:</label>
+                                        <select id="perPageAM" class="per-page-select" onchange="changePerPage(this.value)">
+                                            <option value="10" {{ request('per_page', 15) == 10 ? 'selected' : '' }}>10</option>
+                                            <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15</option>
+                                            <option value="25" {{ request('per_page', 15) == 25 ? 'selected' : '' }}>25</option>
+                                            <option value="50" {{ request('per_page', 15) == 50 ? 'selected' : '' }}>50</option>
+                                            <option value="100" {{ request('per_page', 15) == 100 ? 'selected' : '' }}>100</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         @endif
@@ -2543,7 +3300,7 @@
                             </table>
                         </div>
 
-                        <!-- Similar pagination untuk Corporate Customer -->
+                        <!-- Enhanced Pagination for Corporate Customer -->
                         @if (isset($corporateCustomers) && method_exists($corporateCustomers, 'hasPages') && $corporateCustomers->hasPages())
                             <div class="pagination-container">
                                 <div class="pagination-simple">
@@ -2615,11 +3372,11 @@
         <!-- ✅ ALL MODALS SECTION -->
 
         <!-- ✅ FIXED: Import Result Modal dengan Enhanced Display -->
-        <div class="modal fade import-result-modal" id="importResultModal" tabindex="-1" aria-labelledby="importResultModalLabel" aria-hidden="true">
+        <div class="modal fade import-result-modal" id="ImportResultModal" tabindex="-1" aria-labelledby="ImportResultModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="importResultModalLabel">
+                        <h5 class="modal-title" id="ImportResultModalLabel">
                             <i class="fas fa-chart-bar me-2"></i>
                             <span id="import-result-title">Hasil Import Data</span>
                         </h5>
@@ -2671,84 +3428,9 @@
                             </div>
                         </div>
 
-                        <!-- Success State dengan Detailed Results -->
+                        <!-- Success State akan diisi via JavaScript -->
                         <div id="import-success" class="import-result" style="display: none;">
-                            <!-- Summary Cards -->
-                            <div class="import-summary-grid" id="import-summary">
-                                <div class="summary-card info">
-                                    <div class="summary-number" id="total-rows">0</div>
-                                    <div class="summary-label">Total Baris</div>
-                                </div>
-                                <div class="summary-card success">
-                                    <div class="summary-number" id="success-rows">0</div>
-                                    <div class="summary-label">Berhasil</div>
-                                </div>
-                                <div class="summary-card warning">
-                                    <div class="summary-number" id="updated-rows">0</div>
-                                    <div class="summary-label">Diperbarui</div>
-                                </div>
-                                <div class="summary-card error">
-                                    <div class="summary-number" id="error-rows">0</div>
-                                    <div class="summary-label">Gagal</div>
-                                </div>
-                            </div>
-
-                            <!-- Detailed Results dengan Accordion -->
-                            <div class="accordion" id="importDetailsAccordion">
-                                <!-- Error Details -->
-                                <div class="accordion-item" id="error-accordion">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#errorDetails" aria-expanded="false">
-                                            <i class="fas fa-exclamation-circle text-danger me-2"></i>
-                                            Detail Error (<span id="error-count-label">0</span>)
-                                        </button>
-                                    </h2>
-                                    <div id="errorDetails" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            <div class="import-details" id="error-details-list">
-                                                <!-- Error items akan diisi oleh JavaScript -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Success Details -->
-                                <div class="accordion-item" id="success-accordion">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#successDetails" aria-expanded="false">
-                                            <i class="fas fa-check-circle text-success me-2"></i>
-                                            Detail Berhasil (<span id="success-count-label">0</span>)
-                                        </button>
-                                    </h2>
-                                    <div id="successDetails" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            <div class="import-details" id="success-details-list">
-                                                <!-- Success items akan diisi oleh JavaScript -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Warning Details -->
-                                <div class="accordion-item" id="warning-accordion">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                                data-bs-target="#warningDetails" aria-expanded="false">
-                                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                                            Detail Peringatan (<span id="warning-count-label">0</span>)
-                                        </button>
-                                    </h2>
-                                    <div id="warningDetails" class="accordion-collapse collapse">
-                                        <div class="accordion-body">
-                                            <div class="import-details" id="warning-details-list">
-                                                <!-- Warning items akan diisi oleh JavaScript -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Content akan diisi via JavaScript -->
                         </div>
 
                         <!-- Error State -->
@@ -2821,62 +3503,6 @@
                         </button>
                         <button type="button" class="btn btn-danger" id="confirm-bulk-delete">
                             <i class="fas fa-trash me-1"></i> Ya, Hapus Semua
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ✅ FIXED: Bulk Delete All Confirmation Modal -->
-        <div class="modal fade" id="bulkDeleteAllModal" tabindex="-1" aria-labelledby="bulkDeleteAllModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title" id="bulkDeleteAllModalLabel">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Konfirmasi Hapus SEMUA Data
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-danger">
-                            <h6 class="alert-heading">
-                                <i class="fas fa-radiation me-2"></i>
-                                PERINGATAN KRITIS!
-                            </h6>
-                            <p class="mb-2">
-                                Anda akan menghapus <strong>SEMUA DATA</strong> pada tab yang aktif.
-                                Tindakan ini akan menghapus data secara CASCADE (termasuk data terkait).
-                            </p>
-                            <hr>
-                            <p class="mb-0 small">
-                                <strong>Tindakan ini TIDAK DAPAT DIBATALKAN!</strong>
-                            </p>
-                        </div>
-
-                        <div class="alert alert-info">
-                            <h6>
-                                <i class="fas fa-info-circle me-2"></i>
-                                Informasi Filter Aktif:
-                            </h6>
-                            <div id="active-filters-display">
-                                <p class="mb-0">Tidak ada filter aktif - SEMUA data akan dihapus</p>
-                            </div>
-                        </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="confirmBulkDeleteAll">
-                            <label class="form-check-label fw-bold text-danger" for="confirmBulkDeleteAll">
-                                Ya, saya yakin ingin menghapus SEMUA data dan memahami konsekuensinya
-                            </label>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-1"></i> Batal
-                        </button>
-                        <button type="button" class="btn btn-danger" id="confirm-bulk-delete-all" disabled>
-                            <i class="fas fa-radiation me-1"></i> HAPUS SEMUA DATA
                         </button>
                     </div>
                 </div>
@@ -3271,31 +3897,37 @@
                                 <div class="form-group">
                                     <label for="edit_account_manager" class="form-label">Account Manager</label>
                                     <div class="position-relative">
+                                        <!-- 🔥 FIXED: Account Manager field disabled pada edit mode -->
                                         <input type="text" id="edit_account_manager" class="form-control"
-                                            placeholder="Cari Account Manager..." required>
+                                            placeholder="Account Manager..." disabled required>
                                         <input type="hidden" name="account_manager_id" id="edit_account_manager_id">
                                         <div id="edit_account_manager_suggestions" class="suggestions-container"></div>
                                         <div class="validation-feedback" id="edit_am_validation"></div>
                                     </div>
+                                    <small class="text-muted">Account Manager tidak dapat diubah saat edit</small>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="edit_divisi_id" class="form-label">Divisi</label>
+                                    <!-- 🔥 FIXED: Divisi field disabled pada edit mode -->
                                     <select id="edit_divisi_id" name="divisi_id" class="form-control" required disabled>
                                         <option value="">Pilih Divisi</option>
                                     </select>
+                                    <small class="text-muted">Divisi tidak dapat diubah saat edit</small>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <label for="edit_corporate_customer" class="form-label">Corporate Customer</label>
                                 <div class="position-relative">
+                                    <!-- 🔥 FIXED: Corporate Customer field disabled pada edit mode -->
                                     <input type="text" id="edit_corporate_customer" class="form-control"
-                                        placeholder="Cari Corporate Customer..." required>
+                                        placeholder="Corporate Customer..." disabled required>
                                     <input type="hidden" name="corporate_customer_id" id="edit_corporate_customer_id">
                                     <div id="edit_corporate_customer_suggestions" class="suggestions-container"></div>
                                     <div class="validation-feedback" id="edit_cc_validation"></div>
                                 </div>
+                                <small class="text-muted">Corporate Customer tidak dapat diubah saat edit</small>
                             </div>
 
                             <div class="form-row">
@@ -3303,17 +3935,21 @@
                                     <label for="edit_target_revenue" class="form-label">Target Revenue</label>
                                     <div class="input-group">
                                         <span class="input-group-text">Rp</span>
+                                        <!-- 🔥 FIXED: Remove min="0" untuk allow negative values -->
                                         <input type="number" class="form-control" name="target_revenue" id="edit_target_revenue"
-                                            placeholder="Masukkan target revenue" required min="0">
+                                            placeholder="Masukkan target revenue" required>
                                     </div>
+                                    <small class="text-muted">Nilai negatif diperbolehkan</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="edit_real_revenue" class="form-label">Real Revenue</label>
                                     <div class="input-group">
                                         <span class="input-group-text">Rp</span>
+                                        <!-- 🔥 FIXED: Remove min="0" untuk allow negative values -->
                                         <input type="number" class="form-control" name="real_revenue" id="edit_real_revenue"
-                                            placeholder="Masukkan real revenue" required min="0">
+                                            placeholder="Masukkan real revenue" required>
                                     </div>
+                                    <small class="text-muted">Nilai negatif diperbolehkan</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="edit_bulan" class="form-label">Bulan Capaian</label>
@@ -3419,7 +4055,7 @@
                                 <input type="hidden" name="divisi_ids" id="edit_divisi_ids" value="">
                             </div>
 
-                            <!-- FIXED: Password Section (conditional) -->
+                            <!-- Password Section (conditional) -->
                             <div id="password-section" class="form-group" style="display: none;">
                                 <hr>
                                 <h6><i class="fas fa-key me-2"></i> Account User Settings</h6>
@@ -3506,6 +4142,17 @@
                 </div>
                 <p class="mt-3 mb-0">Memproses permintaan...</p>
             </div>
+        </div>
+
+        <!-- ✅ NOTIFICATION CONTAINER -->
+        <div id="notification-container" class="notification-persistent" style="display: none;">
+            <div class="content">
+                <div class="title" id="notification-title">Notification</div>
+                <div class="message" id="notification-message">Message</div>
+            </div>
+            <button type="button" class="close-btn" id="notification-close">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
     </div>
@@ -3891,8 +4538,6 @@
             const hideBulkDeleteAllBtn = document.getElementById('hide-bulk-delete-all');
             const bulkDeleteAllSection = document.getElementById('bulk-delete-all-section');
             const bulkDeleteAllBtn = document.getElementById('bulk-delete-all-btn');
-            const confirmCheckbox = document.getElementById('confirmBulkDeleteAll');
-            const confirmBulkDeleteAllBtn = document.getElementById('confirm-bulk-delete-all');
 
             // Show bulk delete all section
             if (showBulkDeleteAllBtn && bulkDeleteAllSection) {
@@ -3905,13 +4550,6 @@
             if (hideBulkDeleteAllBtn && bulkDeleteAllSection) {
                 hideBulkDeleteAllBtn.addEventListener('click', function() {
                     bulkDeleteAllSection.style.display = 'none';
-                });
-            }
-
-            // Enable/disable confirm button based on checkbox
-            if (confirmCheckbox && confirmBulkDeleteAllBtn) {
-                confirmCheckbox.addEventListener('change', function() {
-                    confirmBulkDeleteAllBtn.disabled = !this.checked;
                 });
             }
 
@@ -4060,14 +4698,48 @@
             }
         }
 
+        // ✅ FIXED: Mobile responsive touch improvements
+        function initializeMobileEnhancements() {
+            // Improve mobile touch experience
+            if ('ontouchstart' in window) {
+                document.body.classList.add('touch-device');
+
+                // Better tap targets for mobile
+                const actionButtons = document.querySelectorAll('.action-btn');
+                actionButtons.forEach(btn => {
+                    btn.style.minHeight = '44px';
+                    btn.style.minWidth = '44px';
+                });
+
+                // Smooth scrolling for mobile
+                document.documentElement.style.scrollBehavior = 'smooth';
+
+                // Prevent zoom on input focus (mobile)
+                const inputs = document.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('focus', function() {
+                        if (input.style.fontSize < '16px') {
+                            input.style.fontSize = '16px';
+                        }
+                    });
+                });
+            }
+        }
+
         // ✅ FIXED: Expose global functions for external use
         window.revenueHelpers = {
             showLoading: showLoading,
             hideLoading: hideLoading,
             validateForm: validateForm,
             showNotification: showNotification,
-            changePerPage: changePerPage
+            changePerPage: changePerPage,
+            initializeMobileEnhancements: initializeMobileEnhancements
         };
+
+        // Initialize mobile enhancements on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMobileEnhancements();
+        });
 
         console.log('✅ Revenue Management System - Configuration loaded successfully');
     </script>

@@ -17,8 +17,6 @@ use App\Http\Controllers\WitelPerformController;
 use App\Http\Controllers\RegionalController;
 use App\Http\Controllers\Auth\NewPasswordController;
 
-
-
 // ✅ BASIC ROUTES
 Route::get('/', function () {
     return view('auth.login');
@@ -46,6 +44,8 @@ Route::get('/search-account-managers', [RegisteredUserController::class, 'search
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/revenues', [DashboardController::class, 'getRevenuesByYear'])->name('dashboard.revenues');
+    // 🆕 FIX: Tambah dashboard account managers route
+    Route::get('/dashboard/account-managers', [DashboardController::class, 'getAccountManagers'])->name('dashboard.account-managers');
 
     // ✅ Revenue data route - admin only
     Route::get('/revenue_data', [RevenueController::class, 'index'])->name('revenue.data')
@@ -216,7 +216,10 @@ Route::middleware('auth')->group(function () {
 
         // API routes - Admin only
         Route::middleware('admin')->group(function () {
-            // 🆕 FIX: Revenue specific API routes - TAMBAH missing routes
+            // 🆕 FIX: Revenue stats route (untuk mengatasi error GET /api/revenue/stats)
+            Route::get('/revenue/stats', [RevenueController::class, 'getStats'])->name('revenue.stats');
+
+            // Revenue specific API routes
             Route::get('/revenue/{id}/edit', [RevenueController::class, 'edit'])->name('revenue.edit');
             Route::get('/revenue/{id}/data', [RevenueController::class, 'getRevenueData'])->name('revenue.data');
             Route::put('/revenue/{id}/update', [RevenueController::class, 'updateRevenue'])->name('revenue.update');

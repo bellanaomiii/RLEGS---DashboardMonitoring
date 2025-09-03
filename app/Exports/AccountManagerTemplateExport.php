@@ -7,228 +7,243 @@ use App\Models\Regional;
 use App\Models\Divisi;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Color;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class AccountManagerTemplateExport implements WithMultipleSheets
+/**
+ * 🔧 COMPLETELY REWRITTEN: AccountManagerTemplateExport untuk CSV Format
+ *
+ * PERUBAHAN UTAMA:
+ * - Nama class TETAP SAMA (sesuai permintaan)
+ * - Fungsi diubah total untuk optimal CSV
+ * - Hilangkan comment rows yang tidak cocok untuk CSV
+ * - Struktur data lebih sederhana dan clean
+ * - Contoh data lebih realistic
+ */
+class AccountManagerTemplateExport implements FromArray, WithHeadings, ShouldAutoSize, WithTitle
 {
     /**
-     * Return multiple sheets
+     * 🔧 REWRITTEN: Data array untuk CSV template
+     * Struktur lebih clean tanpa comment rows
      */
-    public function sheets(): array
+    public function array(): array
+    {
+        // 🔧 FIX: Data contoh yang realistic dan clean untuk CSV
+        $examples = [
+            // Contoh data dengan multiple divisi untuk NIK yang sama
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DSS'],
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DPS'], // Multiple divisi
+            ['67890', 'SITI NURHALIZA', 'YOGYA JATENG SELATAN', 'TREG 3', 'DES'],
+            ['11111', 'AHMAD HIDAYAT', 'JATIM TIMUR', 'TREG 3', 'DPS'],
+            ['22222', 'RINA WIJAYANTI', 'JATIM SELATAN', 'TREG 3', 'DCS'],
+            ['33333', 'DEDI KURNIAWAN', 'JATENG UTARA', 'TREG 3', 'DSS'],
+            ['44444', 'MAYA SARI', 'JOGJA DIY', 'TREG 3', 'DES'],
+            ['55555', 'RUDI HARTONO', 'SOLO BOYOLALI', 'TREG 3', 'DPS'],
+        ];
+
+        return $examples;
+    }
+
+    /**
+     * 🔧 UPDATED: Headers yang clean untuk CSV
+     */
+    public function headings(): array
     {
         return [
-            'Template' => new AccountManagerTemplateSheet(),
-            'Master Witel' => new WitelMasterSheet(),
-            'Master Regional' => new RegionalMasterSheet(),
-            'Master Divisi' => new DivisiMasterSheet(),
+            'NIK',
+            'NAMA_AM',
+            'WITEL',
+            'REGIONAL',
+            'DIVISI'
         ];
+    }
+
+    /**
+     * 🆕 NEW: Title untuk worksheet (opsional untuk CSV)
+     */
+    public function title(): string
+    {
+        return 'Template Account Manager';
     }
 }
 
 /**
- * Main template sheet
+ * 🆕 NEW: Class terpisah untuk master data Witel (CSV)
+ * Bisa digunakan jika ingin export master data terpisah
  */
-class AccountManagerTemplateSheet implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithTitle
+class WitelMasterCsvExport implements FromArray, WithHeadings, ShouldAutoSize
 {
     public function array(): array
     {
-        // Return beberapa baris contoh
-        return [
-            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DSS'],
-            ['67890', 'SITI NURHALIZA', 'YOGYA JATENG SELATAN', 'TREG 3', 'DPS'],
-            ['11111', 'AHMAD HIDAYAT', 'JATIM TIMUR', 'TREG 3', 'DES'],
-            // Tambahkan baris kosong untuk template
-            ['', '', '', '', ''],
-            ['', '', '', '', ''],
+        // Get semua witel dari database
+        $witels = Witel::orderBy('nama')->get(['nama']);
+
+        $data = [];
+        foreach ($witels as $witel) {
+            $data[] = [$witel->nama];
+        }
+
+        return $data;
+    }
+
+    public function headings(): array
+    {
+        return ['NAMA_WITEL'];
+    }
+}
+
+/**
+ * 🆕 NEW: Class terpisah untuk master data Regional (CSV)
+ */
+class RegionalMasterCsvExport implements FromArray, WithHeadings, ShouldAutoSize
+{
+    public function array(): array
+    {
+        // Get semua regional dari database
+        $regionals = Regional::orderBy('nama')->get(['nama']);
+
+        $data = [];
+        foreach ($regionals as $regional) {
+            $data[] = [$regional->nama];
+        }
+
+        return $data;
+    }
+
+    public function headings(): array
+    {
+        return ['NAMA_REGIONAL'];
+    }
+}
+
+/**
+ * 🆕 NEW: Class terpisah untuk master data Divisi (CSV)
+ */
+class DivisiMasterCsvExport implements FromArray, WithHeadings, ShouldAutoSize
+{
+    public function array(): array
+    {
+        // Get semua divisi dari database
+        $divisis = Divisi::orderBy('nama')->get(['nama']);
+
+        $data = [];
+        foreach ($divisis as $divisi) {
+            $data[] = [$divisi->nama];
+        }
+
+        return $data;
+    }
+
+    public function headings(): array
+    {
+        return ['NAMA_DIVISI'];
+    }
+}
+
+/**
+ * 🆕 NEW: Class untuk template dengan instruksi dalam comment CSV
+ * Alternative jika tetap ingin ada instruksi dalam file
+ */
+class AccountManagerTemplateWithInstructionsExport implements FromArray, WithHeadings, ShouldAutoSize
+{
+    public function array(): array
+    {
+        // Instruksi sebagai data rows dengan prefix khusus
+        $instructions = [
+            ['# INSTRUKSI', 'Pastikan NIK 5 digit unik', '', '', ''],
+            ['# INSTRUKSI', 'Nama AM tidak boleh duplikasi', '', '', ''],
+            ['# INSTRUKSI', 'Gunakan nama Witel/Regional/Divisi yang persis', '', '', ''],
+            ['# INSTRUKSI', 'Satu NIK bisa multiple divisi (buat baris terpisah)', '', '', ''],
+            ['# INSTRUKSI', 'Hapus baris instruksi sebelum import', '', '', ''],
+            ['', '', '', '', ''], // Empty row separator
         ];
+
+        // Data contoh
+        $examples = [
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DSS'],
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DPS'],
+            ['67890', 'SITI NURHALIZA', 'YOGYA JATENG SELATAN', 'TREG 3', 'DES'],
+            ['11111', 'AHMAD HIDAYAT', 'JATIM TIMUR', 'TREG 3', 'DPS'],
+        ];
+
+        return array_merge($instructions, $examples);
     }
 
     public function headings(): array
     {
         return [
             'NIK',
-            'NAMA AM',
-            'WITEL HO',
+            'NAMA_AM',
+            'WITEL',
             'REGIONAL',
             'DIVISI'
         ];
     }
-
-    public function styles(Worksheet $sheet)
-    {
-        // Add some instructions in merged cells
-        $sheet->mergeCells('G1:K1');
-        $sheet->setCellValue('G1', 'INSTRUKSI PENGISIAN:');
-        $sheet->getStyle('G1')->getFont()->setBold(true)->setSize(14);
-
-        $sheet->mergeCells('G2:K2');
-        $sheet->setCellValue('G2', '1. NIK harus 5 digit angka');
-
-        $sheet->mergeCells('G3:K3');
-        $sheet->setCellValue('G3', '2. Nama AM tidak boleh duplikasi');
-
-        $sheet->mergeCells('G4:K4');
-        $sheet->setCellValue('G4', '3. Witel HO harus sesuai master (lihat sheet "Master Witel")');
-
-        $sheet->mergeCells('G5:K5');
-        $sheet->setCellValue('G5', '4. Regional harus sesuai master (lihat sheet "Master Regional")');
-
-        $sheet->mergeCells('G6:K6');
-        $sheet->setCellValue('G6', '5. Divisi harus sesuai master (lihat sheet "Master Divisi")');
-
-        $sheet->mergeCells('G7:K7');
-        $sheet->setCellValue('G7', '6. Satu NIK bisa memiliki multiple divisi (buat baris terpisah)');
-
-        return [
-            // Style header row
-            1 => [
-                'font' => [
-                    'bold' => true,
-                    'color' => ['argb' => Color::COLOR_WHITE],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => '366092'],
-                ],
-            ],
-            // Style example rows
-            '2:4' => [
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'E8F4FD'],
-                ],
-            ],
-        ];
-    }
-
-    public function title(): string
-    {
-        return 'Template';
-    }
 }
 
 /**
- * Master Witel sheet
+ * 🆕 NEW: Class untuk comprehensive template dengan semua master data
+ * Menggunakan multiple sheets (tapi dalam CSV akan flat)
  */
-class WitelMasterSheet implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithTitle
+class ComprehensiveAccountManagerTemplateExport implements FromArray, WithHeadings, ShouldAutoSize
 {
     public function array(): array
     {
-        $witels = Witel::orderBy('nama')->get(['nama'])->toArray();
-        return array_map(function($witel) {
-            return [$witel['nama']];
-        }, $witels);
+        $data = [];
+
+        // Header section
+        $data[] = ['=== TEMPLATE ACCOUNT MANAGER ===', '', '', '', ''];
+        $data[] = ['', '', '', '', ''];
+
+        // Sample data
+        $examples = [
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DSS'],
+            ['12345', 'BAMBANG SUPRIYADI', 'JATIM BARAT', 'TREG 3', 'DPS'],
+            ['67890', 'SITI NURHALIZA', 'YOGYA JATENG SELATAN', 'TREG 3', 'DES'],
+            ['11111', 'AHMAD HIDAYAT', 'JATIM TIMUR', 'TREG 3', 'DPS'],
+        ];
+
+        $data = array_merge($data, $examples);
+
+        // Separator
+        $data[] = ['', '', '', '', ''];
+        $data[] = ['=== MASTER DATA REFERENCE ===', '', '', '', ''];
+        $data[] = ['', '', '', '', ''];
+
+        // Master Witel
+        $data[] = ['WITEL OPTIONS:', '', '', '', ''];
+        $witels = Witel::orderBy('nama')->pluck('nama')->take(10); // Limit untuk CSV
+        foreach ($witels as $witel) {
+            $data[] = [$witel, '', '', '', ''];
+        }
+
+        // Master Regional
+        $data[] = ['', '', '', '', ''];
+        $data[] = ['REGIONAL OPTIONS:', '', '', '', ''];
+        $regionals = Regional::orderBy('nama')->pluck('nama')->take(10);
+        foreach ($regionals as $regional) {
+            $data[] = [$regional, '', '', '', ''];
+        }
+
+        // Master Divisi
+        $data[] = ['', '', '', '', ''];
+        $data[] = ['DIVISI OPTIONS:', '', '', '', ''];
+        $divisis = Divisi::orderBy('nama')->pluck('nama');
+        foreach ($divisis as $divisi) {
+            $data[] = [$divisi, '', '', '', ''];
+        }
+
+        return $data;
     }
 
     public function headings(): array
     {
-        return ['NAMA WITEL'];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
         return [
-            1 => [
-                'font' => [
-                    'bold' => true,
-                    'color' => ['argb' => Color::COLOR_WHITE],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => '28A745'],
-                ],
-            ],
+            'NIK',
+            'NAMA_AM',
+            'WITEL',
+            'REGIONAL',
+            'DIVISI'
         ];
-    }
-
-    public function title(): string
-    {
-        return 'Master Witel';
-    }
-}
-
-/**
- * Master Regional sheet
- */
-class RegionalMasterSheet implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithTitle
-{
-    public function array(): array
-    {
-        $regionals = Regional::orderBy('nama')->get(['nama'])->toArray();
-        return array_map(function($regional) {
-            return [$regional['nama']];
-        }, $regionals);
-    }
-
-    public function headings(): array
-    {
-        return ['NAMA REGIONAL'];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => [
-                'font' => [
-                    'bold' => true,
-                    'color' => ['argb' => Color::COLOR_WHITE],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'FFC107'],
-                ],
-            ],
-        ];
-    }
-
-    public function title(): string
-    {
-        return 'Master Regional';
-    }
-}
-
-/**
- * Master Divisi sheet
- */
-class DivisiMasterSheet implements FromArray, WithHeadings, WithStyles, ShouldAutoSize, WithTitle
-{
-    public function array(): array
-    {
-        $divisis = Divisi::orderBy('nama')->get(['nama'])->toArray();
-        return array_map(function($divisi) {
-            return [$divisi['nama']];
-        }, $divisis);
-    }
-
-    public function headings(): array
-    {
-        return ['NAMA DIVISI'];
-    }
-
-    public function styles(Worksheet $sheet)
-    {
-        return [
-            1 => [
-                'font' => [
-                    'bold' => true,
-                    'color' => ['argb' => Color::COLOR_WHITE],
-                ],
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['argb' => 'DC3545'],
-                ],
-            ],
-        ];
-    }
-
-    public function title(): string
-    {
-        return 'Master Divisi';
     }
 }

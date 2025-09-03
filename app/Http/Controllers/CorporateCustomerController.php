@@ -669,7 +669,7 @@ class CorporateCustomerController extends Controller
     public function downloadTemplate()
     {
         try {
-            $filename = 'template_corporate_customer_' . date('Y-m-d_His') . '.xlsx';
+            $filename = 'template_corporate_customer_' . date('Y-m-d_His') . '.csv';
 
             return Excel::download(new CorporateCustomerTemplateExport(), $filename);
 

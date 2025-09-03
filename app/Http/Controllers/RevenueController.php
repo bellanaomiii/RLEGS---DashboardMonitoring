@@ -180,7 +180,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Store a newly created revenue with proper date handling
+     * 🔧 UPDATED: Store a newly created revenue with ZERO & NEGATIVE value support
      */
     public function store(Request $request)
     {
@@ -189,8 +189,18 @@ class RevenueController extends Controller
                 'account_manager_id' => 'required|exists:account_managers,id',
                 'corporate_customer_id' => 'required|exists:corporate_customers,id',
                 'divisi_id' => 'required|exists:divisi,id',
-                'target_revenue' => 'required|numeric|min:0|max:999999999999',
-                'real_revenue' => 'required|numeric|min:0|max:999999999999',
+                'target_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
+                'real_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
                 'bulan' => 'required|date_format:Y-m',
             ], [
                 'account_manager_id.required' => 'Account Manager wajib dipilih.',
@@ -201,12 +211,12 @@ class RevenueController extends Controller
                 'divisi_id.exists' => 'Divisi tidak valid.',
                 'target_revenue.required' => 'Target Revenue wajib diisi.',
                 'target_revenue.numeric' => 'Target Revenue harus berupa angka.',
-                'target_revenue.min' => 'Target Revenue tidak boleh negatif.',
-                'target_revenue.max' => 'Target Revenue terlalu besar.',
+                'target_revenue.min' => 'Target Revenue tidak boleh kurang dari -999,999,999,999.',
+                'target_revenue.max' => 'Target Revenue tidak boleh lebih dari 999,999,999,999.',
                 'real_revenue.required' => 'Real Revenue wajib diisi.',
                 'real_revenue.numeric' => 'Real Revenue harus berupa angka.',
-                'real_revenue.min' => 'Real Revenue tidak boleh negatif.',
-                'real_revenue.max' => 'Real Revenue terlalu besar.',
+                'real_revenue.min' => 'Real Revenue tidak boleh kurang dari -999,999,999,999.',
+                'real_revenue.max' => 'Real Revenue tidak boleh lebih dari 999,999,999,999.',
                 'bulan.required' => 'Bulan wajib dipilih.',
                 'bulan.date_format' => 'Format bulan tidak valid (harus YYYY-MM).',
             ]);
@@ -246,17 +256,21 @@ class RevenueController extends Controller
                 ], 422);
             }
 
-            // Create Revenue with proper date format
+            // 🔧 ENHANCED: Parse and validate revenue values dengan support untuk negatif dan zero
+            $targetRevenue = $this->parseRevenueValue($request->target_revenue);
+            $realRevenue = $this->parseRevenueValue($request->real_revenue);
+
+            // Create Revenue with proper date format dan revenue values
             $revenue = Revenue::create([
                 'account_manager_id' => $request->account_manager_id,
                 'corporate_customer_id' => $request->corporate_customer_id,
                 'divisi_id' => $request->divisi_id,
-                'target_revenue' => $request->target_revenue,
-                'real_revenue' => $request->real_revenue,
+                'target_revenue' => $targetRevenue,
+                'real_revenue' => $realRevenue,
                 'bulan' => $bulanDate, // Store as Y-m-d format
             ]);
 
-            // ✅ ENHANCED: Comprehensive logging
+            // ✅ ENHANCED: Comprehensive logging dengan info revenue values
             Log::info('Revenue created successfully', [
                 'revenue_id' => $revenue->id,
                 'account_manager_id' => $revenue->account_manager_id,
@@ -265,6 +279,10 @@ class RevenueController extends Controller
                 'bulan' => $revenue->bulan,
                 'target_revenue' => $revenue->target_revenue,
                 'real_revenue' => $revenue->real_revenue,
+                'target_is_zero' => ($targetRevenue == 0),
+                'real_is_zero' => ($realRevenue == 0),
+                'target_is_negative' => ($targetRevenue < 0),
+                'real_is_negative' => ($realRevenue < 0),
                 'user_ip' => $request->ip(),
                 'timestamp' => now()
             ]);
@@ -346,7 +364,7 @@ class RevenueController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Update the specified revenue with proper date handling
+     * 🔧 UPDATED: Update the specified revenue with ZERO & NEGATIVE value support
      */
     public function update(Request $request, $id)
     {
@@ -357,8 +375,18 @@ class RevenueController extends Controller
                 'account_manager_id' => 'required|exists:account_managers,id',
                 'corporate_customer_id' => 'required|exists:corporate_customers,id',
                 'divisi_id' => 'required|exists:divisi,id',
-                'target_revenue' => 'required|numeric|min:0|max:999999999999',
-                'real_revenue' => 'required|numeric|min:0|max:999999999999',
+                'target_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
+                'real_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
                 'bulan' => 'required|date_format:Y-m',
             ], [
                 'account_manager_id.required' => 'Account Manager wajib dipilih.',
@@ -369,12 +397,12 @@ class RevenueController extends Controller
                 'divisi_id.exists' => 'Divisi tidak valid.',
                 'target_revenue.required' => 'Target Revenue wajib diisi.',
                 'target_revenue.numeric' => 'Target Revenue harus berupa angka.',
-                'target_revenue.min' => 'Target Revenue tidak boleh negatif.',
-                'target_revenue.max' => 'Target Revenue terlalu besar.',
+                'target_revenue.min' => 'Target Revenue tidak boleh kurang dari -999,999,999,999.',
+                'target_revenue.max' => 'Target Revenue tidak boleh lebih dari 999,999,999,999.',
                 'real_revenue.required' => 'Real Revenue wajib diisi.',
                 'real_revenue.numeric' => 'Real Revenue harus berupa angka.',
-                'real_revenue.min' => 'Real Revenue tidak boleh negatif.',
-                'real_revenue.max' => 'Real Revenue terlalu besar.',
+                'real_revenue.min' => 'Real Revenue tidak boleh kurang dari -999,999,999,999.',
+                'real_revenue.max' => 'Real Revenue tidak boleh lebih dari 999,999,999,999.',
                 'bulan.required' => 'Bulan wajib dipilih.',
                 'bulan.date_format' => 'Format bulan tidak valid (harus YYYY-MM).',
             ]);
@@ -424,17 +452,21 @@ class RevenueController extends Controller
                 'bulan' => $revenue->bulan
             ];
 
+            // 🔧 ENHANCED: Parse and validate revenue values dengan support untuk negatif dan zero
+            $targetRevenue = $this->parseRevenueValue($request->target_revenue);
+            $realRevenue = $this->parseRevenueValue($request->real_revenue);
+
             // Update Revenue
             $revenue->update([
                 'account_manager_id' => $request->account_manager_id,
                 'corporate_customer_id' => $request->corporate_customer_id,
                 'divisi_id' => $request->divisi_id,
-                'target_revenue' => $request->target_revenue,
-                'real_revenue' => $request->real_revenue,
+                'target_revenue' => $targetRevenue,
+                'real_revenue' => $realRevenue,
                 'bulan' => $bulanDate,
             ]);
 
-            // ✅ ENHANCED: Comprehensive logging
+            // ✅ ENHANCED: Comprehensive logging dengan detail perubahan
             Log::info('Revenue updated successfully', [
                 'revenue_id' => $revenue->id,
                 'original_data' => $originalData,
@@ -445,6 +477,16 @@ class RevenueController extends Controller
                     'target_revenue' => $revenue->target_revenue,
                     'real_revenue' => $revenue->real_revenue,
                     'bulan' => $revenue->bulan
+                ],
+                'changes' => [
+                    'target_changed' => ($originalData['target_revenue'] != $targetRevenue),
+                    'real_changed' => ($originalData['real_revenue'] != $realRevenue),
+                    'target_from_to' => [$originalData['target_revenue'], $targetRevenue],
+                    'real_from_to' => [$originalData['real_revenue'], $realRevenue],
+                    'target_is_zero' => ($targetRevenue == 0),
+                    'real_is_zero' => ($realRevenue == 0),
+                    'target_is_negative' => ($targetRevenue < 0),
+                    'real_is_negative' => ($realRevenue < 0)
                 ],
                 'user_ip' => $request->ip(),
                 'timestamp' => now()
@@ -468,6 +510,182 @@ class RevenueController extends Controller
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Parse revenue value dengan support untuk zero dan negative values
+     */
+    private function parseRevenueValue($value)
+    {
+        // Handle null or empty values
+        if ($value === null || $value === '') {
+            return 0;
+        }
+
+        // Handle array values (from Excel import)
+        if (is_array($value)) {
+            $numericValues = array_filter($value, function($v) {
+                return is_numeric($v) || (is_string($v) && preg_match('/^-?[\d,.]+$/', trim($v)));
+            });
+
+            if (empty($numericValues)) {
+                return 0;
+            }
+
+            $value = reset($numericValues);
+        }
+
+        // If already numeric, return as-is (supporting negative values)
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+
+        // Handle string numeric values with thousands separators
+        if (is_string($value)) {
+            $value = trim($value);
+
+            // Handle negative values
+            $isNegative = (strpos($value, '-') === 0);
+            if ($isNegative) {
+                $value = substr($value, 1); // Remove minus sign temporarily
+            }
+
+            // Clean thousands separators and currency symbols
+            $cleaned = preg_replace('/[^\d,.]/', '', $value);
+
+            // Handle comma as thousand separator vs decimal separator
+            if (substr_count($cleaned, ',') == 1 && substr_count($cleaned, '.') == 0) {
+                $parts = explode(',', $cleaned);
+                if (strlen($parts[1]) <= 2) {
+                    // Comma as decimal separator
+                    $cleaned = str_replace(',', '.', $cleaned);
+                } else {
+                    // Comma as thousand separator
+                    $cleaned = str_replace(',', '', $cleaned);
+                }
+            } else {
+                // Remove commas (thousand separators)
+                $cleaned = str_replace(',', '', $cleaned);
+            }
+
+            $result = is_numeric($cleaned) ? (float)$cleaned : 0;
+
+            // Apply negative sign if needed
+            if ($isNegative) {
+                $result = -$result;
+            }
+
+            return $result;
+        }
+
+        return 0;
+    }
+
+    /**
+     * 🔧 UPDATED: Validate revenue data without saving (for real-time validation) - Support zero & negative
+     */
+    public function validateRevenueData(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'account_manager_id' => 'required|exists:account_managers,id',
+                'corporate_customer_id' => 'required|exists:corporate_customers,id',
+                'divisi_id' => 'required|exists:divisi,id',
+                'target_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
+                'real_revenue' => [
+                    'required',
+                    'numeric',
+                    'min:-999999999999',
+                    'max:999999999999'
+                ],
+                'bulan' => 'required|date_format:Y-m',
+                'current_id' => 'nullable|exists:revenues,id'
+            ], [
+                'target_revenue.min' => 'Target Revenue tidak boleh kurang dari -999,999,999,999.',
+                'target_revenue.max' => 'Target Revenue tidak boleh lebih dari 999,999,999,999.',
+                'real_revenue.min' => 'Real Revenue tidak boleh kurang dari -999,999,999,999.',
+                'real_revenue.max' => 'Real Revenue tidak boleh lebih dari 999,999,999,999.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => $validator->errors()->first()
+                ]);
+            }
+
+            $bulanDate = $request->bulan . '-01';
+
+            // Check for duplicate entry
+            $query = Revenue::where([
+                'account_manager_id' => $request->account_manager_id,
+                'corporate_customer_id' => $request->corporate_customer_id,
+                'divisi_id' => $request->divisi_id,
+                'bulan' => $bulanDate,
+            ]);
+
+            if ($request->current_id) {
+                $query->where('id', '!=', $request->current_id);
+            }
+
+            if ($query->exists()) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Data revenue untuk kombinasi Account Manager, Corporate Customer, Divisi, dan Bulan ini sudah ada.'
+                ]);
+            }
+
+            // 🔧 ENHANCED: Additional validation for special values
+            $targetRevenue = $this->parseRevenueValue($request->target_revenue);
+            $realRevenue = $this->parseRevenueValue($request->real_revenue);
+
+            $validationInfo = [];
+
+            if ($targetRevenue == 0) {
+                $validationInfo[] = 'Target Revenue bernilai 0 (nol)';
+            }
+            if ($realRevenue == 0) {
+                $validationInfo[] = 'Real Revenue bernilai 0 (nol)';
+            }
+            if ($targetRevenue < 0) {
+                $validationInfo[] = 'Target Revenue bernilai negatif';
+            }
+            if ($realRevenue < 0) {
+                $validationInfo[] = 'Real Revenue bernilai negatif';
+            }
+
+            $message = 'Data revenue valid.';
+            if (!empty($validationInfo)) {
+                $message .= ' Info: ' . implode(', ', $validationInfo) . '.';
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => $message,
+                'info' => [
+                    'target_revenue' => $targetRevenue,
+                    'real_revenue' => $realRevenue,
+                    'target_is_zero' => ($targetRevenue == 0),
+                    'real_is_zero' => ($realRevenue == 0),
+                    'target_is_negative' => ($targetRevenue < 0),
+                    'real_is_negative' => ($realRevenue < 0),
+                    'special_values_detected' => !empty($validationInfo)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Revenue Data Validation Error: ' . $e->getMessage());
+
+            return response()->json([
+                'valid' => false,
+                'message' => 'Terjadi kesalahan saat validasi data revenue.'
+            ]);
         }
     }
 
@@ -1626,8 +1844,8 @@ class RevenueController extends Controller
                         'NAMA AM' => 'Nama Account Manager (harus sudah ada di database)',
                         'STANDARD NAME' => 'Nama Corporate Customer (harus sudah ada di database)',
                         'DIVISI' => 'Nama Divisi (opsional, jika kosong akan ambil divisi pertama dari Account Manager)',
-                        'Target_[Bulan]' => 'Target Revenue bulanan (Jan, Feb, Mar, dst)',
-                        'Real_[Bulan]' => 'Real Revenue bulanan (Jan, Feb, Mar, dst)'
+                        'Target_[Bulan]' => 'Target Revenue bulanan (Jan, Feb, Mar, dst) - BOLEH NEGATIF atau NOL',
+                        'Real_[Bulan]' => 'Real Revenue bulanan (Jan, Feb, Mar, dst) - BOLEH NEGATIF atau NOL'
                     ],
                     'monthly_format' => [
                         'supported_months' => ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
@@ -1643,7 +1861,9 @@ class RevenueController extends Controller
                         'Account Manager dan Corporate Customer harus sudah ada di database',
                         'Format kolom bulanan: Target_[Bulan] dan Real_[Bulan]',
                         'Minimal satu pasangan Target-Real bulanan harus diisi',
-                        'Nilai revenue harus berupa angka (bisa dengan format currency)',
+                        '🔧 BARU: Nilai revenue BOLEH negatif, nol, atau kosong',
+                        '🔧 BARU: Nilai kosong akan disimpan sebagai 0',
+                        '🔧 BARU: Nilai negatif akan tetap disimpan sebagai negatif',
                         'Fuzzy matching tersedia untuk nama yang mirip (80% similarity)',
                         'Case insensitive matching untuk semua nama'
                     ],
@@ -1668,13 +1888,15 @@ class RevenueController extends Controller
                         'Support multiple tahun dengan parameter year',
                         'Advanced conflict resolution dengan berbagai mode',
                         'Transaction rollback untuk data integrity',
-                        'Memory management untuk file besar'
+                        'Memory management untuk file besar',
+                        '🔧 BARU: Support nilai negatif dan zero revenue'
                     ],
                     'tips' => [
                         'Pastikan nama Account Manager dan Corporate Customer persis sama dengan data di database',
                         'Format kolom bulanan: Target_Jan, Real_Jan, Target_Feb, Real_Feb, dst',
                         'Bisa gunakan nama bulan Indonesia (Jan, Feb, Mar) atau Inggris (January, February, March)',
-                        'Nilai revenue bisa menggunakan format dengan koma atau titik sebagai pemisah ribuan',
+                        '🔧 BARU: Nilai revenue bisa negatif (misal: -50000), nol (0), atau kosong',
+                        '🔧 BARU: Sel kosong akan otomatis diisi dengan nilai 0',
                         'Jika ada error, perhatikan detail error yang menunjukkan baris dan jenis kesalahan',
                         'Gunakan fuzzy matching akan otomatis mencari nama yang mirip 80%',
                         'File Excel akan diproses dalam chunks untuk menghindari timeout',
@@ -1786,6 +2008,12 @@ class RevenueController extends Controller
                         'has_required_headers' => empty($missingHeaders),
                         'has_monthly_columns' => count($monthlyColumns) > 0,
                         'ready_for_import' => empty($missingHeaders) && count($monthlyColumns) > 0
+                    ],
+                    'revenue_support_info' => [
+                        'supports_negative_values' => true,
+                        'supports_zero_values' => true,
+                        'empty_cells_converted_to_zero' => true,
+                        'range_limit' => 'Dari -999,999,999,999 hingga 999,999,999,999'
                     ]
                 ]
             ]);
@@ -1823,13 +2051,23 @@ class RevenueController extends Controller
             $totalReal = $query->sum('real_revenue');
             $achievementPercentage = $totalTarget > 0 ? ($totalReal / $totalTarget) * 100 : 0;
 
+            // 🔧 ENHANCED: Statistics with negative and zero value analysis
+            $negativeTargetCount = $query->where('target_revenue', '<', 0)->count();
+            $negativeRealCount = $query->where('real_revenue', '<', 0)->count();
+            $zeroTargetCount = $query->where('target_revenue', '=', 0)->count();
+            $zeroRealCount = $query->where('real_revenue', '=', 0)->count();
+
             // Monthly breakdown
             $monthlyData = $query->selectRaw('
                 YEAR(bulan) as year,
                 MONTH(bulan) as month,
                 SUM(target_revenue) as monthly_target,
                 SUM(real_revenue) as monthly_real,
-                COUNT(*) as monthly_count
+                COUNT(*) as monthly_count,
+                COUNT(CASE WHEN target_revenue < 0 THEN 1 END) as negative_targets,
+                COUNT(CASE WHEN real_revenue < 0 THEN 1 END) as negative_reals,
+                COUNT(CASE WHEN target_revenue = 0 THEN 1 END) as zero_targets,
+                COUNT(CASE WHEN real_revenue = 0 THEN 1 END) as zero_reals
             ')
             ->groupBy('year', 'month')
             ->orderBy('year', 'desc')
@@ -1847,7 +2085,7 @@ class RevenueController extends Controller
             ')
             ->with('accountManager')
             ->groupBy('account_manager_id')
-            ->havingRaw('SUM(target_revenue) > 0')
+            ->havingRaw('SUM(target_revenue) != 0')
             ->orderBy('achievement_rate', 'desc')
             ->limit(10)
             ->get();
@@ -1872,7 +2110,15 @@ class RevenueController extends Controller
                         'total_records' => $totalRecords,
                         'total_target' => $totalTarget,
                         'total_real' => $totalReal,
-                        'achievement_percentage' => round($achievementPercentage, 2)
+                        'achievement_percentage' => round($achievementPercentage, 2),
+                        'negative_target_count' => $negativeTargetCount,
+                        'negative_real_count' => $negativeRealCount,
+                        'zero_target_count' => $zeroTargetCount,
+                        'zero_real_count' => $zeroRealCount,
+                        'negative_target_percentage' => $totalRecords > 0 ? round(($negativeTargetCount / $totalRecords) * 100, 2) : 0,
+                        'negative_real_percentage' => $totalRecords > 0 ? round(($negativeRealCount / $totalRecords) * 100, 2) : 0,
+                        'zero_target_percentage' => $totalRecords > 0 ? round(($zeroTargetCount / $totalRecords) * 100, 2) : 0,
+                        'zero_real_percentage' => $totalRecords > 0 ? round(($zeroRealCount / $totalRecords) * 100, 2) : 0
                     ],
                     'monthly_data' => $monthlyData->map(function($item) {
                         return [
@@ -1882,7 +2128,11 @@ class RevenueController extends Controller
                             'monthly_target' => $item->monthly_target,
                             'monthly_real' => $item->monthly_real,
                             'monthly_count' => $item->monthly_count,
-                            'monthly_achievement' => $item->monthly_target > 0 ? round(($item->monthly_real / $item->monthly_target) * 100, 2) : 0
+                            'monthly_achievement' => $item->monthly_target > 0 ? round(($item->monthly_real / $item->monthly_target) * 100, 2) : 0,
+                            'negative_targets' => $item->negative_targets,
+                            'negative_reals' => $item->negative_reals,
+                            'zero_targets' => $item->zero_targets,
+                            'zero_reals' => $item->zero_reals
                         ];
                     }),
                     'top_account_managers' => $topAccountManagers->map(function($item) {
@@ -1906,7 +2156,23 @@ class RevenueController extends Controller
                             'revenue_count' => $item->revenue_count,
                             'achievement_rate' => $item->total_target > 0 ? round(($item->total_real / $item->total_target) * 100, 2) : 0
                         ];
-                    })
+                    }),
+                    'value_analysis' => [
+                        'has_negative_values' => ($negativeTargetCount > 0 || $negativeRealCount > 0),
+                        'has_zero_values' => ($zeroTargetCount > 0 || $zeroRealCount > 0),
+                        'negative_summary' => [
+                            'target_records' => $negativeTargetCount,
+                            'real_records' => $negativeRealCount,
+                            'target_percentage' => $totalRecords > 0 ? round(($negativeTargetCount / $totalRecords) * 100, 2) : 0,
+                            'real_percentage' => $totalRecords > 0 ? round(($negativeRealCount / $totalRecords) * 100, 2) : 0
+                        ],
+                        'zero_summary' => [
+                            'target_records' => $zeroTargetCount,
+                            'real_records' => $zeroRealCount,
+                            'target_percentage' => $totalRecords > 0 ? round(($zeroTargetCount / $totalRecords) * 100, 2) : 0,
+                            'real_percentage' => $totalRecords > 0 ? round(($zeroRealCount / $totalRecords) * 100, 2) : 0
+                        ]
+                    ]
                 ]
             ]);
 
@@ -1917,63 +2183,6 @@ class RevenueController extends Controller
                 'success' => false,
                 'message' => 'Error getting statistics: ' . $e->getMessage()
             ], 500);
-        }
-    }
-
-    /**
-     * 🆕 NEW: Validate revenue data without saving (for real-time validation)
-     */
-    public function validateRevenueData(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'account_manager_id' => 'required|exists:account_managers,id',
-                'corporate_customer_id' => 'required|exists:corporate_customers,id',
-                'divisi_id' => 'required|exists:divisi,id',
-                'bulan' => 'required|date_format:Y-m',
-                'current_id' => 'nullable|exists:revenues,id'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'valid' => false,
-                    'message' => $validator->errors()->first()
-                ]);
-            }
-
-            $bulanDate = $request->bulan . '-01';
-
-            // Check for duplicate entry
-            $query = Revenue::where([
-                'account_manager_id' => $request->account_manager_id,
-                'corporate_customer_id' => $request->corporate_customer_id,
-                'divisi_id' => $request->divisi_id,
-                'bulan' => $bulanDate,
-            ]);
-
-            if ($request->current_id) {
-                $query->where('id', '!=', $request->current_id);
-            }
-
-            if ($query->exists()) {
-                return response()->json([
-                    'valid' => false,
-                    'message' => 'Data revenue untuk kombinasi Account Manager, Corporate Customer, Divisi, dan Bulan ini sudah ada.'
-                ]);
-            }
-
-            return response()->json([
-                'valid' => true,
-                'message' => 'Data revenue valid.'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Revenue Data Validation Error: ' . $e->getMessage());
-
-            return response()->json([
-                'valid' => false,
-                'message' => 'Terjadi kesalahan saat validasi data revenue.'
-            ]);
         }
     }
 
@@ -2014,6 +2223,15 @@ class RevenueController extends Controller
                 ]
             ];
 
+            // 🔧 ENHANCED: Include special value analysis
+            $specialValueInfo = [
+                'target_is_zero' => ($revenue->target_revenue == 0),
+                'real_is_zero' => ($revenue->real_revenue == 0),
+                'target_is_negative' => ($revenue->target_revenue < 0),
+                'real_is_negative' => ($revenue->real_revenue < 0),
+                'has_special_values' => ($revenue->target_revenue <= 0 || $revenue->real_revenue <= 0)
+            ];
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -2025,7 +2243,8 @@ class RevenueController extends Controller
                         'achievement_rate' => $revenue->target_revenue > 0 ?
                             round(($revenue->real_revenue / $revenue->target_revenue) * 100, 2) : 0,
                         'created_at' => $revenue->created_at,
-                        'updated_at' => $revenue->updated_at
+                        'updated_at' => $revenue->updated_at,
+                        'special_values' => $specialValueInfo
                     ],
                     'relationships' => $relationshipSummary
                 ]
@@ -2038,6 +2257,211 @@ class RevenueController extends Controller
                 'success' => false,
                 'message' => 'Revenue tidak ditemukan.'
             ], 404);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Get revenue analysis for negative and zero values
+     */
+    public function getValueAnalysis(Request $request)
+    {
+        try {
+            $query = Revenue::query();
+
+            // Apply filters if provided
+            if ($request->has('year') && !empty($request->year)) {
+                $query->whereYear('bulan', $request->year);
+            }
+
+            if ($request->has('month') && !empty($request->month)) {
+                $query->whereMonth('bulan', $request->month);
+            }
+
+            if ($request->has('account_manager_id') && !empty($request->account_manager_id)) {
+                $query->where('account_manager_id', $request->account_manager_id);
+            }
+
+            if ($request->has('divisi_id') && !empty($request->divisi_id)) {
+                $query->where('divisi_id', $request->divisi_id);
+            }
+
+            // Get detailed breakdown
+            $totalRecords = $query->count();
+
+            $valueBreakdown = [
+                'negative_target' => $query->where('target_revenue', '<', 0)->count(),
+                'zero_target' => $query->where('target_revenue', '=', 0)->count(),
+                'positive_target' => $query->where('target_revenue', '>', 0)->count(),
+                'negative_real' => $query->where('real_revenue', '<', 0)->count(),
+                'zero_real' => $query->where('real_revenue', '=', 0)->count(),
+                'positive_real' => $query->where('real_revenue', '>', 0)->count()
+            ];
+
+            // Get records with negative or zero values for detailed analysis
+            $negativeTargetRecords = $query->where('target_revenue', '<', 0)
+                ->with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->limit(10)
+                ->get()
+                ->map(function($revenue) {
+                    return [
+                        'id' => $revenue->id,
+                        'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                        'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                        'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                        'bulan' => $revenue->bulan,
+                        'target_revenue' => $revenue->target_revenue,
+                        'real_revenue' => $revenue->real_revenue
+                    ];
+                });
+
+            $zeroTargetRecords = $query->where('target_revenue', '=', 0)
+                ->with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->limit(10)
+                ->get()
+                ->map(function($revenue) {
+                    return [
+                        'id' => $revenue->id,
+                        'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                        'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                        'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                        'bulan' => $revenue->bulan,
+                        'target_revenue' => $revenue->target_revenue,
+                        'real_revenue' => $revenue->real_revenue
+                    ];
+                });
+
+            $negativeRealRecords = $query->where('real_revenue', '<', 0)
+                ->with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->limit(10)
+                ->get()
+                ->map(function($revenue) {
+                    return [
+                        'id' => $revenue->id,
+                        'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                        'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                        'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                        'bulan' => $revenue->bulan,
+                        'target_revenue' => $revenue->target_revenue,
+                        'real_revenue' => $revenue->real_revenue
+                    ];
+                });
+
+            $zeroRealRecords = $query->where('real_revenue', '=', 0)
+                ->with(['accountManager', 'corporateCustomer', 'divisi'])
+                ->limit(10)
+                ->get()
+                ->map(function($revenue) {
+                    return [
+                        'id' => $revenue->id,
+                        'account_manager' => $revenue->accountManager->nama ?? 'Unknown',
+                        'corporate_customer' => $revenue->corporateCustomer->nama ?? 'Unknown',
+                        'divisi' => $revenue->divisi->nama ?? 'Unknown',
+                        'bulan' => $revenue->bulan,
+                        'target_revenue' => $revenue->target_revenue,
+                        'real_revenue' => $revenue->real_revenue
+                    ];
+                });
+
+            // Calculate percentages
+            $percentages = [];
+            foreach ($valueBreakdown as $key => $count) {
+                $percentages[$key . '_percentage'] = $totalRecords > 0 ? round(($count / $totalRecords) * 100, 2) : 0;
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'summary' => [
+                        'total_records' => $totalRecords,
+                        'value_breakdown' => array_merge($valueBreakdown, $percentages),
+                        'has_negative_values' => ($valueBreakdown['negative_target'] > 0 || $valueBreakdown['negative_real'] > 0),
+                        'has_zero_values' => ($valueBreakdown['zero_target'] > 0 || $valueBreakdown['zero_real'] > 0)
+                    ],
+                    'detailed_records' => [
+                        'negative_target_sample' => $negativeTargetRecords,
+                        'zero_target_sample' => $zeroTargetRecords,
+                        'negative_real_sample' => $negativeRealRecords,
+                        'zero_real_sample' => $zeroRealRecords
+                    ],
+                    'analysis_tips' => [
+                        'Nilai negatif mungkin mengindikasikan koreksi atau pengembalian',
+                        'Nilai zero target bisa berarti tidak ada target yang ditetapkan',
+                        'Nilai zero real bisa berarti tidak ada realisasi atau data belum diinput',
+                        'Perhatikan tren nilai negatif untuk analisis lebih lanjut'
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get Value Analysis Error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menganalisis nilai revenue.'
+            ], 500);
+        }
+    }
+
+    /**
+     * 🆕 NEW: Export revenue data with special value filtering
+     */
+    public function exportWithValueFilter(Request $request)
+    {
+        try {
+            $filters = $request->only([
+                'year', 'month', 'account_manager_id', 'corporate_customer_id',
+                'divisi_id', 'witel_id', 'regional_id'
+            ]);
+
+            // Add special value filters
+            if ($request->has('include_negative') && $request->include_negative) {
+                $filters['include_negative'] = true;
+            }
+
+            if ($request->has('include_zero') && $request->include_zero) {
+                $filters['include_zero'] = true;
+            }
+
+            if ($request->has('only_negative') && $request->only_negative) {
+                $filters['only_negative'] = true;
+            }
+
+            if ($request->has('only_zero') && $request->only_zero) {
+                $filters['only_zero'] = true;
+            }
+
+            // Generate filename dengan filter info
+            $filterInfo = '';
+            if (!empty($filters['year'])) {
+                $filterInfo .= '_' . $filters['year'];
+            }
+            if (!empty($filters['month'])) {
+                $filterInfo .= '_month' . $filters['month'];
+            }
+            if (!empty($filters['only_negative'])) {
+                $filterInfo .= '_negative_only';
+            }
+            if (!empty($filters['only_zero'])) {
+                $filterInfo .= '_zero_only';
+            }
+
+            $filename = 'revenue_data_special_values' . $filterInfo . '_' . date('Y-m-d_His') . '.xlsx';
+
+            Log::info('Starting revenue export with value filter', [
+                'filters' => $filters,
+                'filename' => $filename,
+                'user_ip' => $request->ip()
+            ]);
+
+            return Excel::download(new RevenueExport($filters), $filename);
+
+        } catch (\Exception $e) {
+            Log::error('Export Revenue With Value Filter Error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'user_ip' => $request->ip(),
+                'error_trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Gagal export data Revenue: ' . $e->getMessage());
         }
     }
 }

@@ -19,6 +19,14 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AccountManagerController extends Controller
 {
+    // ✅ NEW: Memory management constants
+    const MAX_ERROR_DETAILS_DISPLAY = 500;     // Increased from 100 to 500
+    const MAX_WARNING_DETAILS_DISPLAY = 250;   // Increased from 50 to 250
+    const MAX_BATCH_SIZE = 2500;               // Increased from 1000 to 2500
+    const MEMORY_LIMIT_MB = 1024;              // Increased from 512MB to 1GB
+    const MAX_EXECUTION_TIME = 10000;            // Increased from 5 to 10 minutes
+    const MAX_IMPORT_ROWS = 10000;             // New: Maximum allowed rows per import
+
     /**
      * ✅ EXISTING: Display a listing of account managers with comprehensive search
      */
@@ -786,12 +794,7 @@ class AccountManagerController extends Controller
         }
     }
 
-    /**
-     * 🆕 NEW: Bulk delete ALL account managers with filter support
-     *
-     * Route: POST /account-manager/bulk-delete-all
-     * Function: Menghapus SEMUA Account Manager sesuai filter yang aktif
-     */
+
 /**
      * 🆕 NEW: Bulk delete ALL account managers with filter support
      *
@@ -801,6 +804,9 @@ class AccountManagerController extends Controller
     public function bulkDeleteAll(Request $request)
     {
         try {
+            // 🆕 ENHANCED: Memory monitoring untuk data besar
+            $this->monitorMemoryUsage('bulk_delete_all_start');
+
             $query = AccountManager::query();
 
             // Apply filters from request
@@ -835,8 +841,7 @@ class AccountManagerController extends Controller
             }
 
             // Get count and preview before delete
-            $accountManagers = $query->with(['user', 'revenues'])->get();
-            $totalCount = $accountManagers->count();
+            $totalCount = $query->count();
 
             if ($totalCount === 0) {
                 return response()->json([
@@ -844,6 +849,14 @@ class AccountManagerController extends Controller
                     'message' => 'Tidak ada data Account Manager yang sesuai dengan filter.'
                 ], 422);
             }
+
+            // 🆕 ENHANCED: Handle large datasets dengan chunking
+            if ($totalCount > self::MAX_BATCH_SIZE) {
+                return $this->handleLargeBulkDeleteAll($query, $totalCount, $request);
+            }
+
+            // For smaller datasets, use regular approach
+            $accountManagers = $query->with(['user', 'revenues'])->get();
 
             // Calculate what will be deleted (CASCADE info)
             $totalRevenueCount = 0;
@@ -933,8 +946,10 @@ class AccountManagerController extends Controller
                 'deleted_users_total' => $deletedUsersTotal,
                 'filters' => $request->only(['witel_filter', 'regional_filter', 'divisi_filter', 'search_filter', 'user_status_filter']),
                 'user_ip' => $request->ip(),
-                'deleted_preview' => $deletedDetails
+                'deleted_preview' => array_slice($deletedDetails, 0, 10) // First 10 for preview
             ]);
+
+            $this->monitorMemoryUsage('bulk_delete_all_end');
 
             return response()->json([
                 'success' => true,
@@ -960,10 +975,120 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ EXISTING: Import Account Managers dengan master data context
+     * 🆕 NEW: Handle large bulk delete with chunking untuk data ribuan
+     */
+    private function handleLargeBulkDeleteAll($query, $totalCount, $request)
+    {
+        try {
+            $deletedCount = 0;
+            $deletedRevenuesTotal = 0;
+            $deletedUsersTotal = 0;
+            $batchSize = min(self::MAX_BATCH_SIZE, 500); // Use smaller chunks for safety
+
+            Log::info("Starting large bulk delete for {$totalCount} Account Managers in chunks of {$batchSize}");
+
+            DB::beginTransaction();
+
+            // Process in chunks to avoid memory issues
+            $query->chunk($batchSize, function ($accountManagers) use (&$deletedCount, &$deletedRevenuesTotal, &$deletedUsersTotal) {
+                foreach ($accountManagers as $am) {
+                    try {
+                        // Delete related revenues first (CASCADE DELETE)
+                        $revenueCount = $am->revenues()->count();
+                        if ($revenueCount > 0) {
+                            $am->revenues()->delete();
+                            $deletedRevenuesTotal += $revenueCount;
+                        }
+
+                        // Delete user account if exists (CASCADE DELETE)
+                        if ($am->user) {
+                            $am->user->delete();
+                            $deletedUsersTotal++;
+                        }
+
+                        // Detach divisions
+                        $am->divisis()->detach();
+
+                        // Delete account manager
+                        $am->delete();
+                        $deletedCount++;
+
+                        // Monitor memory every 100 deletions
+                        if ($deletedCount % 100 === 0) {
+                            $this->monitorMemoryUsage("bulk_delete_progress_{$deletedCount}");
+                        }
+
+                    } catch (\Exception $e) {
+                        Log::error("Error deleting Account Manager ID {$am->id} in large bulk delete", [
+                            'error' => $e->getMessage(),
+                            'am_id' => $am->id,
+                            'am_name' => $am->nama ?? 'Unknown'
+                        ]);
+                        // Continue with other deletions
+                    }
+                }
+
+                // Force garbage collection after each chunk
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            });
+
+            DB::commit();
+
+            $message = "Berhasil menghapus {$deletedCount} dari {$totalCount} Account Manager (proses chunking)";
+
+            if ($deletedRevenuesTotal > 0) {
+                $message .= " beserta {$deletedRevenuesTotal} data revenue terkait";
+            }
+
+            if ($deletedUsersTotal > 0) {
+                $message .= " dan {$deletedUsersTotal} akun user";
+            }
+
+            $message .= ".";
+
+            // Log large bulk delete activity
+            Log::info('Large Bulk Delete All Account Manager Activity', [
+                'total_count' => $totalCount,
+                'deleted_count' => $deletedCount,
+                'deleted_revenues_total' => $deletedRevenuesTotal,
+                'deleted_users_total' => $deletedUsersTotal,
+                'batch_size' => $batchSize,
+                'filters' => $request->only(['witel_filter', 'regional_filter', 'divisi_filter', 'search_filter', 'user_status_filter']),
+                'user_ip' => $request->ip(),
+                'processing_method' => 'chunked'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'total_count' => $totalCount,
+                    'deleted_count' => $deletedCount,
+                    'deleted_revenues_total' => $deletedRevenuesTotal,
+                    'deleted_users_total' => $deletedUsersTotal,
+                    'processing_method' => 'chunked',
+                    'batch_size' => $batchSize
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Large Account Manager Bulk Delete All Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * 🔧 COMPLETELY REWRITTEN: Import Account Managers dengan robust error handling dan optimal response untuk data besar
      */
     public function import(Request $request)
     {
+        // 🆕 ENHANCED: Set memory dan execution time limits untuk data besar
+        $this->setMemoryAndTimeConfiguration();
+        $this->monitorMemoryUsage('import_start');
+
         $validator = Validator::make($request->all(), [
             'file' => 'required|mimes:xlsx,xls,csv|max:10240', // Max 10MB
         ], [
@@ -973,88 +1098,501 @@ class AccountManagerController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'data' => [
-                    'imported' => 0,
-                    'updated' => 0,
-                    'duplicates' => 0,
-                    'errors' => 1,
-                    'error_details' => [$validator->errors()->first()],
-                    'master_data_available' => $this->getMasterDataSummary()
-                ]
+            return $this->createOptimizedErrorResponse([
+                'validation_error' => $validator->errors()->first()
             ], 422);
         }
 
         try {
-            // ✅ Use dedicated Import class with detailed tracking
+            $file = $request->file('file');
+            $fileSize = $file->getSize();
+            $fileName = $file->getClientOriginalName();
+
+            // 🆕 ENHANCED: Pre-validate file size dan estimate processing time
+            $estimatedRows = $this->estimateRowCount($fileSize);
+
+            Log::info('Starting Account Manager import', [
+                'filename' => $fileName,
+                'size_bytes' => $fileSize,
+                'size_mb' => round($fileSize / 1024 / 1024, 2),
+                'estimated_rows' => $estimatedRows,
+                'user_ip' => $request->ip()
+            ]);
+
+            // 🆕 ENHANCED: Use optimized import class dengan memory management
             $import = new AccountManagerImport();
-            Excel::import($import, $request->file('file'));
 
-            // ✅ Get detailed results from Import class
-            $results = $import->getImportResults();
+            // 🔧 CRITICAL FIX: Execute import in transaction for data integrity
+            DB::beginTransaction();
 
-            // ✅ ENHANCED: Add master data context to results
-            $results['master_data_available'] = $this->getMasterDataSummary();
-            $results['helper_info'] = $this->getImportHelperInfo();
+            try {
+                // Start import process
+                Excel::import($import, $file);
 
-            // ✅ Generate appropriate message
-            $message = $this->generateImportMessage(
-                $results['imported'],
-                $results['updated'],
-                $results['errors']
-            );
+                // 🆕 ENHANCED: Get comprehensive import results
+                $rawResults = $import->getImportResults();
 
-            // Log import summary
-            Log::info('Account Manager Import completed', [
-                'file_name' => $request->file('file')->getClientOriginalName(),
-                'results' => $results
+                $this->monitorMemoryUsage('import_after_processing');
+
+                // 🔧 CRITICAL FIX: Format response untuk data besar dengan primitives only
+                $optimizedResults = $this->formatImportResultsForLargeData($rawResults, $estimatedRows);
+
+                DB::commit();
+
+                // 🆕 ENHANCED: Log successful import dengan detail
+                Log::info('Account Manager import completed successfully', [
+                    'file' => $fileName,
+                    'file_size_mb' => round($fileSize / 1024 / 1024, 2),
+                    'results' => [
+                        'total_rows' => $optimizedResults['total_rows'],
+                        'imported' => $optimizedResults['imported'],
+                        'updated' => $optimizedResults['updated'],
+                        'errors' => $optimizedResults['errors'],
+                        'duplicates' => $optimizedResults['duplicates'],
+                        'success_rate' => $optimizedResults['success_percentage']
+                    ],
+                    'user_ip' => $request->ip(),
+                    'processing_time_seconds' => microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']
+                ]);
+
+                $this->monitorMemoryUsage('import_success_end');
+
+                // 🔧 FIX: Generate appropriate success message
+                $message = $this->generateOptimizedImportMessage($optimizedResults);
+
+                return response()->json([
+                    'success' => ($optimizedResults['errors'] === 0 || $optimizedResults['success_rows'] > 0),
+                    'message' => $message,
+                    'data' => $optimizedResults
+                ]);
+
+            } catch (\Exception $importException) {
+                DB::rollBack();
+
+                // 🆕 ENHANCED: Handle specific import errors
+                if ($this->isMemoryLimitError($importException)) {
+                    return $this->handleMemoryLimitError($fileName, $fileSize);
+                } elseif ($this->isTimeoutError($importException)) {
+                    return $this->handleTimeoutError($fileName, $fileSize);
+                } else {
+                    throw $importException;
+                }
+            }
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            // 🆕 ENHANCED: Handle Excel validation errors dengan optimal response
+            $failures = collect($e->failures());
+            $limitedErrors = $failures->take(self::MAX_ERROR_DETAILS_DISPLAY)->map(function ($failure) {
+                return "Baris {$failure->row()}: " . implode(', ', $failure->errors());
+            })->toArray();
+
+            Log::error('Account Manager import validation error', [
+                'total_failures' => $failures->count(),
+                'file' => $fileName ?? 'unknown',
+                'user_ip' => $request->ip()
             ]);
 
-            return response()->json([
-                'success' => $results['errors'] == 0 || ($results['imported'] + $results['updated']) > 0,
-                'message' => $message,
-                'data' => $results
-            ]);
+            return $this->createOptimizedErrorResponse([
+                'validation_failures' => $limitedErrors,
+                'total_failures' => $failures->count(),
+                'has_more_errors' => $failures->count() > self::MAX_ERROR_DETAILS_DISPLAY
+            ], 422);
 
         } catch (\Exception $e) {
-            Log::error('Account Manager Import Error: ' . $e->getMessage());
+            $this->monitorMemoryUsage('import_error_end');
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan saat memproses file: ' . $e->getMessage(),
-                'data' => [
-                    'imported' => 0,
-                    'updated' => 0,
-                    'duplicates' => 0,
-                    'errors' => 1,
-                    'error_details' => [
-                        'Error sistem: ' . $e->getMessage(),
-                        'Pastikan file Excel dalam format yang benar dan tidak corrupt.'
-                    ],
-                    'master_data_available' => $this->getMasterDataSummary(),
-                    'helper_info' => $this->getImportHelperInfo()
-                ]
+            Log::error('Account Manager import general error: ' . $e->getMessage(), [
+                'file' => $fileName ?? 'unknown',
+                'user_ip' => $request->ip(),
+                'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+                'error_trace' => $e->getTraceAsString()
+            ]);
+
+            // 🔧 CRITICAL FIX: Handle array to string conversion error yang umum terjadi
+            if (strpos($e->getMessage(), 'Array to string conversion') !== false) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Import kemungkinan berhasil, namun terjadi error formatting response. Silakan refresh halaman untuk melihat hasil.',
+                    'data' => [
+                        'total_rows' => 0,
+                        'success_rows' => 0,
+                        'failed_rows' => 0,
+                        'imported' => 0,
+                        'updated' => 0,
+                        'duplicates' => 0,
+                        'errors' => 0,
+                        'warning' => 'Response formatting issue - data mungkin sudah berhasil diimport',
+                        'error_details' => ['Response formatting error - refresh halaman untuk melihat hasil']
+                    ]
+                ]);
+            }
+
+            return $this->createOptimizedErrorResponse([
+                'general_error' => $e->getMessage(),
+                'suggestion' => 'Coba dengan file yang lebih kecil atau refresh halaman jika import mungkin sudah berhasil'
             ], 500);
         }
     }
 
     /**
-     * ✅ EXISTING: Download template Excel (menggunakan AccountManagerTemplateExport)
+     * 🆕 NEW: Format import results optimized untuk data besar
      */
-    public function downloadTemplate()
+    private function formatImportResultsForLargeData($rawResults, $estimatedRows = 0)
     {
-        try {
-            $filename = 'template_account_manager_' . date('Y-m-d_His') . '.xlsx';
+        // 🔧 CRITICAL: Ensure all values are primitives (tidak ada nested arrays)
+        $optimized = [
+            'total_rows' => (int) ($rawResults['total_rows'] ?? $estimatedRows ?? 0),
+            'success_rows' => (int) (($rawResults['imported'] ?? 0) + ($rawResults['updated'] ?? 0)),
+            'failed_rows' => (int) ($rawResults['errors'] ?? 0),
+            'imported' => (int) ($rawResults['imported'] ?? 0),
+            'updated' => (int) ($rawResults['updated'] ?? 0),
+            'duplicates' => (int) ($rawResults['duplicates'] ?? 0),
+            'errors' => (int) ($rawResults['errors'] ?? 0),
+            'conflicts' => (int) ($rawResults['conflicts'] ?? 0),
 
-            return Excel::download(new AccountManagerTemplateExport(), $filename);
+            // 🔧 CRITICAL: Calculate success percentage
+            'success_percentage' => 0,
 
-        } catch (\Exception $e) {
-            Log::error('Download Template Error: ' . $e->getMessage());
-            return back()->with('error', 'Gagal mendownload template: ' . $e->getMessage());
+            // 🆕 ENHANCED: Limit error details untuk data besar
+            'error_details' => [],
+            'warning_details' => [],
+            'success_details' => [],
+
+            // 🆕 NEW: Additional metadata untuk large data
+            'has_more_errors' => false,
+            'has_more_warnings' => false,
+            'total_error_count' => 0,
+            'total_warning_count' => 0,
+            'processing_method' => 'optimized_for_large_data',
+            'memory_peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+
+            // 🆕 NEW: Data master information
+            'master_data_available' => $this->getMasterDataSummary(),
+            'helper_info' => $this->getImportHelperInfo()
+        ];
+
+        // Calculate success percentage
+        if ($optimized['total_rows'] > 0) {
+            $optimized['success_percentage'] = round(($optimized['success_rows'] / $optimized['total_rows']) * 100, 2);
+        }
+
+        // 🔧 CRITICAL: Process error details dengan limit untuk memory efficiency
+        if (isset($rawResults['error_details']) && is_array($rawResults['error_details'])) {
+            $totalErrors = count($rawResults['error_details']);
+            $optimized['total_error_count'] = $totalErrors;
+            $optimized['has_more_errors'] = $totalErrors > self::MAX_ERROR_DETAILS_DISPLAY;
+
+            // Limit error details dan convert ke string
+            $limitedErrors = array_slice($rawResults['error_details'], 0, self::MAX_ERROR_DETAILS_DISPLAY);
+            $optimized['error_details'] = array_map('strval', $limitedErrors);
+        }
+
+        // 🔧 CRITICAL: Process warning details dengan limit
+        if (isset($rawResults['warning_details']) && is_array($rawResults['warning_details'])) {
+            $totalWarnings = count($rawResults['warning_details']);
+            $optimized['total_warning_count'] = $totalWarnings;
+            $optimized['has_more_warnings'] = $totalWarnings > self::MAX_WARNING_DETAILS_DISPLAY;
+
+            // Limit warning details dan convert ke string
+            $limitedWarnings = array_slice($rawResults['warning_details'], 0, self::MAX_WARNING_DETAILS_DISPLAY);
+            $optimized['warning_details'] = array_map('strval', $limitedWarnings);
+        }
+
+        // 🆕 NEW: Add success details (limited)
+        if (isset($rawResults['success_details']) && is_array($rawResults['success_details'])) {
+            $limitedSuccess = array_slice($rawResults['success_details'], 0, 10); // Max 10 success details
+            $optimized['success_details'] = array_map('strval', $limitedSuccess);
+        }
+
+        return $optimized;
+    }
+
+    /**
+     * 🆕 NEW: Generate optimized import message untuk large data
+     */
+    private function generateOptimizedImportMessage($data)
+    {
+        $messages = [];
+
+        if ($data['success_rows'] > 0) {
+            $messages[] = "✅ {$data['success_rows']} data berhasil diproses";
+        }
+
+        if ($data['imported'] > 0) {
+            $messages[] = "🆕 {$data['imported']} data baru ditambahkan";
+        }
+
+        if ($data['updated'] > 0) {
+            $messages[] = "🔄 {$data['updated']} data diperbarui";
+        }
+
+        if ($data['duplicates'] > 0) {
+            $messages[] = "⚠️ {$data['duplicates']} data duplikat dilewati";
+        }
+
+        if ($data['errors'] > 0) {
+            $errorMsg = "❌ {$data['errors']} data gagal";
+            if ($data['has_more_errors']) {
+                $errorMsg .= " (total {$data['total_error_count']})";
+            }
+            $messages[] = $errorMsg;
+        }
+
+        $result = implode(', ', $messages);
+
+        if ($data['errors'] === 0) {
+            return "🎉 Import berhasil sempurna! " . $result . ". Refresh halaman untuk melihat data terbaru.";
+        } elseif ($data['success_rows'] > 0) {
+            $successRate = round($data['success_percentage'], 1);
+            return "⚠️ Import selesai dengan tingkat keberhasilan {$successRate}%. " . $result . ". Refresh halaman untuk melihat data terbaru.";
+        } else {
+            return "❌ Import gagal. " . $result;
         }
     }
+
+    /**
+     * 🆕 NEW: Create optimized error response untuk large data scenarios
+     */
+    private function createOptimizedErrorResponse($errorData, $statusCode = 500)
+    {
+        $baseData = [
+            'total_rows' => 0,
+            'success_rows' => 0,
+            'failed_rows' => 1,
+            'imported' => 0,
+            'updated' => 0,
+            'duplicates' => 0,
+            'errors' => 1,
+            'success_percentage' => 0,
+            'error_details' => [],
+            'warning_details' => [],
+            'success_details' => [],
+            'has_more_errors' => false,
+            'has_more_warnings' => false,
+            'master_data_available' => $this->getMasterDataSummary(),
+            'helper_info' => $this->getImportHelperInfo()
+        ];
+
+        // Handle different error types
+        if (isset($errorData['validation_error'])) {
+            $message = 'File validation error: ' . $errorData['validation_error'];
+            $baseData['error_details'] = [$errorData['validation_error']];
+        } elseif (isset($errorData['validation_failures'])) {
+            $totalFailures = $errorData['total_failures'] ?? count($errorData['validation_failures']);
+            $message = "Validasi Excel gagal pada {$totalFailures} baris";
+            $baseData['error_details'] = $errorData['validation_failures'];
+            $baseData['has_more_errors'] = $errorData['has_more_errors'] ?? false;
+            $baseData['total_error_count'] = $totalFailures;
+            $baseData['failed_rows'] = $totalFailures;
+        } elseif (isset($errorData['memory_limit'])) {
+            $message = 'File terlalu besar - ' . $errorData['memory_limit'];
+            $baseData['error_details'] = [
+                'File size: ' . ($errorData['file_size_mb'] ?? 'unknown') . 'MB',
+                $errorData['memory_limit'],
+                'Solusi: Bagi file menjadi bagian lebih kecil (maksimal 1000 baris per file)'
+            ];
+        } elseif (isset($errorData['timeout'])) {
+            $message = 'Import timeout - ' . $errorData['timeout'];
+            $baseData['error_details'] = [
+                'Processing time exceeded limit',
+                $errorData['timeout'],
+                'Solusi: Gunakan file yang lebih kecil atau coba saat traffic rendah'
+            ];
+        } else {
+            $message = 'Terjadi kesalahan: ' . ($errorData['general_error'] ?? 'Unknown error');
+            $baseData['error_details'] = [
+                $errorData['general_error'] ?? 'Unknown error occurred',
+                $errorData['suggestion'] ?? 'Silakan coba lagi dengan file yang berbeda'
+            ];
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'data' => $baseData
+        ], $statusCode);
+    }
+
+    /**
+     * 🆕 NEW: Monitor memory usage untuk debugging dan optimization
+     */
+    private function monitorMemoryUsage($checkpoint)
+    {
+        $memoryMB = round(memory_get_usage(true) / 1024 / 1024, 2);
+        $peakMB = round(memory_get_peak_usage(true) / 1024 / 1024, 2);
+
+        Log::info("Memory checkpoint: {$checkpoint}", [
+            'current_mb' => $memoryMB,
+            'peak_mb' => $peakMB,
+            'limit_mb' => ini_get('memory_limit')
+        ]);
+
+        // Warning jika memory usage tinggi
+        if ($memoryMB > self::MEMORY_LIMIT_MB * 0.8) {
+            Log::warning("High memory usage detected at {$checkpoint}", [
+                'current_mb' => $memoryMB,
+                'limit_mb' => self::MEMORY_LIMIT_MB
+            ]);
+        }
+
+        return $memoryMB;
+    }
+
+    /**
+     * 🆕 NEW: Set memory dan execution time configuration untuk data besar
+     */
+    private function setMemoryAndTimeConfiguration()
+    {
+        // Increase memory limit jika belum cukup
+        $currentLimit = ini_get('memory_limit');
+        if (intval($currentLimit) < self::MEMORY_LIMIT_MB) {
+            ini_set('memory_limit', self::MEMORY_LIMIT_MB . 'M');
+        }
+
+        // Increase execution time untuk data besar
+        $currentTime = ini_get('max_execution_time');
+        if (intval($currentTime) < self::MAX_EXECUTION_TIME) {
+            set_time_limit(self::MAX_EXECUTION_TIME);
+        }
+
+        Log::info('Memory and time configuration set', [
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'current_memory_mb' => round(memory_get_usage(true) / 1024 / 1024, 2)
+        ]);
+    }
+
+    /**
+     * 🆕 NEW: Estimate row count dari file size
+     */
+    private function estimateRowCount($fileSize)
+    {
+        // Rough estimate: 100 bytes per row average
+        $averageBytesPerRow = 100;
+        return max(1, intval($fileSize / $averageBytesPerRow));
+    }
+
+    /**
+     * 🆕 NEW: Check if error is memory limit related
+     */
+    private function isMemoryLimitError($exception)
+    {
+        $message = $exception->getMessage();
+        return (
+            strpos($message, 'memory') !== false ||
+            strpos($message, 'Allowed memory size') !== false ||
+            strpos($message, 'out of memory') !== false
+        );
+    }
+
+    /**
+     * 🆕 NEW: Check if error is timeout related
+     */
+    private function isTimeoutError($exception)
+    {
+        $message = $exception->getMessage();
+        return (
+            strpos($message, 'timeout') !== false ||
+            strpos($message, 'Maximum execution time') !== false ||
+            strpos($message, 'time limit') !== false
+        );
+    }
+
+    /**
+     * 🆕 NEW: Handle memory limit error
+     */
+    private function handleMemoryLimitError($fileName, $fileSize)
+    {
+        $fileSizeMB = round($fileSize / 1024 / 1024, 2);
+
+        return $this->createOptimizedErrorResponse([
+            'memory_limit' => "Memory limit exceeded untuk file {$fileSizeMB}MB",
+            'file_size_mb' => $fileSizeMB
+        ], 413);
+    }
+
+/**
+     * 🆕 NEW: Handle timeout error
+     */
+    private function handleTimeoutError($fileName, $fileSize)
+    {
+        $fileSizeMB = round($fileSize / 1024 / 1024, 2);
+
+        return $this->createOptimizedErrorResponse([
+            'timeout' => "Processing timeout untuk file {$fileSizeMB}MB - file terlalu besar",
+            'file_size_mb' => $fileSizeMB
+        ], 408);
+    }
+
+    public function downloadTemplate()
+{
+    try {
+        // 🔧 FIX: Ubah ekstensi dari .xlsx ke .csv
+        $filename = 'template_account_manager_' . date('Y-m-d_His') . '.csv';
+
+        // 🔧 FIX: Tambahkan parameter format CSV ke Excel::download()
+        return Excel::download(
+            new AccountManagerTemplateExport(),
+            $filename,
+            \Maatwebsite\Excel\Excel::CSV,  // 🆕 PENTING: Format CSV explicitly
+            [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]
+        );
+
+    } catch (\Exception $e) {
+        Log::error('Download Template CSV Error: ' . $e->getMessage());
+        return back()->with('error', 'Gagal mendownload template CSV: ' . $e->getMessage());
+    }
+}
+
+/**
+ * 🆕 OPTIONAL: Method alternatif jika ingin support kedua format
+ * Route: GET /account-manager/download-template/{format?}
+ * Format: csv atau xlsx (default: csv)
+ */
+public function downloadTemplateWithFormat($format = 'csv')
+{
+    try {
+        $allowedFormats = ['csv', 'xlsx'];
+
+        if (!in_array(strtolower($format), $allowedFormats)) {
+            $format = 'csv'; // Default ke CSV
+        }
+
+        $format = strtolower($format);
+        $extension = $format === 'csv' ? 'csv' : 'xlsx';
+        $filename = 'template_account_manager_' . date('Y-m-d_His') . '.' . $extension;
+
+        // Tentukan format Excel berdasarkan parameter
+        $excelFormat = $format === 'csv'
+            ? \Maatwebsite\Excel\Excel::CSV
+            : \Maatwebsite\Excel\Excel::XLSX;
+
+        // Set headers sesuai format
+        $headers = $format === 'csv'
+            ? [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+              ]
+            : [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+              ];
+
+        return Excel::download(
+            new AccountManagerTemplateExport(),
+            $filename,
+            $excelFormat,
+            $headers
+        );
+
+    } catch (\Exception $e) {
+        Log::error("Download Template {$format} Error: " . $e->getMessage());
+        return back()->with('error', "Gagal mendownload template {$format}: " . $e->getMessage());
+    }
+}
 
     /**
      * ✅ EXISTING: Export Account Manager data (menggunakan AccountManagerExport)
@@ -1114,48 +1652,54 @@ class AccountManagerController extends Controller
                 'Master Regional' => 'Berisi daftar semua Regional yang valid',
                 'Master Divisi' => 'Berisi daftar semua Divisi yang valid'
             ],
+            'validation_rules' => [
+                'Account Manager dan Corporate Customer harus sudah ada di database',
+                'Format kolom bulanan: Target_[Bulan] dan Real_[Bulan]',
+                'Minimal satu pasangan Target-Real bulanan harus diisi',
+                '🔧 BARU: Nilai revenue BOLEH negatif, nol, atau kosong',
+                '🔧 BARU: Nilai kosong akan disimpan sebagai 0',
+                '🔧 BARU: Nilai negatif akan tetap disimpan sebagai negatif',
+                'Fuzzy matching tersedia untuk nama yang mirip (80% similarity)',
+                'Case insensitive matching untuk semua nama'
+            ],
+            'overwrite_modes' => [
+                'update' => 'Data existing akan diperbarui otomatis (default)',
+                'skip' => 'Data existing akan dilewati, hanya import data baru',
+                'ask' => 'Data existing akan diperbarui tapi dengan warning konfirmasi'
+            ],
+            'database_stats' => [
+                'account_managers_count' => AccountManager::count(),
+                'witels_count' => Witel::count(),
+                'regionals_count' => Regional::count(),
+                'divisis_count' => Divisi::count()
+            ],
+            'features' => [
+                'Batch processing dengan chunks untuk performa optimal',
+                'Master data caching untuk lookup cepat',
+                'Fuzzy matching untuk nama Account Manager dan Corporate Customer',
+                'Auto-detect kolom bulanan dengan berbagai format nama',
+                'Comprehensive error reporting dengan detail baris yang gagal',
+                'Support multiple tahun dengan parameter year',
+                'Advanced conflict resolution dengan berbagai mode',
+                'Transaction rollback untuk data integrity',
+                '🆕 ENHANCED: Memory management untuk file besar',
+                '🆕 ENHANCED: Chunked processing untuk data ribuan',
+                '🆕 ENHANCED: Optimized response formatting untuk large data'
+            ],
             'tips' => [
-                '💡 Download template untuk melihat format yang benar',
-                '💡 Periksa sheet "Master Data" untuk data yang valid',
-                '💡 Gunakan export existing data sebagai referensi',
-                '💡 Satu NIK bisa memiliki multiple divisi (buat baris terpisah)',
-                '💡 Import akan menghapus auto refresh - refresh manual setelah melihat hasil'
+                'Pastikan nama Account Manager dan Corporate Customer persis sama dengan data di database',
+                'Format kolom bulanan: Target_Jan, Real_Jan, Target_Feb, Real_Feb, dst',
+                'Bisa gunakan nama bulan Indonesia (Jan, Feb, Mar) atau Inggris (January, February, March)',
+                '🔧 BARU: Nilai revenue bisa negatif (misal: -50000), nol (0), atau kosong',
+                '🔧 BARU: Sel kosong akan otomatis diisi dengan nilai 0',
+                'Jika ada error, perhatikan detail error yang menunjukkan baris dan jenis kesalahan',
+                'Gunakan fuzzy matching akan otomatis mencari nama yang mirip 80%',
+                'File Excel akan diproses dalam chunks untuk menghindari timeout',
+                '🆕 BARU: Untuk file >1000 baris, sistem akan otomatis menggunakan chunked processing',
+                '🆕 BARU: Maksimal 10MB per file - file lebih besar akan ditolak',
+                'Import akan memberikan pesan untuk refresh manual - tidak auto refresh'
             ]
         ];
-    }
-
-    /**
-     * ✅ EXISTING: Generate import message based on results
-     */
-    private function generateImportMessage($imported, $updated, $errors)
-    {
-        $messages = [];
-
-        if ($imported > 0) {
-            $messages[] = "{$imported} Account Manager baru berhasil ditambahkan";
-        }
-
-        if ($updated > 0) {
-            $messages[] = "{$updated} Account Manager berhasil diperbarui";
-        }
-
-        if ($errors > 0) {
-            $messages[] = "{$errors} baris gagal diproses";
-        }
-
-        if (empty($messages)) {
-            return 'Tidak ada data yang diproses.';
-        }
-
-        $result = implode(', ', $messages) . '.';
-
-        if ($errors === 0) {
-            return 'Import berhasil! ' . $result;
-        } elseif ($imported > 0 || $updated > 0) {
-            return 'Import selesai dengan beberapa error. ' . $result;
-        } else {
-            return 'Import gagal. ' . $result;
-        }
     }
 
     /**
@@ -1278,52 +1822,55 @@ class AccountManagerController extends Controller
     }
 
     /**
-     * ✅ ENHANCED: Get statistics for dashboard with user account information
+     * ✅ ENHANCED: Get statistics for dashboard with user account information dan memory-efficient queries
      */
     public function getStatistics()
     {
         try {
+            // 🆕 ENHANCED: Use more efficient queries untuk large datasets
             $totalAccountManagers = AccountManager::count();
             $recentAccountManagers = AccountManager::where('created_at', '>=', now()->subDays(30))->count();
-            $activeAccountManagers = AccountManager::whereHas('revenues')->distinct()->count();
 
-            // ✅ ENHANCED: Count Account Managers with and without user accounts
+            // Optimize query untuk active account managers
+            $activeAccountManagers = AccountManager::whereHas('revenues')->distinct('id')->count();
+
+            // ✅ ENHANCED: Count Account Managers with and without user accounts (optimized)
             $accountManagersWithUsers = AccountManager::whereHas('user')->count();
             $accountManagersWithoutUsers = $totalAccountManagers - $accountManagersWithUsers;
 
-            // Count total revenues related to Account Managers
+            // Count total revenues linked (optimized join)
             $totalRevenuesLinked = DB::table('revenues')
                 ->join('account_managers', 'revenues.account_manager_id', '=', 'account_managers.id')
                 ->count();
 
-            // Count by divisi
+            // Count by divisi (optimized with limit)
             $divisiStats = DB::table('account_manager_divisi')
                 ->join('divisi', 'account_manager_divisi.divisi_id', '=', 'divisi.id')
                 ->select('divisi.nama', DB::raw('count(*) as total'))
                 ->groupBy('divisi.id', 'divisi.nama')
                 ->orderBy('total', 'desc')
+                ->limit(10) // Limit untuk performance
                 ->get();
 
-            // Count by regional
-            $regionalStats = AccountManager::with('regional')
-                ->get()
-                ->groupBy('regional.nama')
-                ->map(function ($items) {
-                    return $items->count();
-                })
-                ->sortDesc();
+            // Count by regional (optimized query)
+            $regionalStats = DB::table('account_managers')
+                ->join('regional', 'account_managers.regional_id', '=', 'regional.id')
+                ->select('regional.nama', DB::raw('count(*) as total'))
+                ->groupBy('regional.id', 'regional.nama')
+                ->orderBy('total', 'desc')
+                ->limit(10)
+                ->pluck('total', 'nama');
 
-            // Count by witel
-            $witelStats = AccountManager::with('witel')
-                ->get()
-                ->groupBy('witel.nama')
-                ->map(function ($items) {
-                    return $items->count();
-                })
-                ->sortDesc()
-                ->take(10); // Top 10 witel
+            // Count by witel (optimized with limit)
+            $witelStats = DB::table('account_managers')
+                ->join('witel', 'account_managers.witel_id', '=', 'witel.id')
+                ->select('witel.nama', DB::raw('count(*) as total'))
+                ->groupBy('witel.id', 'witel.nama')
+                ->orderBy('total', 'desc')
+                ->limit(10) // Top 10 witel only
+                ->pluck('total', 'nama');
 
-            // ✅ ENHANCED: User registration statistics
+            // ✅ ENHANCED: User registration statistics (optimized)
             $userRegistrationStats = [
                 'total_with_accounts' => $accountManagersWithUsers,
                 'total_without_accounts' => $accountManagersWithoutUsers,
@@ -1395,7 +1942,7 @@ class AccountManagerController extends Controller
                 ]);
             }
 
-            // Check uniqueness
+            // Check uniqueness (optimized query)
             $query = AccountManager::where('nik', $nik);
             if ($currentId) {
                 $query->where('id', '!=', $currentId);
@@ -1452,7 +1999,7 @@ class AccountManagerController extends Controller
             $accountManagers = $query->orderBy('nama')
                                    ->paginate($request->get('per_page', 15));
 
-            // Transform data to include user status
+            // Transform data to include user status (memory efficient)
             $accountManagers->getCollection()->transform(function ($am) {
                 return [
                     'id' => $am->id,

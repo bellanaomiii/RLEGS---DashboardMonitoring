@@ -53,12 +53,12 @@
                         </li>
                     </ul>
                 </li>
-                {{-- <li class="sidebar-item">
+                <li class="sidebar-item">
                     <a href="{{ route('monitoring-LOP') }}" class="sidebar-link">
                         <i class="lni lni-user-multiple-4"></i><span>Top LOP</span>
                     </a>
                 </li>
-                <li class="sidebar-item">
+                {{-- <li class="sidebar-item">
                     <a href="#" class="sidebar-link">
                         <i class="lni lni-chromecast"></i><span>Aosodomoro</span>
                     </a>
@@ -67,8 +67,8 @@
                     <a href="#" class="sidebar-link">
                         <i class="lni lni-target-user"></i><span>EDK</span>
                     </a>
-                </li> --}}
-            </ul>
+                </li>
+            </ul> --}}
             <div class="sidebar-footer">
                 <a href="{{ route('profile.edit') }}" class="sidebar-link">
                     <i class="lni lni-gear-1"></i><span>Settings</span>
